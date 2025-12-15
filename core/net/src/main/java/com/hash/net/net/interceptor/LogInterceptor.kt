@@ -1,6 +1,5 @@
 package com.hash.net.net.interceptor
 
-import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
@@ -8,9 +7,12 @@ import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response
 import okio.Buffer
+import android.util.Log
 import java.io.EOFException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @name LogInterceptor
@@ -23,6 +25,12 @@ import java.nio.charset.StandardCharsets
  */
 
 class LogInterceptor : Interceptor {
+
+    companion object {
+        private const val TAG = "LvHttp"
+        private val COUNTER = AtomicLong(0)
+    }
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val requestBody = request.body
@@ -31,33 +39,53 @@ class LogInterceptor : Interceptor {
         val contentType = requestBody?.contentType()
         val charset: Charset = contentType?.charset(StandardCharsets.UTF_8) ?: StandardCharsets.UTF_8
 
-        // 请求日志
+        // generate request id for correlation
+        val requestId = COUNTER.incrementAndGet()
+
+        // 请求日志（在发起请求时打印）
         requestBuffer.apply {
+            append("--> HTTP id=$requestId START\n")
             append("{url:${request.url}} \n")
-            append("{method:${request.method} \n")
+            append("{method:${request.method}} \n")
             if (requestBody != null && !bodyHasUnknownEncoding(request.headers)
                 && !requestBody.isDuplex() && !requestBody.isOneShot()
             ) {
                 val buffer = Buffer()
-                requestBody.writeTo(buffer)
-                if (buffer.isProbablyUtf8()) {
-                    append("{arguments:{${buffer.readString(charset)}\n")
+                try {
+                    requestBody.writeTo(buffer)
+                    if (buffer.isProbablyUtf8()) {
+                        append("{arguments:{${buffer.readString(charset)}}}\n")
+                    } else {
+                        append("{arguments:(binary body omitted)}\n")
+                    }
+                } catch (e: Exception) {
+                    append("{arguments:(failed to read request body: ${e.message})}\n")
                 }
             }
         }
 
+        // log request now so that start and end can be correlated by id
+        Log.d(TAG, requestBuffer.toString())
+
         val response = chain.proceed(request)
 
         try {
-            val responseBody = response.body ?: return response
+            val responseBody = response.body
+            if (responseBody == null) {
+                Log.d(TAG, String.format(Locale.getDefault(), "<-- HTTP id=%d END (no response body) code=%d url=%s", requestId, response.code, response.request.url))
+                return response
+            }
+
             val mediaType = responseBody.contentType()
             val isTextType = mediaType?.type == "text" || mediaType?.subtype?.contains("json", true) == true
             val contentLength = responseBody.contentLength()
 
-            requestBuffer.apply {
-                append("\n{Code:${response.code}\n")
-                append("{URL：${response.request.url}\n")
-                append("{Content-Type：$mediaType  Content-Length：${contentLength}\n")
+            val responseBuffer = StringBuffer()
+            responseBuffer.apply {
+                append("<-- HTTP id=$requestId RESPONSE START\n")
+                append("{Code:${response.code}}\n")
+                append("{URL:${response.request.url}}\n")
+                append("{Content-Type:$mediaType  Content-Length:${contentLength}}\n")
                 response.headers.forEach {
                     append("{Header: ${it.first}=${it.second}}\n")
                 }
@@ -65,38 +93,44 @@ class LogInterceptor : Interceptor {
 
             // 对于大文件/非文本内容，不再尝试读取 body，避免阻塞下载
             if (!isTextType || contentLength > 1024 * 1024) { // >1MB 视为大内容，打印占位
-                requestBuffer.append("<-- END HTTP (body omitted for non-text or large content)\n")
-                Log.d("LvHttp ---- END HTTP>", requestBuffer.toString())
+                responseBuffer.append("<-- END HTTP (body omitted for non-text or large content)\n")
+                Log.d(TAG, responseBuffer.toString())
                 return response
             }
 
-            // 文本且体积可控的响应，尝试读取少量预览
-            val source = responseBody.source()
+            // 使用 peekBody 安全地获取响应的前一部分内容用于日志，peek 不会消耗真正的流
             val peekBytes = 1024L // 预览最多 1KB
-            source.request(peekBytes) // 请求最多 1KB 到缓冲区用于预览
-            val bufferResponse = source.buffer
-
-            val previewBuffer = Buffer()
-            val byteCount = bufferResponse.size.coerceAtMost(peekBytes)
-            bufferResponse.copyTo(previewBuffer, 0, byteCount)
-
-            // 使用响应的 charset 进行解码（fallback 到 UTF-8）
-            val responseCharset: Charset = run {
-                val mt = responseBody.contentType()
-                if (mt == null) StandardCharsets.UTF_8 else mt.charset(StandardCharsets.UTF_8) ?: StandardCharsets.UTF_8
+            val peekBody = try {
+                response.peekBody(peekBytes)
+            } catch (e: Exception) {
+                Log.w(TAG, String.format(Locale.getDefault(), "failed to peek body for id=%d", requestId), e)
+                null
             }
 
-            requestBuffer.apply {
-                if (!previewBuffer.isProbablyUtf8()) {
-                    append("<-- END HTTP (binary body preview omitted)\n")
+            if (peekBody == null) {
+                responseBuffer.append("<-- END HTTP (failed to peek body)\n")
+                Log.d(TAG, responseBuffer.toString())
+                return response
+            }
+
+            val preview = peekBody.string()
+            responseBuffer.apply {
+                if (preview.isBlank()) {
+                    append("body-preview: (empty)\n")
                 } else {
-                    append("body-preview：${prettyJson(previewBuffer.readString(responseCharset))}\n")
+                    if (isProbablyUtf8(preview)) {
+                        append("body-preview: ${prettyJson(preview)}\n")
+                    } else {
+                        append("<-- END HTTP (binary body preview omitted)\n")
+                    }
                 }
+                append("<-- HTTP id=$requestId END\n")
             }
 
-            Log.d("LvHttp ---- END HTTP>", requestBuffer.toString())
+            Log.d(TAG, responseBuffer.toString())
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 保证任何异常不会影响正常返回
+            Log.e(TAG, String.format(Locale.getDefault(), "LogInterceptor failed for id=%d: %s", requestId, e.message), e)
         }
 
         return response
@@ -117,6 +151,19 @@ class LogInterceptor : Interceptor {
         } catch (_: JsonSyntaxException) {
             content // 非 JSON 时返回原始字符串
         }
+    }
+
+    // helper: 判断字符串是否很可能是 utf8 可读文本（针对 peek 的字符串）
+    private fun isProbablyUtf8(s: String): Boolean {
+        // 简单策略：如果包含大量不可见控制字符则认为不是文本
+        var control = 0
+        var total = 0
+        for (ch in s) {
+            total++
+            if (ch.isISOControl() && !ch.isWhitespace()) control++
+            if (total >= 64) break
+        }
+        return control * 100 / (if (total == 0) 1 else total) < 10
     }
 
     private fun Buffer.isProbablyUtf8(): Boolean {
