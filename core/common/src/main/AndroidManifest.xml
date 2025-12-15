@@ -16,6 +16,10 @@
                 android:name="com.hash.router.AInitializer"
                 android:value="androidx.startup" />
 
+            <meta-data
+                android:name="com.hash.common.storage.MMKVInitializer"
+                android:value="androidx.startup" />
+
 
         </provider>
     </application>

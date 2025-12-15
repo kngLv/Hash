@@ -11,11 +11,10 @@
     <string name="common_year">年</string>
     <string name="common_month">月</string>
     <string name="common_day">日</string>
-
     <string name="common_hour">时</string>
     <string name="common_minute">分</string>
     <string name="common_second">秒</string>
 
+    <string name="common_helper">帮助</string>
 
-    <string name="login_welcome_back">Welcome back</string>
 </resources>

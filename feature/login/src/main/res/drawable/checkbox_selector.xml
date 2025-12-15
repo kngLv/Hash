@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        说明：selector 的第一个匹配项会被使用。这里原本把 state_selected 的 drawable 写反了，
+        导致 view.isSelected = false 时显示了选中图标，反之亦然。
+        正确顺序：先放 state_selected="true" 的选中态，再放 false 的未选中态；最好再加一个默认项作为兜底。
+    -->
+    <!-- checked / selected state -->
+    <item android:state_selected="true" android:drawable="@mipmap/icon_selected" />
+    <!-- unchecked / unselected state -->
+    <item android:state_selected="false" android:drawable="@mipmap/icon_unselected" />
+    <!-- fallback (shouldn't normally be reached) -->
+    <item android:drawable="@mipmap/icon_unselected" />
+</selector>

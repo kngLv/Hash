@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/core/src/main/java/com/hash/core/user/JsonSerializer.kt">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/core/src/main/java/com/hash/core/user/JsonSerializer.kt" />
+              <option name="updatedContent" value="&#10;import kotlinx.serialization.json.Json&#10;&#10;internal val json = Json { encodeDefaults = true; explicitNulls = false }&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

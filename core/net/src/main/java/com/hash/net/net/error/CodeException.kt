@@ -10,7 +10,7 @@ import java.lang.Exception
  * @description
  */
 class CodeException(val code: Int, private val msg: String) :
-    Exception("CodeError：$code $msg") {
+    Exception("$code $msg") {
     override fun toString(): String {
         return "CodeException(code=$code, msg='$msg')"
     }

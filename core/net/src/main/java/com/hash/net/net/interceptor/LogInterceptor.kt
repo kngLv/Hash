@@ -6,7 +6,6 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import okhttp3.Headers
 import okhttp3.Interceptor
-import okhttp3.MediaType
 import okhttp3.Response
 import okio.Buffer
 import java.io.EOFException
@@ -51,7 +50,7 @@ class LogInterceptor : Interceptor {
 
         try {
             val responseBody = response.body ?: return response
-            val mediaType: MediaType? = responseBody.contentType()
+            val mediaType = responseBody.contentType()
             val isTextType = mediaType?.type == "text" || mediaType?.subtype?.contains("json", true) == true
             val contentLength = responseBody.contentLength()
 
@@ -59,6 +58,9 @@ class LogInterceptor : Interceptor {
                 append("\n{Code:${response.code}\n")
                 append("{URL：${response.request.url}\n")
                 append("{Content-Type：$mediaType  Content-Length：${contentLength}\n")
+                response.headers.forEach {
+                    append("{Header: ${it.first}=${it.second}}\n")
+                }
             }
 
             // 对于大文件/非文本内容，不再尝试读取 body，避免阻塞下载
@@ -70,18 +72,25 @@ class LogInterceptor : Interceptor {
 
             // 文本且体积可控的响应，尝试读取少量预览
             val source = responseBody.source()
-            source.request(0) // 尝试 buffer 一小部分，而不是 Long.MAX_VALUE
+            val peekBytes = 1024L // 预览最多 1KB
+            source.request(peekBytes) // 请求最多 1KB 到缓冲区用于预览
             val bufferResponse = source.buffer
 
             val previewBuffer = Buffer()
-            val byteCount = bufferResponse.size.coerceAtMost(1024) // 预览最多 1KB
+            val byteCount = bufferResponse.size.coerceAtMost(peekBytes)
             bufferResponse.copyTo(previewBuffer, 0, byteCount)
+
+            // 使用响应的 charset 进行解码（fallback 到 UTF-8）
+            val responseCharset: Charset = run {
+                val mt = responseBody.contentType()
+                if (mt == null) StandardCharsets.UTF_8 else mt.charset(StandardCharsets.UTF_8) ?: StandardCharsets.UTF_8
+            }
 
             requestBuffer.apply {
                 if (!previewBuffer.isProbablyUtf8()) {
                     append("<-- END HTTP (binary body preview omitted)\n")
                 } else {
-                    append("body-preview：${prettyJson(previewBuffer.readString(charset))}\n")
+                    append("body-preview：${prettyJson(previewBuffer.readString(responseCharset))}\n")
                 }
             }
 
@@ -105,7 +114,7 @@ class LogInterceptor : Interceptor {
         return try {
             val jsonElement = JsonParser.parseString(content)
             GsonBuilder().setPrettyPrinting().create().toJson(jsonElement)
-        } catch (e: JsonSyntaxException) {
+        } catch (_: JsonSyntaxException) {
             content // 非 JSON 时返回原始字符串
         }
     }
@@ -115,9 +124,9 @@ class LogInterceptor : Interceptor {
             val prefix = Buffer()
             val byteCount = size.coerceAtMost(64)
             copyTo(prefix, 0, byteCount)
-            for (i in 0 until 16) {
+            repeat(16) {
                 if (prefix.exhausted()) {
-                    break
+                    return true
                 }
                 val codePoint = prefix.readUtf8CodePoint()
                 if (Character.isISOControl(codePoint) && !Character.isWhitespace(codePoint)) {

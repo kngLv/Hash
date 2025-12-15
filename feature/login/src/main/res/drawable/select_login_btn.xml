@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    select_login_btn.xml
+
+    用途：用于登录方式选择按钮的背景状态（checked / pressed / disabled / default）
+    说明：
+    - 推荐与可 check 的控件配合使用（例如 MaterialButton 设置 app:checkable="true"），
+      这样控件的 checked 状态会触发此 selector 中的 android:state_checked 条目。
+    - 语义颜色来自 core/common 的 colors（buttonPrimary/buttonPrimaryPressed/buttonDisabled/buttonGhostBackground/buttonOutlineBorder），
+      可在 values/colors.xml 和 values-night/colors.xml 中分别定义浅/夜间值以支持自动切换。
+    - 形状为圆角 pill，如果你需要完全圆形按钮可改为 android:shape="oval"。
+
+    使用示例（布局）：
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/loginOption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:checkable="true"
+        style="@style/Widget.Hash.Button.Ghost"
+        android:background="@drawable/select_login_btn"
+        android:text="手机号" />
+
+    在代码中切换：
+    kotlin:
+      val btn = findViewById<MaterialButton>(R.id.loginOption)
+      btn.isChecked = true // 选中
+      btn.setOnClickListener { btn.isChecked = !btn.isChecked }
+
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <!-- Pressed 状态（触摸反馈） -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/buttonPrimaryPressed" />
+            <corners android:radius="@dimen/dp_20" />
+        </shape>
+    </item>
+
+    <!-- Selected 状态（选中） -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/buttonPrimary" />
+            <corners android:radius="@dimen/dp_20" />
+        </shape>
+    </item>
+
+    <!-- Selected 状态（未选中） -->
+    <item android:state_selected="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/buttonDisabled" />
+            <corners android:radius="@dimen/dp_20" />
+        </shape>
+    </item>
+
+
+    <!-- Default 状态（未选中，幽灵/Outline 风格） -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/buttonGhostBackground" />
+            <stroke android:width="1dp" android:color="@color/buttonOutlineBorder" />
+            <corners android:radius="@dimen/dp_20" />
+        </shape>
+    </item>
+
+</selector>

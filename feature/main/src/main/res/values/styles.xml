@@ -27,7 +27,7 @@
         <!--        &lt;!&ndash; 应用的强调色，CheckBox RadioButton Switch 等一般控件的选中效果默认采用该颜色 &ndash;&gt;-->
         <!--        <item name="colorAccent">@color/primary</item>-->
         <!--        &lt;!&ndash; 默认文本颜色，Button、TextView 的文字颜色 &ndash;&gt;-->
-        <!--        <item name="android:textColor">@color/textColor</item>-->
+        <!--        <item name="android:textColor">@color/textPrimary</item>-->
         <!--        &lt;!&ndash; 默认字体大小，Button、TextView 的字体大小 &ndash;&gt;-->
         <!--        <item name="android:textSize">14sp</item>-->
         <!--        &lt;!&ndash; 默认提示颜色，Button、TextView 的提示文字颜色 &ndash;&gt;-->

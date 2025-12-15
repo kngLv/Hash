@@ -2,10 +2,15 @@ package com.hash.net.api
 
 import com.hash.bean.home.BannerListBean
 import com.hash.bean.home.HomeListBean
+import com.hash.bean.mine.UserInfoBean
 import com.hash.net.response.WanResponse
 import okhttp3.ResponseBody
+import retrofit2.http.Body
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Streaming
 
@@ -26,8 +31,6 @@ interface WanAndroidApi {
     @GET("/article/list/{page}/json")
     suspend fun homeList(@Path("page") page: Int): WanResponse<HomeListBean>
 
-    @GET("/article/list/{page}/json")
-    suspend fun home(@Path("page") page: Int): Int
 
     /** 常用网站 */
     @GET("/friend/json")

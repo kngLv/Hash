@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <data>
 
@@ -9,78 +10,294 @@
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
+        android:layout_height="match_parent"
+        android:background="@color/white">
 
         <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/logo"
-            android:layout_width="@dimen/dp_80"
-            android:layout_height="@dimen/dp_80"
-            android:layout_marginTop="@dimen/dp_141"
-            android:src="@mipmap/ic_launcher"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:id="@+id/back"
+            android:layout_width="@dimen/dp_18"
+            android:layout_height="@dimen/dp_18"
+            android:layout_marginStart="@dimen/dp_20"
+            android:layout_marginTop="@dimen/dp_12"
+            android:src="@mipmap/icon_close"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/helper"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/dp_6"
-            android:text="@string/login_welcome_back"
-            android:textColor="@color/textColor"
-            android:textSize="@dimen/sp_20"
+            android:layout_marginEnd="@dimen/dp_20"
+            android:text="@string/common_helper"
+            android:textColor="@color/textSecondary"
+            android:textSize="@dimen/sp_14"
+            app:layout_constraintBottom_toBottomOf="@id/back"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/logo" />
-
-
-        <androidx.cardview.widget.CardView
-            android:id="@+id/input_card"
-            android:layout_width="@dimen/dp_327"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/dp_70"
-            android:elevation="5dp"
-            app:cardBackgroundColor="@color/white"
-            app:cardCornerRadius="@dimen/dp_16"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/logo">
-
-            <androidx.appcompat.widget.LinearLayoutCompat
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="@dimen/dp_24"
-                android:paddingVertical="@dimen/dp_24">
-
-                <include
-                    android:id="@+id/layout_number"
-                    layout="@layout/layout_input"
-                    app:icon="@{R.mipmap.login_number}"
-                    app:showPass="@{false}" />
-
-                <View
-                    android:layout_width="wrap_content"
-                    android:layout_height="@dimen/dp_12" />
-
-                <include
-                    android:id="@+id/layout_pass"
-                    layout="@layout/layout_input"
-                    app:icon="@{R.mipmap.login_pass}"
-                    app:showPass="@{false}" />
-            </androidx.appcompat.widget.LinearLayoutCompat>
-
-        </androidx.cardview.widget.CardView>
+            app:layout_constraintTop_toTopOf="@id/back" />
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:layout_width="@dimen/dp_260"
-            android:layout_height="@dimen/dp_50"
-            android:layout_marginTop="50dp"
-            android:background="@color/red"
+            android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/dp_16"
+            android:text="@string/login_input_number_hint"
+            android:textColor="@color/textTitle"
+            android:textSize="@dimen/sp_22"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/input_card" />
+            app:layout_constraintTop_toBottomOf="@id/back" />
+
+        <!-- 手机号输入框 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/phone_layout"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dp_40"
+            android:layout_marginStart="@dimen/dp_40"
+            android:layout_marginTop="@dimen/dp_40"
+            android:layout_marginEnd="@dimen/dp_40"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@id/title">
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/country_code"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/_86"
+                android:textColor="@color/textBody"
+                android:textSize="@dimen/sp_16" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:layout_width="@dimen/dp_18"
+                android:layout_height="@dimen/dp_18"
+                android:padding="@dimen/dp_3"
+                android:src="@mipmap/icon_down_arrow" />
+
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/phone_number"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/dp_10"
+                android:layout_weight="1"
+                android:background="@null"
+                android:gravity="center|start"
+                android:hint="@string/login_input_number_hint"
+                android:text="15129379467"
+                android:inputType="phone"
+                android:maxLength="13"
+                android:textColor="@color/textBody"
+                android:textColorHint="@color/textHint"
+                android:textCursorDrawable="@drawable/edit_text_cursor"
+                android:textSize="@dimen/sp_16" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/clear_phone"
+                android:layout_width="@dimen/dp_20"
+                android:layout_height="@dimen/dp_20"
+                android:src="@mipmap/icon_delete"
+                android:visibility="visible" />
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:background="@color/divider"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/phone_layout" />
+
+
+        <!-- 密码输入框 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/password_layout"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/dp_40"
+            android:layout_marginTop="@dimen/dp_15"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/phone_layout">
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/password"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="111111"
+                android:background="@null"
+                android:gravity="start|center"
+                android:hint="@string/login_input_password_hint"
+                android:inputType="textPassword"
+                android:maxLength="20"
+                android:textColor="@color/textBody"
+                android:textColorHint="@color/textHint"
+                android:textCursorDrawable="@drawable/edit_text_cursor"
+                android:textSize="@dimen/sp_16" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/toggle_password"
+                android:layout_width="@dimen/dp_20"
+                android:layout_height="@dimen/dp_20"
+                android:src="@mipmap/icon_password_invisible" />
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:background="@color/divider"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/password_layout" />
+
+
+        <!-- 验证码登录和忘记密码链接 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/sms_layout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/dp_15"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/password_layout">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:layout_width="@dimen/dp_12"
+                android:layout_height="@dimen/dp_12"
+                android:layout_gravity="center"
+                android:src="@mipmap/icon_switch" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/sms_login"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/dp_3"
+                android:drawablePadding="@dimen/dp_5"
+                android:text="@string/phone_code_login"
+                android:textColor="@color/textLink"
+                android:textSize="@dimen/sp_14" />
+
+            <Space
+                android:layout_width="@dimen/dp_0"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/forgot_password"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/login_forgot_password"
+                android:textColor="@color/textLink"
+                android:textSize="@dimen/sp_14" />
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!-- 登录按钮 -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/login_button"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/dp_45"
+            android:layout_marginTop="@dimen/dp_30"
+            android:background="@drawable/select_login_btn"
+            android:gravity="center"
+            android:text="@string/login_button_text"
+            android:textColor="@color/white"
+            android:textSize="@dimen/sp_16"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/sms_layout" />
+
+        <!-- 用户协议复选框 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/agreement_layout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/dp_15"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/login_button">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/agreement_checkbox"
+                android:layout_width="@dimen/dp_18"
+                android:layout_height="@dimen/dp_18"
+                android:layout_gravity="top"
+                android:src="@drawable/checkbox_selector"
+                app:binding_onSelect="@{false}" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/agreement_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/dp_8"
+                android:layout_weight="1"
+                android:lineSpacingExtra="@dimen/dp_5"
+                android:textSize="@dimen/sp_12" />
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!-- 第三方登录选项 -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/dp_60"
+            android:gravity="start"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@id/phone_layout"
+            app:layout_constraintStart_toStartOf="@id/phone_layout"
+            app:layout_constraintTop_toBottomOf="@id/agreement_layout">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/wechat_login"
+                android:layout_width="@dimen/dp_34"
+                android:layout_height="@dimen/dp_34"
+                android:background="@drawable/shape_share_bg"
+                android:padding="@dimen/dp_4"
+                android:src="@mipmap/icon_wechat"
+                app:layout_constraintEnd_toStartOf="@id/qq_login"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/qq_login"
+                android:layout_width="@dimen/dp_34"
+                android:layout_height="@dimen/dp_34"
+                android:background="@drawable/shape_share_bg"
+                android:padding="@dimen/dp_4"
+                android:src="@mipmap/icon_qq"
+                app:layout_constraintEnd_toStartOf="@id/weibo_login"
+                app:layout_constraintStart_toEndOf="@id/wechat_login"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/weibo_login"
+                android:layout_width="@dimen/dp_34"
+                android:layout_height="@dimen/dp_34"
+                android:background="@drawable/shape_share_bg"
+                android:padding="@dimen/dp_4"
+                android:src="@mipmap/icon_wb"
+                app:layout_constraintEnd_toStartOf="@id/account_retrieve"
+                app:layout_constraintStart_toEndOf="@id/qq_login"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/account_retrieve"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/round_20_shape"
+                android:paddingHorizontal="@dimen/dp_15"
+                android:paddingVertical="@dimen/dp_8"
+                android:text="@string/account_retrieval"
+                android:textColor="@color/textSecondary"
+                android:textSize="@dimen/sp_14"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/weibo_login"
+                app:layout_constraintTop_toTopOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

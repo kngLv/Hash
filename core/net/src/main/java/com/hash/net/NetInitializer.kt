@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.startup.Initializer
 import com.hash.common.ext.showToast
-import com.hash.net.api.WanAndroidApi
+import com.hash.net.interceptor.WanCookieInterceptor
 import com.hash.net.net.LvHttp
 import com.hash.net.net.error.CodeException
 import com.hash.net.net.error.ErrorKey
@@ -23,13 +23,14 @@ class NetInitializer : Initializer<Unit> {
             .setBaseUrl(NetConstants.BASE_URL)
             //是否开启缓存
             .isCache(false)
-            .setCode(200,0)
+            .setCode(0)
             //是否打印 log
             .isLog(true)
+            .addInterceptor(WanCookieInterceptor())
             //对 Code 异常的处理，可自定义,参考 ResponseData 类
             .setErrorDispose(ErrorKey.ErrorCode, ErrorValue {
                 (it as? CodeException)?.run {
-                    "code:${it.code}".showToast()
+                    "${it.message}".showToast()
                 }
             })
             //全局异常处理，参考 ILaunch.kt ，可自定义异常处理，参考 ErrorKey 即可

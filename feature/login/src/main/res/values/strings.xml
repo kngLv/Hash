@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_input_number_hint">请输入账号</string>
+    <string name="login_input_password_hint">请输入密码</string>
+    <string name="login_forgot_password">忘记密码？</string>
+    <string name="login_button_text">登录</string>
+    <string name="login_no_account">还没有账号？</string>
+    <string name="login_register_now">立即注册</string>
+    <string name="phone_number_login">手机号登录</string>
+    <string name="login_invalid_number">请输入有效的手机号</string>
+    <string name="login_invalid_password">密码长度不能少于6位</string>
+
+    <string name="phone_code_login">验证码登录</string>
+    <string name="login_send_code">发送验证码</string>
+    <string name="login_input_code_hint">请输入验证码</string>
+    <string name="login_invalid_code">请输入有效的验证码</string>
+    <string name="login_code_sent">验证码已发送</string>
+    <string name="login_resend_code">重新发送验证码</string>
+    <string name="account_retrieval">账号找回</string>
+    <string name="_86">+86</string>
+
+    <string name="login_agree">我已阅读并同意</string>
+    <string name="login_user_agreement">《用户协议》</string>
+    <string name="login_privacy_policy">《隐私政策》</string>
+    <string name="login_minor_protection">《未成年人个人信息保护规则》</string>
+    <string name="login_please_agree">请阅读并同意以下条款</string>
+
+    <string name="login_success">登录成功</string>
+    <string name="login_failed">登录失败，请重试</string>
+</resources>

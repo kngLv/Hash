@@ -23,7 +23,7 @@ abstract class AbstractRequestAction<T> {
     /**
      * 请求结束时的回调（无论成功/失败均会调用，用于关闭加载态）
      */
-    protected var end: (() -> Unit)? = null
+    protected var end: ((Boolean) -> Unit)? = null
 
     /**
      * 请求发生异常时的回调（例如抛出 Exception 时）

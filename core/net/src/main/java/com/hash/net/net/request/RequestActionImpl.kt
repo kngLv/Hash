@@ -1,5 +1,7 @@
 package com.hash.net.net.request
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.hash.net.net.response.IResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +76,7 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
     /**
      * 注册：请求结束的回调（继承自 AbstractRequestAction.end）
      */
-    fun onEnd(block: () -> Unit): RequestActionImpl<T> = apply { this.end = block }
+    fun onEnd(block: (Boolean) -> Unit): RequestActionImpl<T> = apply { this.end = block }
 
 
     /**
@@ -112,19 +114,23 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
      */
     fun enqueue(scope: CoroutineScope = CoroutineScope(Dispatchers.Main)) {
         scope.launch {
+            var result = false
             // protect begin callback
             dispatchBegin()
             try {
-                val state = LvRequest().request(block) // 发起请求
-                when (state) {
-                    is ResultState.SuccessState -> dispatchBody(state.body)
+                when (val state = LvRequest().request(block)) { // 发起请求
+                    is ResultState.SuccessState -> {
+                        result = true
+                        dispatchBody(state.body)
+                    }
+
                     is ResultState.CodeErrorState -> dispatchErrorCode(state.code, state.body)
                     is ResultState.ErrorState -> dispatchError(state.error)
                 }
             } catch (e: Exception) {
                 dispatchError(e)
             } finally {
-                dispatchEnd()
+                dispatchEnd(result)
             }
         }
         return
@@ -135,10 +141,14 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
      */
     suspend fun execute(): T? {
         dispatchBegin()
+        var result = false
         try {
-            val state = LvRequest().request(block)
-            return when (state) {
-                is ResultState.SuccessState -> state.body
+            return when (val state = LvRequest().request(block)) {
+                is ResultState.SuccessState -> {
+                    result = true
+                    state.body
+                }
+
                 is ResultState.ErrorState -> {
                     dispatchError(state.error)
                     null
@@ -153,7 +163,15 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
             dispatchError(e)
             return null
         } finally {
-            dispatchEnd()
+            dispatchEnd(result)
+        }
+    }
+
+    suspend fun responseState(): ResultState<T> {
+        return try {
+            LvRequest().request(block)
+        } catch (e: Exception) {
+            ResultState.ErrorState(error = e)
         }
     }
 
@@ -168,9 +186,9 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
         }
     }
 
-    private fun dispatchEnd() {
+    private fun dispatchEnd(result: Boolean) {
         try {
-            end?.invoke()
+            end?.invoke(result)
         } catch (e: Exception) {
             e.printStackTrace()
         }

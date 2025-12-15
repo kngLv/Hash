@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        夜间主题颜色（values-night/colors.xml）
+
+        说明：
+        - 与 `values/colors.xml` 保持相同的资源名（例如 textTitle/textBody/textHint/texthint/divider/placeholder 等），
+          以避免在非夜间配置中找不到资源导致的问题。
+        - 这里定义的是夜间（dark）主题下的颜色值。请在样式/布局中使用语义色名（例如 @color/textBody 或 @color/colorOnBackground），
+          系统切换到夜间模式时会自动加载此文件中的值（如果使用 DayNight 或 UI_MODE_NIGHT 配置）。
+    -->
+
+    <!-- 主色（品牌色） -->
+    <color name="primary">#F50057</color>
+
+    <!-- 主要背景与 surface（夜间主题） -->
+    <color name="background">#FF121212</color>
+    <color name="surface">#FF1E1E1E</color>
+
+    <!-- 对应背景上的前景 / 文本颜色（使用 colorOn* 命名） -->
+    <color name="colorOnPrimary">#FFFFFFFF</color>
+    <color name="colorOnBackground">#FFFFFFFF</color>
+    <color name="colorOnSurface">#FFFFFFFF</color>
+
+    <!-- 文本语义色（按优先级） -->
+    <color name="textTitle">#FFFFFFFF</color>
+    <color name="textBody">#FFFFFFFF</color>
+    <color name="textSecondary">#B3FFFFFF</color>
+    <color name="textCaption">#8AFFFFFF</color>
+    <color name="textLabel">#E6FFFFFF</color>
+    <color name="textButton">#FFFFFFFF</color>
+
+    <!-- 状态/提示/特殊用途 -->
+    <color name="textHint">#80FFFFFF</color>
+    <color name="textDisabled">#66FFFFFF</color>
+    <color name="textLink">#FF90CAF9</color>
+    <color name="textError">#FFFF6B6B</color>
+    <color name="textSuccess">#FF4CAF50</color>
+
+    <!-- 分割线 / 边框 -->
+    <color name="divider">#FF2A2A2A</color>
+
+    <!-- 透明与通用色 -->
+    <color name="transparent">#00000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="gray">#FF808080</color>
+
+    <!-- 备用 / 语义色（便于组件直接引用） -->
+    <color name="red">#FFFF0000</color>
+    <color name="green">#FF008000</color>
+    <color name="blue">#FF0000FF</color>
+    <color name="orange">#FFFFA500</color>
+
+    <!-- 按钮颜色（夜间主题） -->
+    <!-- 说明：对应浅色的 button* 语义色，确保夜间模式下也有对应的值 -->
+    <color name="buttonPrimary">#F50057</color>
+    <color name="buttonPrimaryPressed">#C20044</color>
+
+    <color name="buttonSecondary">#FF2A2A2A</color>
+    <color name="buttonSecondaryPressed">#FF1F1F1F</color>
+
+    <color name="buttonDestructive">#FFFF8A80</color>
+    <color name="buttonDestructivePressed">#FFFF5252</color>
+
+    <color name="buttonGhostBackground">#00000000</color>
+    <color name="buttonOutlineBorder">#FF424242</color>
+
+    <color name="buttonDisabled">#FF424242</color>
+    <color name="buttonElevatedBackground">#FF1E1E1E</color>
+
+    <!-- 兼容/占位色（用于占位 / 默认图标等） -->
+    <color name="placeholder">#FFBDBDBD</color>
+
+</resources>

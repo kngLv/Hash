@@ -22,7 +22,7 @@ class IndicatorNavAdapter(
     private val textSize: Float = 16F,
     private val isIndicator: Boolean = true,
     private val color: Int = R.color.primary,
-    private val unColor: Int = R.color.textColor,
+    private val unColor: Int = R.color.textSecondary,
     val onClick: (Int) -> Unit
 ) : CommonNavigatorAdapter() {
 

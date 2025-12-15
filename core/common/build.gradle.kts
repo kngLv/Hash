@@ -49,14 +49,16 @@ dependencies {
     api(libs.androidx.appcompat)
     api(project(":core:widget")) //widget模块
 
+    api(project(":core:bean")) // provide shared bean classes like UserInfoBean
+
     api(libs.androidx.activity.ktx) //activity扩展
     api(libs.androidx.fragment.ktx) //fragment扩展
 
     api(libs.androidx.startup.runtime)//启动库
 
     implementation(libs.immersionbar) // 沉浸式状态栏基础依赖包，必须要依赖
-    implementation(libs.immersionbar.ktx) //kotlin扩展（可选）
-    implementation(libs.immersionbar.components) //fragment快速实现（可选）
+    implementation(libs.immersionbar.ktx) //kotlin扩展（可选)
+    implementation(libs.immersionbar.components) //fragment快速实现（可选)
     api(libs.lottie) //lottie动画库
 
     api("com.jakewharton.timber:timber:4.7.1")
@@ -69,5 +71,6 @@ dependencies {
     api("com.github.hackware1993:MagicIndicator:1.7.0")
 
     api("io.github.cymchad:BaseRecyclerViewAdapterHelper4:4.1.4")
-
+    // MMKV: fast key-value storage. Use core mmkv artifact.
+    implementation("com.tencent:mmkv:2.3.0")
 }

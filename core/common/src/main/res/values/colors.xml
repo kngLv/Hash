@@ -1,89 +1,89 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+        应用默认（浅色）主题颜色（values/colors.xml）
+
+        说明：
+        - 使用常见的 "colorOn*" 命名约定（例如 colorOnPrimary、colorOnBackground、colorOnSurface），与夜间文件保持一致。
+        - 如果需要在某个背景上使用专用前景色，使用相应的 colorOn*（例如 colorOnPrimary）。
+    -->
+
+    <!-- 主色（品牌色） -->
     <color name="primary">#F50057</color>
+
+    <!-- 主要背景与 surface（浅色主题） -->
     <color name="background">#FFFFFFFF</color>
-    <color name="page_background">#FFF4F4F4</color>
+    <color name="surface">#FFFFFFFF</color>
 
+    <!-- 对应背景上的前景 / 文本颜色（使用 colorOn* 命名） -->
+    <!-- colorOnPrimary: 放在 primary 背景上的文字 / 图标（例如带颜色的按钮上的文字） -->
+    <color name="colorOnPrimary">#FFFFFFFF</color>
+    <!-- colorOnBackground: 放在应用整体背景 background 上的主要文字 -->
+    <color name="colorOnBackground">#FF000000</color>
+    <!-- colorOnSurface: 放在 surface（卡片 / 弹窗 / 面板）上的文字 -->
+    <color name="colorOnSurface">#FF000000</color>
 
-    <color name="input_background">#000000</color>
-    <color name="input_hint_color">#9CA3AF</color>
-    <color name="input_text_color">#000000</color>
+    <!-- 文本语义色（按优先级） -->
+    <!-- textTitle: 页面/卡片标题，最高优先级 -->
+    <color name="textTitle">#FF000000</color>
+    <!-- textBody: 正文/主要信息 -->
+    <color name="textBody">#DE000000</color>
+    <!-- textSecondary: 次要文字（描述、辅助信息） -->
+    <color name="textSecondary">#8A000000</color>
+    <!-- textCaption: 更低优先级的文字（注释、元信息） -->
+    <color name="textCaption">#61000000</color>
+    <!-- textLabel: 表单字段 label / 小标题 -->
+    <color name="textLabel">#99000000</color>
+    <!-- textButton: 按钮上的文字（若按钮使用 primary 背景，建议使用 colorOnPrimary） -->
+    <color name="textButton">#FFFFFFFF</color>
 
-    <!--文字相关-->
-    <color name="textColor">#FF111A34</color>
-    <color name="textWhiteColor">#FFFFFFFF</color>
-    <color name="textMinorColor">#FF666F83</color>
+    <!-- 状态、提示与特殊用途文字 -->
+    <color name="textHint">#60000000</color>
+    <color name="textDisabled">#42000000</color>
+    <color name="textLink">#FF1B3452</color>
+    <color name="textError">#FFD32F2F</color>
+    <color name="textSuccess">#FF2E7D32</color>
 
-    <color name="divider">#FFEEEEEE</color>
+    <!-- 分割线 / 边框 -->
+    <color name="divider">#1F000000</color>
 
-
-    <!-- 透明色 -->
+    <!-- 透明与通用色 -->
     <color name="transparent">#00000000</color>
-    <!-- 熊猫色（黑白背景通吃） -->
-    <color name="panda">#FF757575</color>
-
-    <!-- 白色 -->
     <color name="white">#FFFFFFFF</color>
-    <color name="white95">#F2FFFFFF</color>
-    <color name="white90">#E6FFFFFF</color>
-    <color name="white85">#D9FFFFFF</color>
-    <color name="white80">#CCFFFFFF</color>
-    <color name="white75">#BFFFFFFF</color>
-    <color name="white70">#B3FFFFFF</color>
-    <color name="white65">#A6FFFFFF</color>
-    <color name="white60">#99FFFFFF</color>
-    <color name="white55">#8CFFFFFF</color>
-    <color name="white50">#80FFFFFF</color>
-    <color name="white45">#73FFFFFF</color>
-    <color name="white40">#66FFFFFF</color>
-    <color name="white35">#59FFFFFF</color>
-    <color name="white30">#4DFFFFFF</color>
-    <color name="white25">#40FFFFFF</color>
-    <color name="white20">#33FFFFFF</color>
-    <color name="white15">#26FFFFFF</color>
-    <color name="white10">#1AFFFFFF</color>
-    <color name="white5">#0DFFFFFF</color>
-
-    <!-- 黑色 -->
     <color name="black">#FF000000</color>
-    <color name="black95">#F2000000</color>
-    <color name="black90">#E6000000</color>
-    <color name="black85">#D9000000</color>
-    <color name="black80">#CC000000</color>
-    <color name="black75">#B000000F</color>
-    <color name="black70">#B3000000</color>
-    <color name="black65">#A6000000</color>
-    <color name="black60">#99000000</color>
-    <color name="black55">#8C000000</color>
-    <color name="black50">#80000000</color>
-    <color name="black45">#73000000</color>
-    <color name="black40">#66000000</color>
-    <color name="black35">#59000000</color>
-    <color name="black30">#4D000000</color>
-    <color name="black25">#40000000</color>
-    <color name="black20">#33000000</color>
-    <color name="black15">#26000000</color>
-    <color name="black10">#1A000000</color>
-    <color name="black5">#0D000000</color>
-
-    <!-- 灰色 -->
     <color name="gray">#FF808080</color>
-    <!-- 红色 -->
+
+    <!-- 备用 / 语义色（便于组件直接引用） -->
     <color name="red">#FFFF0000</color>
-    <!-- 金色 -->
-    <color name="gold">#FFFFD700</color>
-    <!-- 黄色 -->
-    <color name="yellow">#FFFFFF00</color>
-    <!-- 绿色 -->
     <color name="green">#FF008000</color>
-    <!-- 蓝色 -->
     <color name="blue">#FF0000FF</color>
-    <!-- 紫色 -->
-    <color name="purple">#FF800080</color>
-    <!-- 粉色 -->
-    <color name="pink">#FFFFC0CB</color>
-    <!-- 橙色 -->
     <color name="orange">#FFFFA500</color>
 
+    <!-- 按钮背景语义色（浅色主题） -->
+    <!-- 说明：按语义定义按钮背景，使用 selector 管理按下/禁用状态。命名以 button 开头。 -->
+    <!-- 主要按钮（Primary） -->
+    <color name="buttonPrimary">#F50057</color>               <!-- 主色，优先操作 -->
+    <color name="buttonPrimaryPressed">#D4004A</color>       <!-- 主色按下态（深一层） -->
+
+    <!-- 次要按钮（Secondary） -->
+    <color name="buttonSecondary">#FFEEEEEE</color>          <!-- 次要按钮背景（浅灰） -->
+    <color name="buttonSecondaryPressed">#FFE0E0E0</color>   <!-- 次要按钮按下态 -->
+
+    <!-- 危险类按钮（Destructive） -->
+    <color name="buttonDestructive">#D32F2F</color>          <!-- 删除/危险操作 -->
+    <color name="buttonDestructivePressed">#C62828</color>
+
+    <!-- 透明/幽灵按钮（无填充，仅文字或边框） -->
+    <color name="buttonGhostBackground">#00000000</color>
+    <color name="buttonOutlineBorder">#FFBDBDBD</color>
+
+    <!-- 禁用态与抬起态 -->
+    <color name="buttonDisabled">#FFBDBDBD</color>
+    <color name="buttonElevatedBackground">#FFFFFFFF</color>
+
+    <!-- 按钮前景（文字/图标）优先复用现有语义色：colorOnPrimary / textBody / colorOnSurface -->
+
+    <!-- 兼容/占位色（用于占位 / 默认图标等） -->
+    <color name="placeholder">#FFBDBDBD</color>
 
 </resources>

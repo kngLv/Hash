@@ -11,7 +11,6 @@ fun View.setSelect(isSelect: Boolean) {
     isSelected = isSelect
 }
 
-
 @BindingAdapter("binding_visibleOrGone")
 fun View.setVisibleOrGone(visible: Boolean) {
     this.visibility = if (visible) View.VISIBLE else View.GONE

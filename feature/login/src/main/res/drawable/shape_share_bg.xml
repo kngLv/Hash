@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    shape_share_bg.xml
+
+    圆形（oval）背景示例
+
+    用途：用于需要圆形背景的控件（例如分享按钮、头像占位、圆形图标背景等）。
+
+    使用说明：
+    - 当作为 View 的 background 使用时，View 本身的宽高决定最终大小；为了呈现正圆，请确保 View 为正方形（width == height）。
+    - 如果需要固定大小（不依赖 View 大小），可以取消注释 <size> 节点并设置合适的 dp。
+    - 如需边框（outline），可取消注释 <stroke> 节点并指定颜色与宽度。
+
+    示例用法（布局）：
+    <View
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@drawable/shape_share_bg" />
+
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <!-- 填充颜色（根据项目语义色替换） -->
+    <solid android:color="@color/white" />
+
+    <!-- 可选边框：取消注释并替换颜色 -->
+
+    <stroke
+        android:width="1dp"
+        android:color="@color/buttonOutlineBorder" />
+
+    <!-- 可选固定大小：取消注释以在没有宿主 View 时让 drawable 自身具有大小 -->
+    <!--
+    <size
+        android:width="48dp"
+        android:height="48dp" />
+    -->
+
+</shape>
