@@ -25,3 +25,14 @@ fun View.setVisibleOrInvisible(visible: Boolean) {
 fun TextView.setColor(color: Int) {
     setTextColor(ResourcesCompat.getColor(resources, color, null))
 }
+
+@BindingAdapter("binding_setText")
+fun TextView.setTextNullable(text: String?) {
+    // support nullable input and be defensive against unexpected errors
+    try {
+        this.text = text ?: ""
+    } catch (_: Exception) {
+        // fallback to empty string if anything goes wrong
+        this.text = ""
+    }
+}

@@ -4,9 +4,13 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
+import com.google.android.material.appbar.AppBarLayout
+import android.animation.ArgbEvaluator
+import android.graphics.Color
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
 import com.hash.common.base.fragment.BaseBindingFragment
+import com.hash.common.ext.getColor
 import com.hash.mine.databinding.FragmentMineBinding
 import com.hash.mine.viewModel.MineViewModel
 import com.hash.repository.login.LoginState
@@ -21,12 +25,18 @@ import kotlinx.coroutines.flow.zip
  * @package com.hash.mine
  * @author 345 QQ:1831712732
  * @time 2024/12/15 20:27
- * @description
+ * @description 我的页面 Fragment
  */
 @Route(path = RouterFragmentPath.Mine.MINE)
 class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
 
     val viewModel by viewModels<MineViewModel>()
+
+    // AppBar 偏移监听引用，便于在 onDestroyView 中移除，防止泄露
+    private var appBarOffsetListener: AppBarLayout.OnOffsetChangedListener? = null
+
+    // 标记当前头像是否已显示到位，避免重复触发动画
+    private var isAvatarVisible: Boolean = false
 
     // 保存上次在界面上渲染的 userInfo，用于避免重复渲染
     private var lastDisplayedUserInfo: com.hash.bean.mine.UserInfoBean? = null
@@ -34,7 +44,7 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
     override fun layoutId(): Int = R.layout.fragment_mine
 
     override fun initView() {
-
+        setAppBar()
     }
 
     override fun observer() {
@@ -53,18 +63,15 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
                         }
                     }
             }
-
         }
 
-
-        // 2) 将与 UI 相关的 collection 绑定到 viewLifecycleOwner，避免在 view 已销毁时访问 binding
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.userInfoFlow.collect { userInfo ->
                         // 每次收到 userInfo 时都与 lastDisplayedUserInfo 比较，只有变化才更新 UI。
                         if (userInfo != null && userInfo != lastDisplayedUserInfo) {
-                            renderUserInfo(userInfo)
+                            refreshUserInfo(userInfo)
                             lastDisplayedUserInfo = userInfo
                         }
                     }
@@ -73,12 +80,10 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
         }
     }
 
-    private fun renderUserInfo(userInfo: com.hash.bean.mine.UserInfoBean) {
+    private fun refreshUserInfo(userInfo: com.hash.bean.mine.UserInfoBean) {
         // 安全地访问 binding 并更新 UI
         if (view != null && ::binding.isInitialized) {
-            // 示例：把 userInfo 序列化到根 view 的 contentDescription，便于无障碍和调试
-            binding.root.contentDescription = "userInfo:${userInfo.toString()}"
-            // TODO: 在这里把实际字段渲染到具体控件上，如：binding.username.text = userInfo.name ?: ""
+            binding.bean = userInfo
         }
     }
 
@@ -87,11 +92,82 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
     }
 
     override fun listener() {
-        super.listener()
-        binding.login.setOnClickListener {
+        binding.layoutMineInfo.btnProfileSettings.setOnClickListener {
             ARouter.getInstance().build(RouterActivityPath.Login.LOGIN)
                 .navigation(requireActivity())
-//            viewModel.refreshUserInfo()
         }
+    }
+
+    fun setAppBar() {
+        val avatar = binding.ivToolbarAvatar
+        // 颜色：透明 -> 白色（可替换为项目中任意颜色资源）
+        val startColor = Color.TRANSPARENT
+        val endColor = R.color.mine_toolbar_anim_end_color.getColor()
+        val evaluator = ArgbEvaluator()
+
+        // 在视图测量完成后计算初始的 translationY，使用 post 确保测量已完成
+        avatar.post {
+            // 记录初始下移距离并初始化头像为隐藏状态
+            val startTranslation = (avatar.height.takeIf { it > 0 }
+                ?: (32 * resources.displayMetrics.density).toInt()).toFloat()
+            avatar.translationY = startTranslation
+            avatar.alpha = 0f
+            isAvatarVisible = false
+
+            appBarOffsetListener =
+                AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
+                    val totalRange = appBarLayout.totalScrollRange.toFloat()
+                    val absOffset = kotlin.math.abs(verticalOffset).toFloat()
+                    // 完成点改为 45%（0.5f），即当折叠达到 totalRange * 0.5f 时完成动画
+                    val finishRatio = 0.5f
+                    // 计算 finishRange，使用 coerceAtLeast(1f) 避免除数为 0
+                    val finishRange = (totalRange * finishRatio).coerceAtLeast(1f)
+                    // 用于 Toolbar 颜色插值的归一化进度（0..1），在达到 finishRange 时为 1
+                    val colorFraction = (absOffset / finishRange).coerceIn(0f, 1f)
+
+                    // 插值计算 Toolbar 背景色（按 colorFraction 进度）
+                    val color = evaluator.evaluate(colorFraction, startColor, endColor) as Int
+                    binding.toolbar.setBackgroundColor(color)
+
+                    // 头像仅在到达 finishRatio（即 colorFraction == 1）时开始移动并淡入，移动时长 300ms
+                    val shouldShowAvatar = colorFraction >= 1f
+                    if (shouldShowAvatar && !isAvatarVisible) {
+                        // 取消任何现有动画并启动显示动画
+                        avatar.animate().cancel()
+                        avatar.animate()
+                            .translationY(0f)
+                            .alpha(1f)
+                            .setDuration(300L)
+                            .withStartAction { /* 开始显示 */ }
+                            .start()
+                        isAvatarVisible = true
+                    } else if (!shouldShowAvatar && isAvatarVisible) {
+                        // 低于 0.45 时直接反向（隐藏）并用 300ms
+                        avatar.animate().cancel()
+                        avatar.animate()
+                            .translationY(startTranslation)
+                            .alpha(0f)
+                            .setDuration(300L)
+                            .withStartAction { /* 开始隐藏 */ }
+                            .start()
+                        isAvatarVisible = false
+                    }
+                    // 注意：在 colorFraction 变化但未跨越阈值时，我们不做逐帧平移，而是只在跨越阈值时做一次 300ms 的平移动画。
+                }
+
+            binding.appBarLayout.addOnOffsetChangedListener(appBarOffsetListener)
+        }
+    }
+
+    override fun onDestroyView() {
+        // 移除监听器以避免泄露 fragment/view
+        try {
+            if (::binding.isInitialized) {
+                appBarOffsetListener?.let { binding.appBarLayout.removeOnOffsetChangedListener(it) }
+            }
+        } catch (_: Exception) {
+            // 忽略异常
+        }
+        super.onDestroyView()
     }
 }

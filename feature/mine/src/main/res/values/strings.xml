@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu">菜单</string>
+    <string name="scan">扫一扫</string>
+    <string name="share">分享</string>
+    <string name="search">搜索</string>
+    <string name="avatar">头像</string>
+    <string name="edit_profile">编辑资料</string>
+    <string name="nickname">快乐棉花糖 ~</string>
+    <string name="sub_info">小红书号：6721019431  ·  浙江</string>
+    <string name="tab_notes">笔记</string>
+    <string name="tab_collect">收藏</string>
+    <string name="tab_like">赞过</string>
+
+    <string name="stat_following">关注</string>
+    <string name="stat_fan">粉丝</string>
+    <string name="stat_like_collect">获赞与收藏</string>
+    <string name="edit_profile_title">编辑资料</string>
+    <string name="manage_shop">管理店铺</string>
+    <string name="manage_group">群聊</string>
+    <string name="manage_idea">创作灵感</string>
+    <string name="manage_product">去上架商品</string>
+    <string name="view_details">查看详情</string>
+    <string name="learn_idea">学创作找灵感</string>
+</resources>

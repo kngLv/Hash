@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.HashApp" parent="Theme.Design.NoActionBar">
+    <style name="Theme.HashApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
 
         <!--将ActionBar隐藏,这里使用ToolBar-->
         <item name="windowActionBar">false</item>
@@ -50,7 +50,7 @@
     </style>
 
 
-    <style name="SplashTheme" parent="Theme.Design.NoActionBar">
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@drawable/bg</item>
         <!--将ActionBar隐藏,这里使用ToolBar-->
         <item name="windowActionBar">false</item>

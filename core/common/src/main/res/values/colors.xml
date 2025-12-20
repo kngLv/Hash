@@ -15,6 +15,12 @@
     <color name="background">#FFFFFFFF</color>
     <color name="surface">#FFFFFFFF</color>
 
+    <!-- 新增：次级深色背景（用于次级按钮、卡片或强调区域） -->
+    <!-- 颜色原始值：#453F38 （不含透明度），使用不透明表示：#FF453F38 -->
+    <color name="backgroundSecondary">#FF453F38</color>
+    <!-- 放在 backgroundSecondary 上的文字/图标颜色（默认白色） -->
+    <color name="colorOnBackgroundSecondary">#FFFFFFFF</color>
+
     <!-- 对应背景上的前景 / 文本颜色（使用 colorOn* 命名） -->
     <!-- colorOnPrimary: 放在 primary 背景上的文字 / 图标（例如带颜色的按钮上的文字） -->
     <color name="colorOnPrimary">#FFFFFFFF</color>
@@ -34,6 +40,8 @@
     <color name="textCaption">#61000000</color>
     <!-- textLabel: 表单字段 label / 小标题 -->
     <color name="textLabel">#99000000</color>
+    <!-- 新增：额外语义文本色（中性色/占位类） -->
+    <color name="textTertiary">#FFBFBEBC</color>
     <!-- textButton: 按钮上的文字（若按钮使用 primary 背景，建议使用 colorOnPrimary） -->
     <color name="textButton">#FFFFFFFF</color>
 
