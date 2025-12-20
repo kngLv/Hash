@@ -21,10 +21,19 @@ import com.hash.mine.viewModel.MineViewModel
 import com.hash.repository.login.LoginState
 import com.hash.router.RouterActivityPath
 import com.hash.router.RouterFragmentPath
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.zip
 import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigator
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.RecyclerView
+import android.widget.ScrollView
+import android.widget.AbsListView
+import kotlin.math.abs
 
 /**
  * @name MineFragment
@@ -37,6 +46,9 @@ import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigat
 class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
 
     val viewModel by viewModels<MineViewModel>()
+
+    // 标记 AppBar 是否已经完全折叠（用于禁止在 ViewPager 占满屏 时触发刷新）
+    private var isAppBarFullyCollapsed: Boolean = false
 
     // AppBar 偏移监听引用，便于在 onDestroyView 中移除，防止泄露
     private var appBarOffsetListener: AppBarLayout.OnOffsetChangedListener? = null
@@ -52,6 +64,8 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
     override fun initView() {
         setAppBar()
         initTabIndicator()
+        // 配置 SwipeRefreshLayout 与 ViewPager2 的交互，避免横向滑动/子视图可滚动时触发刷新
+        setupSwipeRefreshBehavior()
     }
 
     private fun refreshUserInfo(userInfo: UserInfoBean) {
@@ -103,6 +117,12 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
             ARouter.getInstance().build(RouterActivityPath.Login.LOGIN)
                 .navigation(requireActivity())
         }
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            lifecycleScope.launch {
+                delay(3000L)
+                binding.swipeRefreshLayout.isRefreshing = false
+            }
+        }
     }
 
     private fun initTabIndicator() {
@@ -144,7 +164,9 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
             appBarOffsetListener =
                 AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
                     val totalRange = appBarLayout.totalScrollRange.toFloat()
-                    val absOffset = kotlin.math.abs(verticalOffset).toFloat()
+                    val absOffset = abs(verticalOffset).toFloat()
+                    // 更新 AppBar 是否完全折叠的标志（接近 totalRange 则认为折叠）
+                    isAppBarFullyCollapsed = absOffset >= (totalRange - 1f)
                     // 完成点改为 45%（0.5f），即当折叠达到 totalRange * 0.5f 时完成动画
                     val finishRatio = 0.5f
                     // 计算 finishRange，使用 coerceAtLeast(1f) 避免除数为 0
@@ -184,6 +206,94 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
 
             binding.appBarLayout.addOnOffsetChangedListener(appBarOffsetListener)
         }
+    }
+
+    /**
+     * 配置 SwipeRefreshLayout 与 ViewPager2 的交互逻辑，避免在横向切换页面或子视图可向上滚动时触发刷新
+     */
+    private fun setupSwipeRefreshBehavior() {
+        // 当子视图可以向上滚动时，表示不应该触发刷新（返回 true 表示 child can scroll up -> SwipeRefresh 不拦截）
+        binding.swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
+            // 如果 AppBar 已经完全折叠（ViewPager 占满屏幕），则不允许触发刷新
+            if (isAppBarFullyCollapsed) return@setOnChildScrollUpCallback true
+
+            val currentScrollable = findCurrentScrollable()
+            currentScrollable?.canScrollVertically(-1) ?: false
+        }
+
+        // ViewPager2 内部用于承载 page 的 RecyclerView（水平滑动逻辑）
+        val pagerTouchView = binding.viewpager.getChildAt(0)
+        if (pagerTouchView != null) {
+            var startX = 0f
+            var startY = 0f
+            pagerTouchView.setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startX = event.x
+                        startY = event.y
+                        // 若 AppBar 已折叠（ViewPager 占满屏），则临时禁用刷新
+                        binding.swipeRefreshLayout.isEnabled = !isAppBarFullyCollapsed
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = abs(event.x - startX)
+                        val dy = abs(event.y - startY)
+                        if (dx > dy) {
+                            // 明显的水平滑动，禁用下拉刷新以不干扰页面切换
+                            binding.swipeRefreshLayout.isEnabled = false
+                        } else {
+                            // 垂直滑动时，如果当前子视图可以向上滚动（即内容不在顶部），也禁用刷新
+                            // 如果 AppBar 完全折叠，继续禁用刷新
+                            if (isAppBarFullyCollapsed) {
+                                binding.swipeRefreshLayout.isEnabled = false
+                            } else {
+                                val currentScrollable = findCurrentScrollable()
+                                binding.swipeRefreshLayout.isEnabled = (currentScrollable?.canScrollVertically(-1) == false)
+                            }
+                        }
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        // 恢复，并在抬起时触发 performClick 以满足无障碍/lint 要求
+                        v?.performClick()
+                        binding.swipeRefreshLayout.isEnabled = true
+                    }
+                }
+                // 不消费事件，让 ViewPager2 和子视图继续处理
+                false
+            }
+        }
+    }
+
+    /**
+     * 查找当前 ViewPager 页面中第一个“可滚动”子视图（RecyclerView、NestedScrollView、ScrollView、AbsListView 或任何 canScrollVertically 能返回 true 的视图）
+     */
+    private fun findCurrentScrollable(): View? {
+        // 尝试通过 childFragmentManager 找到当前显示的 Fragment（优先已 attach 且 view 可见）
+        val fragments = childFragmentManager.fragments
+        val currentFragment = fragments.firstOrNull { f ->
+            val view = f.view
+            view != null && view.isAttachedToWindow && view.visibility == View.VISIBLE
+        } ?: fragments.firstOrNull { f ->
+            val view = f.view
+            view != null && view.visibility == View.VISIBLE
+        } ?: fragments.firstOrNull { f -> f.view != null }
+
+        val rootView = currentFragment?.view ?: return null
+        return findScrollableInView(rootView)
+    }
+
+    private fun findScrollableInView(v: View): View? {
+        // 常见可滚动控件
+        if (v is RecyclerView || v is NestedScrollView || v is ScrollView || v is AbsListView) return v
+        // 任意 view 如果能向上滚动也能作为滚动目标
+        if (v.canScrollVertically(-1)) return v
+        if (v is ViewGroup) {
+            for (i in 0 until v.childCount) {
+                val child = v.getChildAt(i)
+                val found = findScrollableInView(child)
+                if (found != null) return found
+            }
+        }
+        return null
     }
 
     override fun onDestroyView() {
