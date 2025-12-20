@@ -113,129 +113,28 @@
 
 
             </com.google.android.material.appbar.CollapsingToolbarLayout>
-            <!-- TabLayout -->
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tab_layout"
+
+            <net.lucode.hackware.magicindicator.MagicIndicator
+                android:id="@+id/indicator"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="bottom"
-                android:background="@color/blue"
-                app:layout_collapseMode="pin"
-                app:tabIndicatorColor="@color/red"
-                app:tabIndicatorHeight="3dp"
-                app:tabMode="scrollable"
-                app:tabSelectedTextColor="@color/black"
-                app:tabTextColor="@color/gray" />
+                android:layout_height="@dimen/dp_50"
+                android:background="@color/white" />
         </com.google.android.material.appbar.AppBarLayout>
 
 
         <!-- 可滚动的ViewPager区域 -->
-        <!--        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout-->
-        <!--            android:id="@+id/swipe_refresh_layout"-->
-        <!--            android:layout_width="match_parent"-->
-        <!--            android:layout_height="match_parent"-->
-        <!--            app:layout_behavior="@string/appbar_scrolling_view_behavior">-->
-
-        <!--            <androidx.viewpager2.widget.ViewPager2-->
-        <!--                android:id="@+id/view_pager"-->
-        <!--                android:layout_width="match_parent"-->
-        <!--                android:layout_height="match_parent" />-->
-
-        <!--        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>-->
-
-        <androidx.core.widget.NestedScrollView
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipe_refresh_layout"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-            <androidx.appcompat.widget.LinearLayoutCompat
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/viewpager"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@color/gray"
-                android:orientation="vertical">
+                android:layout_height="match_parent" />
 
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="1"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="2"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="3"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="4"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="5"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="6"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="7"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="8"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="9"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="10"
-                    android:textSize="@dimen/dp_34" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/dp_100"
-                    android:gravity="center"
-                    android:text="11"
-                    android:textSize="@dimen/dp_34" />
-
-
-            </androidx.appcompat.widget.LinearLayoutCompat>
-
-
-        </androidx.core.widget.NestedScrollView>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

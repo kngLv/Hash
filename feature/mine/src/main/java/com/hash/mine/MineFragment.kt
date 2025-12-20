@@ -7,9 +7,14 @@ import androidx.lifecycle.Lifecycle
 import com.google.android.material.appbar.AppBarLayout
 import android.animation.ArgbEvaluator
 import android.graphics.Color
+import androidx.fragment.app.Fragment
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
+import com.hash.bean.mine.UserInfoBean
 import com.hash.common.base.fragment.BaseBindingFragment
+import com.hash.common.core.indicator.IndicatorNavAdapter
+import com.hash.common.core.indicator.ViewPager2Helper
 import com.hash.common.ext.getColor
 import com.hash.mine.databinding.FragmentMineBinding
 import com.hash.mine.viewModel.MineViewModel
@@ -19,6 +24,7 @@ import com.hash.router.RouterFragmentPath
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.zip
+import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigator
 
 /**
  * @name MineFragment
@@ -39,12 +45,20 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
     private var isAvatarVisible: Boolean = false
 
     // 保存上次在界面上渲染的 userInfo，用于避免重复渲染
-    private var lastDisplayedUserInfo: com.hash.bean.mine.UserInfoBean? = null
+    private var lastDisplayedUserInfo: UserInfoBean? = null
 
     override fun layoutId(): Int = R.layout.fragment_mine
 
     override fun initView() {
         setAppBar()
+        initTabIndicator()
+    }
+
+    private fun refreshUserInfo(userInfo: UserInfoBean) {
+        // 安全地访问 binding 并更新 UI
+        if (view != null && ::binding.isInitialized) {
+            binding.bean = userInfo
+        }
     }
 
     override fun observer() {
@@ -64,7 +78,6 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
                     }
             }
         }
-
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
@@ -80,12 +93,6 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
         }
     }
 
-    private fun refreshUserInfo(userInfo: com.hash.bean.mine.UserInfoBean) {
-        // 安全地访问 binding 并更新 UI
-        if (view != null && ::binding.isInitialized) {
-            binding.bean = userInfo
-        }
-    }
 
     override fun loadData() {
         viewModel.refreshUserInfo()
@@ -98,7 +105,27 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
         }
     }
 
-    fun setAppBar() {
+    private fun initTabIndicator() {
+        val tabs = viewModel.tabList
+        val commonNavigator = CommonNavigator(requireContext())
+        commonNavigator.isAdjustMode = false
+        commonNavigator.adapter = IndicatorNavAdapter(tabs, textSize = 18f, onClick = {
+            binding.viewpager.currentItem = it
+        })
+        binding.indicator.navigator = commonNavigator
+        ViewPager2Helper.bind(binding.indicator, binding.viewpager)
+
+        binding.viewpager.adapter =
+            object : FragmentStateAdapter(childFragmentManager, lifecycle) {
+                override fun getItemCount(): Int = tabs.size
+                override fun createFragment(position: Int): Fragment {
+                    return NoteFragment()
+                }
+            }
+    }
+
+
+    private fun setAppBar() {
         val avatar = binding.ivToolbarAvatar
         // 颜色：透明 -> 白色（可替换为项目中任意颜色资源）
         val startColor = Color.TRANSPARENT

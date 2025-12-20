@@ -12,6 +12,8 @@ class MineViewModel(
     private val userInfoRepository: UserInfoRepository = UserInfoRepository.instance
 ) : ViewModel() {
 
+    val tabList = arrayListOf("笔记", "评论", "收藏", "赞过")
+
     val userInfoFlow: StateFlow<UserInfoBean?> = userInfoRepository.userInfoFlow
 
     val loginState = LoginRepository.instance.loginStateFlow
