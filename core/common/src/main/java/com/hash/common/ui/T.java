@@ -1,4 +1,4 @@
-package com.hash.common.core;
+package com.hash.common.ui;
 
 /**
  * @author 345 QQ:1831712732

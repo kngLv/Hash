@@ -43,5 +43,5 @@ dependencies {
 //    api("com.github.LvKang-insist:LvHttp:1.2.0")
 
     // Gson 解析容错：https://github.com/getActivity/GsonFactory
-    implementation("com.github.getActivity:GsonFactory:9.6")
+    implementation("com.github.getActivity:GsonFactory:10.5")
 }

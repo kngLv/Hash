@@ -10,11 +10,11 @@ import com.hash.net.net.response.IResponse
  * @description
  */
 data class WanResponse<T>(
-    private val data: T,
+    private val data: T?,
     private val errorCode: Int,
     private val errorMsg: String
 ) : IResponse<T> {
-    override fun data(): T = data
+    override fun data(): T = data ?: Any() as T
 
     override fun code(): Int = errorCode
 

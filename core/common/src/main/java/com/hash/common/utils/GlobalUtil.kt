@@ -44,7 +44,8 @@ object GlobalUtil {
      * 获取当前应用程序的版本名。
      * @return 当前应用程序的版本名。
      */
-    val appVersionName: String = IApp.instant.packageManager.getPackageInfo(appPackage, 0).versionName
+    val appVersionName: String? =
+        IApp.instant.packageManager.getPackageInfo(appPackage, 0).versionName
 
     /**
      * 获取当前应用程序的版本号。
@@ -94,7 +95,7 @@ object GlobalUtil {
             if (TextUtils.isEmpty(deviceBrand)) {
                 deviceBrand = "unknown"
             }
-            return deviceBrand.toLowerCase(Locale.getDefault())
+            return deviceBrand.lowercase(Locale.getDefault())
         }
 
     private var deviceSerial: String? = null
@@ -107,7 +108,8 @@ object GlobalUtil {
     @SuppressLint("HardwareIds")
     fun getDeviceSerial(): String {
         if (deviceSerial == null) {
-            deviceSerial = UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.getDefault())
+            deviceSerial =
+                UUID.randomUUID().toString().replace("-", "").uppercase(Locale.getDefault())
             return deviceSerial.toString()
         } else {
             return deviceSerial.toString()
@@ -124,7 +126,10 @@ object GlobalUtil {
     fun getApplicationMetaData(key: String): String? {
         var applicationInfo: ApplicationInfo? = null
         try {
-            applicationInfo = IApp.instant.packageManager.getApplicationInfo(appPackage, PackageManager.GET_META_DATA)
+            applicationInfo = IApp.instant.packageManager.getApplicationInfo(
+                appPackage,
+                PackageManager.GET_META_DATA
+            )
         } catch (e: PackageManager.NameNotFoundException) {
             Log.e(TAG, e.message, e)
         }

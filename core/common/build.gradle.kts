@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.hash.common"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -61,16 +61,17 @@ dependencies {
     implementation(libs.immersionbar.components) //fragment快速实现（可选)
     api(libs.lottie) //lottie动画库
 
-    api("com.jakewharton.timber:timber:4.7.1")
+    api(libs.timber)
     // 图片加载框架：https://github.com/bumptech/glide
     // 官方使用文档：https://github.com/Muyangmin/glide-docs-cn
-    implementation ("com.github.bumptech.glide:glide:4.16.0")
-    kapt("com.github.bumptech.glide:compiler:4.16.0")
+    implementation (libs.glide)
+    implementation(libs.androidx.swiperefreshlayout)
+    kapt(libs.compiler)
 
-    api("com.google.code.gson:gson:2.10.1")
-    api("com.github.hackware1993:MagicIndicator:1.7.0")
+    api(libs.gson)
+    api(libs.magicindicator)
 
-    api("io.github.cymchad:BaseRecyclerViewAdapterHelper4:4.1.4")
+    api(libs.baserecyclerviewadapterhelper4)
     // MMKV: fast key-value storage. Use core mmkv artifact.
-    implementation("com.tencent:mmkv:2.3.0")
+    implementation(libs.mmkv)
 }

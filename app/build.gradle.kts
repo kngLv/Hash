@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.hash.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.hash.app"
