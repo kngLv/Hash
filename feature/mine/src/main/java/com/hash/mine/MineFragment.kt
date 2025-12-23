@@ -105,7 +105,9 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
 
 
     override fun loadData() {
-        viewModel.refreshUserInfo()
+        lifecycleScope.launch {
+            viewModel.refreshUserInfo()
+        }
     }
 
     override fun listener() {
@@ -115,7 +117,7 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
         }
         binding.swipeRefreshLayout.setOnRefreshListener {
             lifecycleScope.launch {
-                delay(3000L)
+                viewModel.refreshUserInfo()
                 binding.swipeRefreshLayout.isRefreshing = false
             }
         }

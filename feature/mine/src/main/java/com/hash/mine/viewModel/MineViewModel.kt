@@ -19,9 +19,7 @@ class MineViewModel(
     val loginState = LoginRepository.instance.loginStateFlow
 
 
-    fun refreshUserInfo() {
-        viewModelScope.launch {
-            userInfoRepository.refreshUserInfo(this)
-        }
+    suspend fun refreshUserInfo() {
+        userInfoRepository.refreshUserInfo(viewModelScope)
     }
 }
