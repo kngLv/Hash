@@ -50,12 +50,12 @@ class IndicatorNavAdapter(
 //        if (!isIndicator) return null
         val indicator = CustomLinePagerIndicator(context)
         indicator.mLineWidth = dip2px(context, 24f).toFloat()
-        indicator.mLineHeight = dip2px(context, 4f).toFloat()
+        indicator.mLineHeight = dip2px(context, 2f).toFloat()
         indicator.mStartInterpolator = AccelerateInterpolator()
         indicator.mEndInterpolator = DecelerateInterpolator(1.0f)
         indicator.setColors(ResourcesCompat.getColor(context.resources, R.color.primary, null))
         indicator.mRoundRadius = 10f
-        indicator.mYOffset = dip2px(context, 8f).toFloat()
+        indicator.mYOffset = dip2px(context, 6f).toFloat()
         indicator.mMode = LinePagerIndicator.MODE_EXACTLY
         return indicator
     }

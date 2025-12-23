@@ -127,7 +127,7 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
         val tabs = viewModel.tabList
         val commonNavigator = CommonNavigator(requireContext())
         commonNavigator.isAdjustMode = false
-        commonNavigator.adapter = IndicatorNavAdapter(tabs, textSize = 18f, onClick = {
+        commonNavigator.adapter = IndicatorNavAdapter(tabs, textSize = 16f, onClick = {
             binding.viewpager.currentItem = it
         })
         binding.indicator.navigator = commonNavigator
