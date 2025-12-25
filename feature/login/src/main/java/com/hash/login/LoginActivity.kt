@@ -7,7 +7,7 @@ import com.hash.common.ext.SpanPart
 import com.hash.common.ext.setSpannableParts
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.activity.BaseBindingActivity
-import com.hash.common.core.impl.TextWatcherImpl
+import com.hash.common.impl.TextWatcherImpl
 import com.hash.common.ext.selectToggle
 import com.hash.common.ext.showToast
 import com.hash.login.databinding.ActivityLoginBinding

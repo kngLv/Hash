@@ -46,4 +46,8 @@ object UserInfoStore {
     }
 
     fun getCookie(): String? = try { kv.decodeString(KEY_COOKIE, null) } catch (_: Throwable) { null }
+
+    fun  cleanCookie() {
+        try { try { kv.removeValueForKey(KEY_COOKIE) } catch (_: NoSuchMethodError) { kv.remove(KEY_COOKIE) } } catch (_: Throwable) {}
+    }
 }

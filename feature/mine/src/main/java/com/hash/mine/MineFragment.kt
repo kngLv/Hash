@@ -13,15 +13,14 @@ import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
 import com.hash.bean.mine.UserInfoBean
 import com.hash.common.base.fragment.BaseBindingFragment
-import com.hash.common.core.indicator.IndicatorNavAdapter
-import com.hash.common.core.indicator.ViewPager2Helper
+import com.hash.common.ui.indicator.IndicatorNavAdapter
+import com.hash.common.ui.helper.ViewPager2Helper
 import com.hash.common.ext.getColor
 import com.hash.mine.databinding.FragmentMineBinding
 import com.hash.mine.viewModel.MineViewModel
 import com.hash.repository.login.LoginState
 import com.hash.router.RouterActivityPath
 import com.hash.router.RouterFragmentPath
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.zip

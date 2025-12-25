@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.startup.Initializer
 import com.hash.common.ext.showToast
+import com.hash.common.storage.userInfo.UserInfoStore
 import com.hash.net.interceptor.WanCookieInterceptor
 import com.hash.net.net.LvHttp
 import com.hash.net.net.error.CodeException
@@ -30,6 +31,9 @@ class NetInitializer : Initializer<Unit> {
             //对 Code 异常的处理，可自定义,参考 ResponseData 类
             .setErrorDispose(ErrorKey.ErrorCode, ErrorValue {
                 (it as? CodeException)?.run {
+                    if (code == -1001) {
+                        UserInfoStore.clearUserInfo()
+                    }
                     "${it.message}".showToast()
                 }
             })

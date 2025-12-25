@@ -1,4 +1,4 @@
-package com.hash.common.core.indicator
+package com.hash.common.ui.helper
 
 import androidx.viewpager2.widget.ViewPager2
 import net.lucode.hackware.magicindicator.MagicIndicator

@@ -1,4 +1,4 @@
-package com.hash.common.core.indicator
+package com.hash.common.ui.indicator
 
 import android.content.Context
 import android.view.animation.AccelerateInterpolator

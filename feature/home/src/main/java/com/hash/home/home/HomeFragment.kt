@@ -5,8 +5,8 @@ import androidx.fragment.app.viewModels
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.fragment.BaseBindingFragment
-import com.hash.common.core.indicator.IndicatorNavAdapter
-import com.hash.common.core.indicator.ViewPager2Helper
+import com.hash.common.ui.indicator.IndicatorNavAdapter
+import com.hash.common.ui.helper.ViewPager2Helper
 import com.hash.home.R
 import com.hash.home.databinding.FragmentHomeBinding
 import com.hash.home.home.viewmodel.HomeViewModel
