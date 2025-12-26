@@ -9,6 +9,7 @@ import com.hash.common.ui.indicator.IndicatorNavAdapter
 import com.hash.common.ui.helper.ViewPager2Helper
 import com.hash.home.R
 import com.hash.home.databinding.FragmentHomeBinding
+import com.hash.home.home.ui.WanFragment
 import com.hash.home.home.viewmodel.HomeViewModel
 import com.hash.router.RouterFragmentPath
 import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigator
