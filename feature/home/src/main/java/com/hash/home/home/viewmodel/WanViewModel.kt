@@ -5,9 +5,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hash.bean.home.HomeListBean.HomeListItem
+import com.hash.common.ui.helper.AdapterHelper
 import com.hash.net.api.api
 import com.hash.net.net.launch.request
 import com.hash.net.net.request.onBodyOf
+import com.hash.repository.home.HomeRepository
 import kotlinx.coroutines.launch
 
 /**
@@ -19,8 +21,10 @@ import kotlinx.coroutines.launch
  */
 class WanViewModel : ViewModel() {
 
+    val repository by lazy { HomeRepository() }
+
     var page = 0
-    var pageSize = 40
+    var pageSize = AdapterHelper.LIST_PAGE_SIZE
 
     var hasMore = true
 
@@ -33,25 +37,29 @@ class WanViewModel : ViewModel() {
         getHomeList()
     }
 
-    fun nextHomeList() {
-        page++
-        getHomeList()
-    }
 
     fun getHomeList() {
-        viewModelScope.launch {
-            request { api.homeList(page, pageSize) }
-                .onBodyOf {
-                    if (it.curPage == 1) {
-                        _data.value = it.datas.toMutableList()
-                    } else {
-                        hasMore = it.curPage < it.pageCount
-                        val list = _data.value ?: mutableListOf()
-                        list.addAll(it.datas)
-                        _data.value = list
-                    }
-                }.enqueue()
-        }
+        page++
+        repository.homeList(page, pageSize)
+            .onBodyOf {
+                if (page == 1) {
+                    val beans = it.datas.toMutableList()
+                    beans.shuffle()
+                    _data.value = beans
+                } else {
+                    hasMore = it.curPage < it.pageCount
+                    val currentList = it.datas.toMutableList()
+                    currentList.shuffle()
+                    _data.value = currentList
+                }
+            }
+            .onEnd {
+                if (!it) {
+                    page--
+                    _data.value = mutableListOf()
+                }
+            }
+            .enqueue(viewModelScope)
     }
 
 }

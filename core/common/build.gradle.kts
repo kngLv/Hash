@@ -72,6 +72,10 @@ dependencies {
     api(libs.magicindicator)
 
     api(libs.baserecyclerviewadapterhelper4)
-    // MMKV: fast key-value storage. Use core mmkv artifact.
     implementation(libs.mmkv)
+
+    // SmartRefreshLayout，
+    api(libs.refresh.layout.kernel)
+    api(libs.refresh.header.material)
+    api(libs.refresh.footer.classics)
 }

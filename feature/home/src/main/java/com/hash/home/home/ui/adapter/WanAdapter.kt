@@ -31,5 +31,5 @@ class WanAdapter : BaseQuickAdapter<HomeListItem, WanAdapter.WanVH>() {
         val binding: ItemWanBinding = ItemWanBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         ),
-    ) : RecyclerView.ViewHolder(parent)
+    ) : RecyclerView.ViewHolder(binding.root)
 }

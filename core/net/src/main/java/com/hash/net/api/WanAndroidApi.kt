@@ -27,12 +27,7 @@ interface WanAndroidApi {
     @GET("/banner/json")
     suspend fun banner(): WanResponse<BannerListBean>
 
-    /** 首页文章列表 */
-    @GET("/article/list/{page}/json")
-    suspend fun homeList(
-        @Path("page") page: Int,
-        @Path("page_size") pageSize: Int
-    ): WanResponse<HomeListBean>
+
 
 
     /** 常用网站 */

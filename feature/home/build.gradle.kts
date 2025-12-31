@@ -46,7 +46,6 @@ dependencies {
     implementation(project(":core:router"))
     implementation(project(":core:net"))
     implementation(project(":core:bean"))
-    implementation("com.squareup.okhttp3:okhttp:4.9.3")
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation(project(":core:repository"))
     kapt(libs.arouter.compiler)
 }

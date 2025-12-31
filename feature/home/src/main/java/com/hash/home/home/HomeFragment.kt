@@ -1,5 +1,6 @@
 package com.hash.home.home
 
+import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -31,6 +32,8 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
 
 
     override fun layoutId(): Int = R.layout.fragment_home
+
+    override fun getTitleBar(): View = binding.indicator
 
     override fun initView() {
         initTabIndicator()

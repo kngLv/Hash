@@ -99,7 +99,7 @@ class LogInterceptor : Interceptor {
             }
 
             // 使用 peekBody 安全地获取响应的前一部分内容用于日志，peek 不会消耗真正的流
-            val peekBytes = 1024L // 预览最多 1KB
+            val peekBytes = 1024L * 100 // 预览最多 100 KB
             val peekBody = try {
                 response.peekBody(peekBytes)
             } catch (e: Exception) {

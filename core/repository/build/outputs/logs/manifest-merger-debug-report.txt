@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml:2:13-83
-INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml:2:13-83
+ADDED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml:2:13-83
+INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml:2:13-83
 	package
-		INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml
+		INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml
 	xmlns:android
-		ADDED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml:2:23-81
+		ADDED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml:2:23-81
 uses-sdk
-INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml reason: use-sdk injection requested
-INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml
-INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml
+INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml reason: use-sdk injection requested
+INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml
+INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml
 	android:targetSdkVersion
-		INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml
+		INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml
 	android:minSdkVersion
-		INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8830720089096015445.xml
+		INJECTED from /Users/lvkang/StudioProjects/Hash/core/repository/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest8207440682068530115.xml

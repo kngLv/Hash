@@ -1,11 +1,20 @@
 package com.hash.common
 
 import android.app.Application
+import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.util.Log
 import com.hash.common.config.GlideApp
+import com.scwang.smart.refresh.footer.ClassicsFooter
+import com.scwang.smart.refresh.header.MaterialHeader
+import com.scwang.smart.refresh.layout.SmartRefreshLayout
+import com.scwang.smart.refresh.layout.api.RefreshFooter
+import com.scwang.smart.refresh.layout.api.RefreshHeader
+import com.scwang.smart.refresh.layout.api.RefreshLayout
+import com.scwang.smart.refresh.layout.listener.DefaultRefreshFooterCreator
+import com.scwang.smart.refresh.layout.listener.DefaultRefreshHeaderCreator
 import timber.log.Timber
 import kotlin.properties.Delegates
+
 
 /**
  * @name IApp
@@ -44,6 +53,7 @@ open class IApp : Application() {
 
         fun initSdk() {
             initTimer()
+            defaultRefresh()
         }
 
         private fun initTimer() {
@@ -55,6 +65,19 @@ open class IApp : Application() {
                         // 上传到服务器
                     }
                 });
+            }
+        }
+
+        private fun defaultRefresh() {
+            //设置全局的Header构建器
+            SmartRefreshLayout.setDefaultRefreshHeaderCreator { context, layout ->
+                layout.setPrimaryColorsId(R.color.primary, R.color.colorOnPrimary)
+                MaterialHeader(context)
+            }
+
+            //设置全局的Footer构建器
+            SmartRefreshLayout.setDefaultRefreshFooterCreator { context, layout ->
+                ClassicsFooter(context).setDrawableSize(20f)
             }
         }
     }
