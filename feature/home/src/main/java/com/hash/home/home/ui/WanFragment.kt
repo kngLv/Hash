@@ -9,6 +9,7 @@ import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ext.logD
 import com.hash.common.ext.showToast
 import com.hash.common.ext.toJson
+import com.hash.common.ui.GridSpaceItemDecoration
 import com.hash.home.R
 import com.hash.home.databinding.FragmentWanBinding
 import com.hash.home.home.ui.adapter.WanAdapter
@@ -32,6 +33,7 @@ class WanFragment : BaseBindingFragment<FragmentWanBinding>() {
     override fun initView() {
         binding.recycler.layoutManager =
             StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+        binding.recycler.addItemDecoration(GridSpaceItemDecoration(20, true))
         binding.recycler.adapter = adapter
     }
 

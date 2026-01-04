@@ -4,12 +4,14 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.hash.common.config.GlideApp
+import com.hash.common.ext.getColor
 import com.scwang.smart.refresh.footer.ClassicsFooter
 import com.scwang.smart.refresh.header.MaterialHeader
 import com.scwang.smart.refresh.layout.SmartRefreshLayout
 import com.scwang.smart.refresh.layout.api.RefreshFooter
 import com.scwang.smart.refresh.layout.api.RefreshHeader
 import com.scwang.smart.refresh.layout.api.RefreshLayout
+import com.scwang.smart.refresh.layout.constant.SpinnerStyle
 import com.scwang.smart.refresh.layout.listener.DefaultRefreshFooterCreator
 import com.scwang.smart.refresh.layout.listener.DefaultRefreshHeaderCreator
 import timber.log.Timber
@@ -72,7 +74,9 @@ open class IApp : Application() {
             //设置全局的Header构建器
             SmartRefreshLayout.setDefaultRefreshHeaderCreator { context, layout ->
                 layout.setPrimaryColorsId(R.color.primary, R.color.colorOnPrimary)
-                MaterialHeader(context)
+                MaterialHeader(context).setColorSchemeColors(
+                    R.color.primary.getColor(),
+                )
             }
 
             //设置全局的Footer构建器
