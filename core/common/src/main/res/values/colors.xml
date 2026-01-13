@@ -54,6 +54,8 @@
 
     <!-- 分割线 / 边框 -->
     <color name="divider">#1F000000</color>
+    <!-- 新增：浅灰分割线，颜色值 E9E9E9 -->
+    <color name="dividerLight">#FFE9E9E9</color>
 
     <!-- 透明与通用色 -->
     <color name="transparent">#00000000</color>

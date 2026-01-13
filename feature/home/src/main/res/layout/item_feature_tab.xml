@@ -67,8 +67,7 @@
                 android:scaleType="centerCrop"
                 android:adjustViewBounds="true"
                 android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 1 ? View.VISIBLE : View.GONE}"
-                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 1) ? item.imgList.get(0) : null}"
-                android:contentDescription="@string/news_image" />
+                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 1) ? item.imgList.get(0) : null}" />
 
             <!-- 图片间间隔 -->
             <View
@@ -85,8 +84,7 @@
                 android:scaleType="centerCrop"
                 android:adjustViewBounds="true"
                 android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 2 ? View.VISIBLE : View.GONE}"
-                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 2) ? item.imgList.get(1) : null}"
-                android:contentDescription="@string/news_image" />
+                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 2) ? item.imgList.get(1) : null}" />
 
             <!-- 图片间间隔 -->
             <View
@@ -103,8 +101,7 @@
                 android:scaleType="centerCrop"
                 android:adjustViewBounds="true"
                 android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 3 ? View.VISIBLE : View.GONE}"
-                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 3) ? item.imgList.get(2) : null}"
-                android:contentDescription="@string/news_image" />
+                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 3) ? item.imgList.get(2) : null}" />
 
         </LinearLayout>
 
@@ -148,7 +145,7 @@
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_marginTop="12dp"
-            android:background="@color/divider_light"
+            android:background="@color/dividerLight"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/meta_row"
