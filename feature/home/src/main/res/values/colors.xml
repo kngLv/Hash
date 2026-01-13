@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light divider color similar to mobile browser separators -->
+    <color name="divider_light">#E9E9E9</color>
+</resources>
+

@@ -1,16 +1,13 @@
-package com.hash.home.home.viewmodel
+package com.hash.home.home.ui.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.bean.home.HomeListBean.HomeListItem
-import com.hash.common.ui.helper.AdapterHelper
-import com.hash.net.api.api
-import com.hash.net.net.launch.request
+import com.hash.bean.home.HomeListBean
+import com.hash.common.const.AppConst
 import com.hash.net.net.request.onBodyOf
 import com.hash.repository.home.HomeRepository
-import kotlinx.coroutines.launch
 
 /**
  * @name RecommendViewModel
@@ -24,12 +21,11 @@ class WanViewModel : ViewModel() {
     val repository by lazy { HomeRepository() }
 
     var page = 0
-    var pageSize = AdapterHelper.LIST_PAGE_SIZE
 
     var hasMore = true
 
-    private val _data by lazy { MutableLiveData<MutableList<HomeListItem>>() }
-    val data: LiveData<MutableList<HomeListItem>> = _data
+    private val _data by lazy { MutableLiveData<MutableList<HomeListBean.HomeListItem>>() }
+    val data: LiveData<MutableList<HomeListBean.HomeListItem>> = _data
 
 
     fun refresh() {
@@ -40,7 +36,7 @@ class WanViewModel : ViewModel() {
 
     fun getHomeList() {
         page++
-        repository.homeList(page, pageSize)
+        repository.homeList(page, AppConst.PAGE_LIST_SIZE)
             .onBodyOf {
                 if (page == 1) {
                     val beans = it.datas.toMutableList()

@@ -13,7 +13,7 @@ import com.hash.common.ui.GridSpaceItemDecoration
 import com.hash.home.R
 import com.hash.home.databinding.FragmentWanBinding
 import com.hash.home.home.ui.adapter.WanAdapter
-import com.hash.home.home.viewmodel.WanViewModel
+import com.hash.home.home.ui.viewmodel.WanViewModel
 
 /**
  * @name RecommendFragment

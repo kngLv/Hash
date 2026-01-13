@@ -176,7 +176,7 @@ object TimberUtils {
     // ReleaseTree：生产环境下只允许 WARN 及以上日志，避免过多噪音
     private class ReleaseTree : Timber.Tree() {
         override fun isLoggable(tag: String?, priority: Int): Boolean {
-            return priority >= Log.WARN
+            return priority >= Log.DEBUG
         }
 
         override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {

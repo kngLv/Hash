@@ -1,19 +1,14 @@
 package com.hash.common
 
 import android.app.Application
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.hash.common.config.GlideApp
 import com.hash.common.ext.getColor
+import com.hash.common.ext.logD
+import com.hash.common.utils.TimberUtils
 import com.scwang.smart.refresh.footer.ClassicsFooter
 import com.scwang.smart.refresh.header.MaterialHeader
 import com.scwang.smart.refresh.layout.SmartRefreshLayout
-import com.scwang.smart.refresh.layout.api.RefreshFooter
-import com.scwang.smart.refresh.layout.api.RefreshHeader
-import com.scwang.smart.refresh.layout.api.RefreshLayout
-import com.scwang.smart.refresh.layout.constant.SpinnerStyle
-import com.scwang.smart.refresh.layout.listener.DefaultRefreshFooterCreator
-import com.scwang.smart.refresh.layout.listener.DefaultRefreshHeaderCreator
 import timber.log.Timber
 import kotlin.properties.Delegates
 
@@ -59,15 +54,8 @@ open class IApp : Application() {
         }
 
         private fun initTimer() {
-            if (isDebug) {
-                Timber.plant(Timber.DebugTree());
-            } else {
-                Timber.plant(object : Timber.Tree() {
-                    override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-                        // 上传到服务器
-                    }
-                });
-            }
+            TimberUtils.init(isDebug, enableReporting = false)
+            logD("Timber 初始化完成，isDebug=$isDebug")
         }
 
         private fun defaultRefresh() {

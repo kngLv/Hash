@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Height used for multi-image rows -->
+    <dimen name="img_multi_height">96dp</dimen>
+    <!-- Height used for single large image -->
+    <dimen name="img_single_height">180dp</dimen>
+</resources>
+

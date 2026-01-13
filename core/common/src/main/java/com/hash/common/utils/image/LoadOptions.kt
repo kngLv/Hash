@@ -11,8 +11,8 @@ import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.RequestListener
 
 /**
- * LoadOptions: image loading options and a Builder for convenient construction.
- * Moved out of the monolithic file to keep responsibilities separated.
+ * LoadOptions：图片加载选项以及方便构建的 Builder。
+ * 把相关逻辑从单一文件中拆分出来以便维护。
  */
 data class LoadOptions(
     val placeholderRes: Int? = null,
@@ -21,6 +21,7 @@ data class LoadOptions(
     val errorDrawable: Drawable? = null,
     val circleCrop: Boolean = false,
     val roundedRadiusDp: Int? = null,
+    val granularRoundedRadiusDp: IntArray? = null, // {tl, tr, br, bl}
     val centerCrop: Boolean = false,
     val crossFade: Boolean = false,
     val asGif: Boolean = false,
@@ -36,7 +37,7 @@ data class LoadOptions(
     val useViewSizeAsOverride: Boolean = true,
     // 若 true 且 imageView 尚未测量（宽/高为 0），当尝试使用 view 尺寸作为 override 时会延迟加载直到 view 布局完成
     val useDeferredLoad: Boolean = false,
-    // typed listeners (prefer these when present)
+    // typed listeners（优先使用这些 listener）
     val bitmapListener: RequestListener<Bitmap>? = null,
     val gifListener: RequestListener<GifDrawable>? = null,
     val drawableListener: RequestListener<Drawable>? = null
@@ -48,6 +49,7 @@ data class LoadOptions(
         private var errorDrawable: Drawable? = null
         private var circleCrop = false
         private var roundedRadiusDp: Int? = null
+        private var granularRoundedRadiusDp: IntArray? = null
         private var centerCrop = false
         private var crossFade = false
         private var asGif = false
@@ -63,7 +65,7 @@ data class LoadOptions(
         private var useViewSizeAsOverride = true
         private var useDeferredLoad = false
 
-        // typed listener storage
+        // typed listener 存储
         private var bitmapListener: RequestListener<Bitmap>? = null
         private var gifListener: RequestListener<GifDrawable>? = null
         private var drawableListener: RequestListener<Drawable>? = null
@@ -74,6 +76,15 @@ data class LoadOptions(
         fun errorDrawable(drawable: Drawable) = apply { this.errorDrawable = drawable }
         fun circleCrop() = apply { this.circleCrop = true }
         fun rounded(radiusDp: Int) = apply { this.roundedRadiusDp = radiusDp }
+        /** 设置统一圆角的同时清除分角圆角配置 */
+        fun roundedRadiusDp(radiusDp: Int) = apply { this.roundedRadiusDp = radiusDp; this.granularRoundedRadiusDp = null }
+        /**
+         * 设置按角分别圆角，顺序为 top-left, top-right, bottom-right, bottom-left（单位 dp）
+         */
+        fun roundedCorners(tlDp: Int, trDp: Int, brDp: Int, blDp: Int) = apply {
+            this.granularRoundedRadiusDp = intArrayOf(tlDp, trDp, brDp, blDp)
+            this.roundedRadiusDp = null
+        }
         fun centerCrop() = apply { this.centerCrop = true }
         fun crossFade() = apply { this.crossFade = true }
         fun asGif() = apply { this.asGif = true }
@@ -100,6 +111,7 @@ data class LoadOptions(
             errorDrawable,
             circleCrop,
             roundedRadiusDp,
+            granularRoundedRadiusDp,
             centerCrop,
             crossFade,
             asGif,
@@ -117,5 +129,65 @@ data class LoadOptions(
             gifListener,
             drawableListener
         )
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as LoadOptions
+
+        if (placeholderRes != other.placeholderRes) return false
+        if (errorRes != other.errorRes) return false
+        if (circleCrop != other.circleCrop) return false
+        if (roundedRadiusDp != other.roundedRadiusDp) return false
+        if (centerCrop != other.centerCrop) return false
+        if (crossFade != other.crossFade) return false
+        if (asGif != other.asGif) return false
+        if (asBitmap != other.asBitmap) return false
+        if (overrideWidth != other.overrideWidth) return false
+        if (overrideHeight != other.overrideHeight) return false
+        if (transitionDurationMs != other.transitionDurationMs) return false
+        if (skipMemoryCache != other.skipMemoryCache) return false
+        if (clearOnLoadFailed != other.clearOnLoadFailed) return false
+        if (useViewSizeAsOverride != other.useViewSizeAsOverride) return false
+        if (useDeferredLoad != other.useDeferredLoad) return false
+        if (placeholderDrawable != other.placeholderDrawable) return false
+        if (errorDrawable != other.errorDrawable) return false
+        if (!granularRoundedRadiusDp.contentEquals(other.granularRoundedRadiusDp)) return false
+        if (priority != other.priority) return false
+        if (diskCacheStrategy != other.diskCacheStrategy) return false
+        if (bitmapListener != other.bitmapListener) return false
+        if (gifListener != other.gifListener) return false
+        if (drawableListener != other.drawableListener) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = placeholderRes ?: 0
+        result = 31 * result + (errorRes ?: 0)
+        result = 31 * result + circleCrop.hashCode()
+        result = 31 * result + (roundedRadiusDp ?: 0)
+        result = 31 * result + centerCrop.hashCode()
+        result = 31 * result + crossFade.hashCode()
+        result = 31 * result + asGif.hashCode()
+        result = 31 * result + asBitmap.hashCode()
+        result = 31 * result + (overrideWidth ?: 0)
+        result = 31 * result + (overrideHeight ?: 0)
+        result = 31 * result + (transitionDurationMs ?: 0)
+        result = 31 * result + skipMemoryCache.hashCode()
+        result = 31 * result + clearOnLoadFailed.hashCode()
+        result = 31 * result + useViewSizeAsOverride.hashCode()
+        result = 31 * result + useDeferredLoad.hashCode()
+        result = 31 * result + (placeholderDrawable?.hashCode() ?: 0)
+        result = 31 * result + (errorDrawable?.hashCode() ?: 0)
+        result = 31 * result + (granularRoundedRadiusDp?.contentHashCode() ?: 0)
+        result = 31 * result + (priority?.hashCode() ?: 0)
+        result = 31 * result + diskCacheStrategy.hashCode()
+        result = 31 * result + (bitmapListener?.hashCode() ?: 0)
+        result = 31 * result + (gifListener?.hashCode() ?: 0)
+        result = 31 * result + (drawableListener?.hashCode() ?: 0)
+        return result
     }
 }

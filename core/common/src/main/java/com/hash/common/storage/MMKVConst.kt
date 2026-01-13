@@ -1,4 +1,4 @@
-package com.hash.common.const
+package com.hash.common.storage
 
 object MMKVConst {
 
@@ -7,4 +7,7 @@ object MMKVConst {
 
     /** cookie  */
     const val KEY_BASE_COOKIE = "key_base_cookie"
+
+    /** 置顶新闻 type 列表  */
+    const val KEY_FEATURED_NEWS_TYPE_LIST = "key_featured_news_type_list"
 }

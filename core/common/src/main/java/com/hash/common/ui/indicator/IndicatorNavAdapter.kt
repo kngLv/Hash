@@ -18,7 +18,7 @@ import net.lucode.hackware.magicindicator.buildins.commonnavigator.indicators.Li
  * @description
  */
 class IndicatorNavAdapter(
-    private val titles: MutableList<String>,
+    private val titles: List<String>,
     private val textSize: Float = 16F,
     private val isIndicator: Boolean = true,
     private val color: Int = R.color.primary,
@@ -47,7 +47,7 @@ class IndicatorNavAdapter(
 
     override fun getIndicator(context: Context): IPagerIndicator? {
 //        return null
-//        if (!isIndicator) return null
+        if (!isIndicator) return null
         val indicator = CustomLinePagerIndicator(context)
         indicator.mLineWidth = dip2px(context, 24f).toFloat()
         indicator.mLineHeight = dip2px(context, 2f).toFloat()

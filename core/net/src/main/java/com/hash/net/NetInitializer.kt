@@ -24,7 +24,7 @@ class NetInitializer : Initializer<Unit> {
             .setBaseUrl(NetConstants.BASE_URL)
             //是否开启缓存
             .isCache(false)
-            .setCode(0)
+            .setCode(0,1)
             //是否打印 log
             .isLog(true)
             .addInterceptor(WanCookieInterceptor())

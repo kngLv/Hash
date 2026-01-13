@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <import type="android.view.View" />
+        <variable
+            name="item"
+            type="com.hash.bean.home.NewsListBean.NewsListBeanItem" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
+
+        <!-- 标题 -->
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@{item.title}"
+            android:textSize="16sp"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 摘要 / 概要 -->
+        <TextView
+            android:id="@+id/tv_digest"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@{item.digest}"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:maxLines="3"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_title"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="8dp" />
+
+        <!-- 图片容器：最多显示 3 张图片 -->
+        <LinearLayout
+            android:id="@+id/ll_images"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@id/tv_digest"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="8dp">
+
+            <!-- 图片 1 -->
+            <ImageView
+                android:id="@+id/iv_img1"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/img_multi_height"
+                android:layout_weight="1"
+                android:scaleType="centerCrop"
+                android:adjustViewBounds="true"
+                android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 1 ? View.VISIBLE : View.GONE}"
+                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 1) ? item.imgList.get(0) : null}"
+                android:contentDescription="@string/news_image" />
+
+            <!-- 图片间间隔 -->
+            <View
+                android:layout_width="4dp"
+                android:layout_height="match_parent"
+                android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 2 ? View.VISIBLE : View.GONE}" />
+
+            <!-- 图片 2 -->
+            <ImageView
+                android:id="@+id/iv_img2"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/img_multi_height"
+                android:layout_weight="1"
+                android:scaleType="centerCrop"
+                android:adjustViewBounds="true"
+                android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 2 ? View.VISIBLE : View.GONE}"
+                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 2) ? item.imgList.get(1) : null}"
+                android:contentDescription="@string/news_image" />
+
+            <!-- 图片间间隔 -->
+            <View
+                android:layout_width="4dp"
+                android:layout_height="match_parent"
+                android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 3 ? View.VISIBLE : View.GONE}" />
+
+            <!-- 图片 3 -->
+            <ImageView
+                android:id="@+id/iv_img3"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/img_multi_height"
+                android:layout_weight="1"
+                android:scaleType="centerCrop"
+                android:adjustViewBounds="true"
+                android:visibility="@{item.imgList != null &amp;&amp; item.imgList.size() &gt;= 3 ? View.VISIBLE : View.GONE}"
+                android:tag="@{(item.imgList != null &amp;&amp; item.imgList.size() &gt;= 3) ? item.imgList.get(2) : null}"
+                android:contentDescription="@string/news_image" />
+
+        </LinearLayout>
+
+        <!-- 元信息行：左侧为 source，右侧为 postTime -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/meta_row"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ll_images"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/tv_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{item.source}"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{item.postTime}"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 分割线：浅色，类似手机浏览器 -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/divider_light"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/meta_row"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

@@ -4,8 +4,8 @@ import com.hash.net.net.LvHttp
 
 /**
  * Created by KngLv
- * @time 2025/12/29 09:49
+ * @time 2026/1/5 09:14
  * @description
  */
 
-val wanCommonApi by lazy { LvHttp.createApi(CommonServiceApi::class.java) }
+val rollApi by lazy { LvHttp.createApi(RollServiceApi::class.java) }

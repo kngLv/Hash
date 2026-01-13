@@ -14,6 +14,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.bitmap.GranularRoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.RequestOptions
@@ -22,7 +23,6 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.request.transition.DrawableCrossFadeFactory
 import com.hash.common.config.GlideApp
 import androidx.lifecycle.LifecycleOwner
-import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestManager
 
 /**
@@ -32,9 +32,9 @@ object ImageLoader {
 
     enum class ExpectedListenerType { ANY, BITMAP, GIF, DRAWABLE }
 
-    // LoadOptions is defined in LoadOptions.kt
+    // LoadOptions 在 LoadOptions.kt 中定义
 
-    // 构建通用 RequestOptions（路由外部复用）
+    // 构建通用 RequestOptions（供外部复用）
     private fun buildRequestOptions(ctx: Context, options: LoadOptions, applyBitmapTransforms: Boolean): RequestOptions {
         var ro = RequestOptions().diskCacheStrategy(options.diskCacheStrategy)
         if (options.skipMemoryCache) ro = ro.skipMemoryCache(true)
@@ -43,16 +43,27 @@ object ImageLoader {
         options.placeholderDrawable?.let { ro = ro.placeholder(it).error(it) }
         options.errorDrawable?.let { ro = ro.error(it) }
 
-        // override
+        // override 尺寸
         options.overrideWidth?.let { w -> options.overrideHeight?.let { h -> ro = ro.override(w, h) } }
-        // priority
+        // 优先级
         options.priority?.let { p -> ro = ro.priority(p) }
 
-        // 只有在允许 bitmap 转换时应用圆角/centerCrop 等 bitmap-based transforms
+        // 只有在允许 bitmap 转换时才应用圆角/centerCrop 等基于 Bitmap 的 transforms
         if (applyBitmapTransforms) {
             val transformations = mutableListOf<Transformation<Bitmap>>()
             if (options.centerCrop) transformations.add(CenterCrop())
-            options.roundedRadiusDp?.let { transformations.add(RoundedCorners(dp2px(ctx, it.toFloat()))) }
+            // 如果提供了按角度的圆角，则优先使用
+            options.granularRoundedRadiusDp?.let {
+                if (it.size == 4) {
+                    val tl = dp2px(ctx, it[0].toFloat()).toFloat()
+                    val tr = dp2px(ctx, it[1].toFloat()).toFloat()
+                    val br = dp2px(ctx, it[2].toFloat()).toFloat()
+                    val bl = dp2px(ctx, it[3].toFloat()).toFloat()
+                    transformations.add(GranularRoundedCorners(tl, tr, br, bl))
+                }
+            } ?: run {
+                options.roundedRadiusDp?.let { transformations.add(RoundedCorners(dp2px(ctx, it.toFloat()))) }
+            }
             if (transformations.isNotEmpty()) ro = ro.transform(*transformations.toTypedArray())
         } else {
             // 对 GIF 路径只应用 centerCrop（若请求），避免对 GifDrawable 应用不兼容的 Bitmap 转换
@@ -75,7 +86,7 @@ object ImageLoader {
                 builder = builder.transition(BitmapTransitionOptions.withCrossFade())
             }
         }
-        // 优先使用 typed listener
+        // 优先使用类型化的 listener
         options.bitmapListener?.let { builder = builder.listener(it) }
         return builder
     }
@@ -164,10 +175,10 @@ object ImageLoader {
      * 否则会将请求与 ImageView 的视图上下文绑定。
      */
     fun load(imageView: ImageView, model: Any?, lifecycleOwner: LifecycleOwner? = null, options: LoadOptions = LoadOptions()) {
-        // deferred-load handling: if view not measured and caller requested deferral, post to view and return
+        // 延迟加载处理：如果 view 未被测量且调用方请求延迟加载，则在布局完成后再执行加载
         if (options.useDeferredLoad && options.useViewSizeAsOverride && (imageView.width == 0 || imageView.height == 0)) {
             imageView.post {
-                // call internal loader after layout
+                // 布局完成后调用内部加载逻辑
                 internalLoad(imageView, model, lifecycleOwner, options)
             }
             return
