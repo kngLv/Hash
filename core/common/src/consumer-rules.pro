@@ -18,3 +18,4 @@
 # Avoid warnings about javax.annotation
 -dontwarn javax.annotation.**
 
+-keep class com.tencent.mmkv.** { *; }

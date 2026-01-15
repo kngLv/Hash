@@ -1,7 +1,5 @@
 package com.hash.home.home.ui
 
-import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hash.common.base.fragment.BaseBindingFragment
@@ -9,8 +7,6 @@ import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedTabBinding
 import com.hash.home.home.ui.adapter.FeaturedTabAdapter
 import com.hash.home.home.ui.viewmodel.FeaturedTabViewModel
-import androidx.viewpager2.widget.ViewPager2
-import com.hash.common.ext.enableNestedPaging
 
 /**
  * Created by KngLv

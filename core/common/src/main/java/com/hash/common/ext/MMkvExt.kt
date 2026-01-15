@@ -1,6 +1,7 @@
 package com.hash.common.ext
 
 import com.google.gson.Gson
+import com.hjq.gson.factory.GsonFactory
 import com.tencent.mmkv.MMKV
 
 // Lazily get MMKV instance; if not initialized this will throw with a helpful message.
@@ -26,7 +27,7 @@ fun String.mmkvPutJson(json: String?): Boolean = try { mmkv().encode(this, json)
 
 // Reified inline wrapper that serializes object to JSON and stores it
 inline fun <reified T> String.mmkvPutObject(obj: T?): Boolean = try {
-    val json = obj?.let { Gson().toJson(it) }
+    val json = obj?.let { GsonFactory.getSingletonGson().toJson(it) }
     mmkvPutJson(json)
 } catch (_: Throwable) { false }
 
@@ -44,7 +45,7 @@ fun String.mmkvGetStringSet(): Set<String>? = try { mmkv().decodeStringSet(this)
 // Public non-inline generic get (accepts Class)
 fun <T> String.mmkvGetObject(clazz: Class<T>): T? = try {
     val json = mmkv().decodeString(this, null) ?: return null
-    Gson().fromJson(json, clazz)
+    GsonFactory.getSingletonGson().fromJson(json, clazz)
 } catch (_: Throwable) { null }
 
 // Reified inline wrapper

@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.hash.net"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -23,14 +23,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
 }
 
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:bean"))
+    implementation("com.google.code.gson:gson:2.13.2")
 
     api("com.squareup.okhttp3:okhttp:4.12.0")
     api("com.squareup.retrofit2:retrofit:2.9.0")
@@ -42,6 +40,4 @@ dependencies {
 //
 //    api("com.github.LvKang-insist:LvHttp:1.2.0")
 
-    // Gson 解析容错：https://github.com/getActivity/GsonFactory
-    implementation("com.github.getActivity:GsonFactory:10.5")
 }

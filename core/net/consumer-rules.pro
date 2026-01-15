@@ -1,0 +1,2 @@
+-keep class com.hash.net.net.response.** { *; }
+-keep class com.hash.net.response.** { *; }

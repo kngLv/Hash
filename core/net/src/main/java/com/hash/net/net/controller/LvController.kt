@@ -1,10 +1,10 @@
 package com.hash.net.net.controller
 
+import com.google.gson.Gson
 import com.hash.net.net.converter.LvDefaultConverterFactory
 import com.hash.net.net.interceptor.CacheInterceptor
 import com.hash.net.net.interceptor.LogInterceptor
 import com.hash.net.net.utils.HTTPSCerUtils
-import com.hjq.gson.factory.GsonFactory
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -29,7 +29,6 @@ class LvController {
     }
 
 
-
     private fun createOkhttpBuilder(): OkHttpClient.Builder {
         return OkHttpClient.Builder()
             .readTimeout(params.readTimeOut, TimeUnit.SECONDS)
@@ -43,7 +42,7 @@ class LvController {
         return Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
-            .addConverterFactory(LvDefaultConverterFactory.create(GsonFactory.getSingletonGson()))
+            .addConverterFactory(LvDefaultConverterFactory.create(params.gson ?: Gson()))
             .build()
     }
 

@@ -2,12 +2,12 @@ package com.hash.net.net
 
 import android.app.Application
 import androidx.annotation.RawRes
+import com.google.gson.Gson
 import com.hash.net.net.controller.LvController
 import com.hash.net.net.controller.LvParams
 import com.hash.net.net.error.ErrorKey
 import com.hash.net.net.error.ErrorValue
 import okhttp3.Interceptor
-import retrofit2.Retrofit
 
 
 object LvHttp {
@@ -134,6 +134,14 @@ object LvHttp {
          */
         fun setErrorDispose(errorKey: ErrorKey, errorValue: ErrorValue): Builder {
             p.errorDisposes[errorKey] = errorValue
+            return this
+        }
+
+        /**
+         * 设置 Gson 解析器，默认使用gson，如果有自定义的Gson解析器，可以在此设置
+         */
+        fun setGsonParser(gson: Gson): Builder {
+            p.gson = gson
             return this
         }
 

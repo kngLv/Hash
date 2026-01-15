@@ -17,10 +17,10 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-sdk.pro",
-                "proguard-app.pro"
+                "proguard-rules.pro"
             )
         }
     }
@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.androidx.swiperefreshlayout)
     kapt(libs.compiler)
 
+    // Gson 解析容错：https://github.com/getActivity/GsonFactory
+    api("com.github.getActivity:GsonFactory:10.5")
     api(libs.gson)
     api(libs.magicindicator)
 

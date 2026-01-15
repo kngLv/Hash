@@ -2,6 +2,7 @@ package com.hash.common.storage.userInfo
 
 import com.google.gson.Gson
 import com.hash.bean.mine.UserInfoBean
+import com.hjq.gson.factory.GsonFactory
 import com.tencent.mmkv.MMKV
 
 object UserInfoStore {
@@ -11,7 +12,7 @@ object UserInfoStore {
     private const val KEY_USER_INFO = "key_user_info"
     private const val KEY_COOKIE = "key_cookie"
 
-    private val gson = Gson()
+    private val gson = GsonFactory.getSingletonGson()
 
     /** Save user info to MMKV. If userInfo is null, clear stored value. */
     fun saveUserInfo(userInfo: UserInfoBean) {
