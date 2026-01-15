@@ -1,26 +1,25 @@
 package com.hash.database
 
+import android.app.Application
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.hash.common.IApp
-//import com.hash.database.dao.UserInfoDao
-//import com.hash.database.entity.UserInfoEntity
+import com.hash.database.dao.GsonFactoryPaseExceptionDao
+import com.hash.database.entity.GsonFactoryPaseExceptionEntity
 
-//@Database(entities = [UserInfoEntity::class], version = 1)
-@TypeConverters(RoomTypeConverters::class)
+@Database(entities = [GsonFactoryPaseExceptionEntity::class], version = 1)
 abstract class AppDataBase : RoomDatabase() {
 
 //    abstract fun userInfoDao(): UserInfoDao
 
+    abstract fun gsonFactoryPaseExceptionDao(): GsonFactoryPaseExceptionDao
+
     companion object {
         const val DATABASE_NAME = "hash_database.db"
+        lateinit var db: AppDataBase
 
-        val db by lazy {
-            Room.databaseBuilder(
-                IApp.instant, AppDataBase::class.java, DATABASE_NAME,
-            ).build()
+        fun init(context: Application) {
+            db = Room.databaseBuilder(context, AppDataBase::class.java, DATABASE_NAME).build()
         }
     }
 

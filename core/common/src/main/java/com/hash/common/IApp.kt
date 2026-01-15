@@ -4,12 +4,13 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import com.hash.common.config.GlideApp
 import com.hash.common.ext.getColor
-import com.hash.common.ext.logD
-import com.hash.common.utils.TimberUtils
+import com.hash.common.impl.GsonFactoryParseExceptionDefaultImpl
+import com.hash.common.utils.timber.TimberUtils
+import com.hash.database.AppDataBase
+import com.hjq.gson.factory.GsonFactory
 import com.scwang.smart.refresh.footer.ClassicsFooter
 import com.scwang.smart.refresh.header.MaterialHeader
 import com.scwang.smart.refresh.layout.SmartRefreshLayout
-import timber.log.Timber
 import kotlin.properties.Delegates
 
 
@@ -50,13 +51,17 @@ open class IApp : Application() {
 
         fun initSdk() {
             initTimer()
+            initDb()
             defaultRefresh()
         }
 
-        private fun initTimer() {
-            TimberUtils.init(isDebug, enableReporting = false)
-            logD("Timber 初始化完成，isDebug=$isDebug")
-        }
+        private fun initDb() = AppDataBase.init(instant)
+
+        private fun initTimer() = TimberUtils.init(isDebug, enableReporting = false)
+
+        private fun initGsonFactoryException() = GsonFactory.setParseExceptionCallback(
+            GsonFactoryParseExceptionDefaultImpl(isDebug)
+        )
 
         private fun defaultRefresh() {
             //设置全局的Header构建器
@@ -66,7 +71,6 @@ open class IApp : Application() {
                     R.color.primary.getColor(),
                 )
             }
-
             //设置全局的Footer构建器
             SmartRefreshLayout.setDefaultRefreshFooterCreator { context, layout ->
                 ClassicsFooter(context).setDrawableSize(20f)

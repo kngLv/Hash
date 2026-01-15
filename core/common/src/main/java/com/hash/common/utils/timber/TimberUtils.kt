@@ -1,6 +1,8 @@
-package com.hash.common.utils
+package com.hash.common.utils.timber
 
 import android.util.Log
+import com.hash.common.IApp
+import com.hash.common.ext.logD
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -28,7 +30,11 @@ object TimberUtils {
      * @param enableReporting 是否同时启用上报（会植入 ReportingTree 并启用 ReportingManager）
      * @param reportingMinPriority 上报采集的最低优先级（默认 WARN）
      */
-    fun init(isDebug: Boolean, enableReporting: Boolean = false, reportingMinPriority: Int = Log.WARN) {
+    fun init(
+        isDebug: Boolean,
+        enableReporting: Boolean = false,
+        reportingMinPriority: Int = Log.WARN
+    ) {
         // 清除已存在的 Tree，避免重复打印
         try {
             Timber.uprootAll()
@@ -46,6 +52,7 @@ object TimberUtils {
         if (enableReporting) {
             enableReporting(reportingMinPriority)
         }
+        logD("Timber 初始化完成，isDebug=${IApp.Companion.isDebug} enableReporting=$enableReporting reportingMinPriority=$reportingMinPriority")
     }
 
     /** 运行时开启上报（会设置阈值、启用 ReportingManager 并植入 ReportingTree），幂等 */
@@ -118,7 +125,11 @@ object TimberUtils {
      */
     fun e(message: String?, throwable: Throwable? = null, vararg args: Any?) {
         if (throwable != null) {
-            if (args.isNotEmpty()) Timber.e(throwable, message ?: "", *args) else Timber.e(throwable, message ?: "")
+            if (args.isNotEmpty()) Timber.e(
+                throwable,
+                message ?: "",
+                *args
+            ) else Timber.e(throwable, message ?: "")
         } else {
             if (args.isNotEmpty()) Timber.e(message, *args) else Timber.e(message ?: "null")
         }

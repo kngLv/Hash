@@ -1,7 +1,6 @@
 package com.hash.common.ext
 
-import com.hash.common.utils.TimberUtils
-import com.hash.common.utils.ReportingManager
+import com.hash.common.utils.timber.TimberUtils
 
 /**
  * 日志扩展函数集合，放在 ext 包下，方便在任意对象或字符串上直接调用。

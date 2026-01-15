@@ -1,4 +1,4 @@
-package com.hash.common.utils
+package com.hash.common.utils.timber
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope

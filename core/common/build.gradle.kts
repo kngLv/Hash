@@ -43,6 +43,8 @@ android {
 }
 
 dependencies {
+    api(project(":core:database"))
+
     api(libs.androidx.core.ktx)
     api(libs.androidx.lifecycle.runtime.ktx)
     api(libs.material)

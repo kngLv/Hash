@@ -101,6 +101,10 @@ android {
 //        }
 //    }
 }
+// 或者在项目级别统一设置
+kotlin {
+    jvmToolchain(21)
+}
 
 dependencies {
     implementation(project(":core:common"))
