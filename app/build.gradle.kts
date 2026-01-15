@@ -3,7 +3,6 @@ import java.util.Date
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
 }
 
@@ -13,11 +12,6 @@ android {
 
     defaultConfig {
         applicationId = "com.hash.app"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -26,6 +20,9 @@ android {
         }
     }
 
+    buildFeatures {
+        dataBinding = true
+    }
 
     signingConfigs {
         signingConfigs {
@@ -39,7 +36,7 @@ android {
     }
 
     buildTypes {
-        debug {
+        getByName("debug") {
             isDebuggable = true
             isJniDebuggable = true
             isShrinkResources = false
@@ -51,7 +48,15 @@ android {
                 abiFilters.add("arm64-v8a")
             }
         }
-        release {
+        getByName("preview") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ""
+            // 添加清单占位符
+            manifestPlaceholders += mapOf(
+                "app_name" to "@string/app_name_preview"
+            )
+        }
+        getByName("release") {
             isDebuggable = false// 调试模式开关
             isJniDebuggable = false
             isShrinkResources = true// 移除无用的资源
@@ -71,39 +76,6 @@ android {
             }
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-    buildFeatures {
-        dataBinding = true
-    }
-//
-//    applicationVariants.all {
-//        // apk 输出文件名配置
-//        outputs.all {
-//            val outputFileName = buildString {
-//                append(rootProject.name)
-//                append("_v")
-//                append(versionName)
-//                append("_")
-//                append(buildType.name)
-//                if (buildType.name == "release") {
-//                    append("_")
-//                    append(SimpleDateFormat("MMdd").format(Date()))
-//                }
-//                append(".apk")
-//            }
-//            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = outputFileName
-//        }
-//    }
-}
-// 或者在项目级别统一设置
-kotlin {
-    jvmToolchain(21)
 }
 
 dependencies {
