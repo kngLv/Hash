@@ -13,6 +13,7 @@ android {
     buildFeatures {
         //android.dataBinding.enabled has been replace to android.buildFeatures.dataBinding
         dataBinding = true
+        buildConfig = true
     }
     sourceSets {
         getByName("main") {
@@ -30,6 +31,7 @@ dependencies {
     api(project(":core:widget")) //widget模块
     api(project(":core:database"))
     api(project(":core:bean"))
+    api(project(":core:umengSdk"))
 
     api(libs.androidx.activity.ktx) //activity扩展
     api(libs.androidx.fragment.ktx) //fragment扩展
@@ -44,7 +46,7 @@ dependencies {
     api(libs.timber)
     // 图片加载框架：https://github.com/bumptech/glide
     // 官方使用文档：https://github.com/Muyangmin/glide-docs-cn
-    implementation (libs.glide)
+    implementation(libs.glide)
     implementation(libs.androidx.swiperefreshlayout)
     kapt(libs.compiler)
 

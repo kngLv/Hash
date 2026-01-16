@@ -4,6 +4,7 @@ import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.activity.BaseBindingActivity
 import com.hash.release.databinding.ActivityReleaseBinding
 import com.hash.router.RouterActivityPath
+import com.hash.umengsdk.UmengClient
 
 /**
  * @name ReleaseActivity
@@ -18,7 +19,16 @@ class ReleaseActivity : BaseBindingActivity<ActivityReleaseBinding>() {
     override fun layoutId(): Int = R.layout.activity_release
 
     override fun initView() {
+    }
 
+    override fun listener() {
+        binding.throwCrashButton.setOnClickListener {
+            throw IllegalStateException("are you ok?")
+        }
+        binding.crashButton.setOnClickListener {
+            val s = IllegalStateException("Custom Crash?")
+            UmengClient.generateCustomLog(s, "Custom Crash")
+        }
     }
 
     override fun finish() {

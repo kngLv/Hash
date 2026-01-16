@@ -19,6 +19,7 @@
             <option value="$PROJECT_DIR$/core/net" />
             <option value="$PROJECT_DIR$/core/repository" />
             <option value="$PROJECT_DIR$/core/router" />
+            <option value="$PROJECT_DIR$/core/umengSdk" />
             <option value="$PROJECT_DIR$/core/widget" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/discover" />

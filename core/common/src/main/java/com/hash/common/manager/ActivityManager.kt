@@ -1,44 +1,25 @@
 package com.hash.common.manager
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
-import android.app.Application.ActivityLifecycleCallbacks
+import android.content.Context
 import android.os.Bundle
-import androidx.collection.ArrayMap
-import timber.log.Timber
-import java.util.*
+import android.text.TextUtils
+import android.util.Log
+import com.hash.common.ktx.isAndroid9
+import java.io.FileInputStream
+import java.io.IOException
+import java.lang.reflect.InvocationTargetException
+import java.nio.charset.StandardCharsets
 
-/**
- *    author : Android 轮子哥
- *    github : https://github.com/getActivity/AndroidProject-Kotlin
- *    time   : 2018/11/18
- *    desc   : Activity 管理类
- */
-class ActivityManager private constructor() : ActivityLifecycleCallbacks {
-
-    companion object {
-
-        @Suppress("StaticFieldLeak")
-        private val activityManager: ActivityManager by lazy { ActivityManager() }
-
-        fun getInstance(): ActivityManager {
-            return activityManager
-        }
-
-        /**
-         * 获取一个对象的独立无二的标记
-         */
-        private fun getObjectTag(`object`: Any): String {
-            // 对象所在的包名 + 对象的内存地址
-            return `object`.javaClass.name + Integer.toHexString(`object`.hashCode())
-        }
-    }
+object ActivityManager : Application.ActivityLifecycleCallbacks {
 
     /** Activity 存放集合 */
-    private val activitySet: ArrayMap<String?, Activity?> = ArrayMap()
+    private val activityList: MutableList<Activity> = mutableListOf()
 
     /** 应用生命周期回调 */
-    private val lifecycleCallbacks: ArrayList<ApplicationLifecycleCallback> = ArrayList()
+    private val lifecycleCallbacks: MutableList<ApplicationLifecycleCallback> = mutableListOf()
 
     /** 当前应用上下文对象 */
     private lateinit var application: Application
@@ -76,6 +57,13 @@ class ActivityManager private constructor() : ActivityLifecycleCallbacks {
     }
 
     /**
+     * 获取 Activity 集合
+     */
+    fun getActivityList(): MutableList<Activity> {
+        return activityList
+    }
+
+    /**
      * 判断当前应用是否处于前台状态
      */
     fun isForeground(): Boolean {
@@ -103,17 +91,17 @@ class ActivityManager private constructor() : ActivityLifecycleCallbacks {
         if (clazz == null) {
             return
         }
-        val keys: Array<String?> = activitySet.keys.toTypedArray()
-        for (key: String? in keys) {
-            val activity: Activity? = activitySet[key]
-            if (activity == null || activity.isFinishing) {
+
+        val iterator: MutableIterator<Activity> = activityList.iterator()
+        while (iterator.hasNext()) {
+            val activity = iterator.next()
+            if (activity.javaClass != clazz) {
                 continue
             }
-            if ((activity.javaClass == clazz)) {
+            if (!activity.isFinishing) {
                 activity.finish()
-                activitySet.remove(key)
-                break
             }
+            iterator.remove()
         }
     }
 
@@ -131,62 +119,60 @@ class ActivityManager private constructor() : ActivityLifecycleCallbacks {
      */
     @SafeVarargs
     fun finishAllActivities(vararg classArray: Class<out Activity>?) {
-        val keys: Array<String?> = activitySet.keys.toTypedArray()
-        for (key: String? in keys) {
-            val activity: Activity? = activitySet[key]
-            if (activity == null || activity.isFinishing) {
-                continue
-            }
+        val iterator: MutableIterator<Activity> = activityList.iterator()
+        while (iterator.hasNext()) {
+            val activity = iterator.next()
             var whiteClazz = false
-            for (clazz: Class<out Activity?>? in classArray) {
-                if ((activity.javaClass == clazz)) {
+            for (clazz in classArray) {
+                if (activity.javaClass == clazz) {
                     whiteClazz = true
                 }
             }
             if (whiteClazz) {
                 continue
             }
-
             // 如果不是白名单上面的 Activity 就销毁掉
-            activity.finish()
-            activitySet.remove(key)
+            if (!activity.isFinishing) {
+                activity.finish()
+            }
+            iterator.remove()
         }
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-        Timber.i("%s - onCreate", activity.javaClass.simpleName)
-        if (activitySet.size == 0) {
+        printLog(String.format("%s - onCreate", activity.javaClass.simpleName))
+        if (activityList.isEmpty()) {
             for (callback: ApplicationLifecycleCallback? in lifecycleCallbacks) {
                 callback?.onApplicationCreate(activity)
             }
-            Timber.i("%s - onApplicationCreate", activity.javaClass.simpleName)
+            printLog(String.format("%s - onApplicationCreate", activity.javaClass.simpleName))
         }
-        activitySet[getObjectTag(activity)] = activity
+        activityList.add(activity)
         topActivity = activity
     }
 
     override fun onActivityStarted(activity: Activity) {
-        Timber.i("%s - onStart", activity.javaClass.simpleName)
+        printLog(String.format("%s - onStart", activity.javaClass.simpleName))
     }
 
     override fun onActivityResumed(activity: Activity) {
-        Timber.i("%s - onResume", activity.javaClass.simpleName)
+        printLog(String.format("%s - onResume", activity.javaClass.simpleName))
         if (topActivity === activity && resumedActivity == null) {
             for (callback: ApplicationLifecycleCallback in lifecycleCallbacks) {
                 callback.onApplicationForeground(activity)
             }
-            Timber.i("%s - onApplicationForeground", activity.javaClass.simpleName)
+            printLog(String.format("%s - onApplicationForeground", activity.javaClass.simpleName))
         }
         topActivity = activity
         resumedActivity = activity
     }
 
     override fun onActivityPaused(activity: Activity) {
-        Timber.i("%s - onPause", activity.javaClass.simpleName)
+        printLog(String.format("%s - onPause", activity.javaClass.simpleName))
     }
 
     override fun onActivityStopped(activity: Activity) {
-        Timber.i("%s - onStop", activity.javaClass.simpleName)
+        printLog(String.format("%s - onStop", activity.javaClass.simpleName))
         if (resumedActivity === activity) {
             resumedActivity = null
         }
@@ -194,26 +180,101 @@ class ActivityManager private constructor() : ActivityLifecycleCallbacks {
             for (callback: ApplicationLifecycleCallback in lifecycleCallbacks) {
                 callback.onApplicationBackground(activity)
             }
-            Timber.i("%s - onApplicationBackground", activity.javaClass.simpleName)
+            printLog(String.format("%s - onApplicationBackground", activity.javaClass.simpleName))
         }
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-        Timber.i("%s - onSaveInstanceState", activity.javaClass.simpleName)
+        printLog(String.format("%s - onSaveInstanceState", activity.javaClass.simpleName))
     }
 
     override fun onActivityDestroyed(activity: Activity) {
-        Timber.i("%s - onDestroy", activity.javaClass.simpleName)
-        activitySet.remove(getObjectTag(activity))
+        printLog(String.format("%s - onDestroy", activity.javaClass.simpleName))
+        activityList.remove(activity)
         if (topActivity === activity) {
             topActivity = null
         }
-        if (activitySet.size == 0) {
+        if (activityList.isEmpty()) {
             for (callback: ApplicationLifecycleCallback in lifecycleCallbacks) {
                 callback.onApplicationDestroy(activity)
             }
-            Timber.i("%s - onApplicationDestroy", activity.javaClass.simpleName)
+            printLog(String.format("%s - onApplicationDestroy", activity.javaClass.simpleName))
         }
+    }
+
+    /**
+     * 判断是否在主进程中
+     */
+    fun isMainProcess(context: Context): Boolean {
+        val processName = getProcessName()
+        return if (TextUtils.isEmpty(processName)) {
+            // 如果获取不到进程名称，那么则将它当做主进程
+            true
+        } else TextUtils.equals(processName, context.packageName)
+    }
+
+    /**
+     * 获取当前进程名称
+     */
+    @SuppressLint("PrivateApi, DiscouragedPrivateApi")
+    fun getProcessName(): String? {
+        var processName: String? = null
+        if (isAndroid9()) {
+            processName = Application.getProcessName()
+        } else {
+            try {
+                val activityThread = Class.forName("android.app.ActivityThread")
+                val currentProcessNameMethod =
+                    activityThread.getDeclaredMethod("currentProcessName")
+                processName = currentProcessNameMethod.invoke(null) as String
+            } catch (e: ClassNotFoundException) {
+                e.printStackTrace()
+            } catch (e: ClassCastException) {
+                e.printStackTrace()
+            } catch (e: NoSuchMethodException) {
+                e.printStackTrace()
+            } catch (e: IllegalAccessException) {
+                e.printStackTrace()
+            } catch (e: InvocationTargetException) {
+                e.printStackTrace()
+            }
+        }
+        if (!TextUtils.isEmpty(processName)) {
+            return processName
+        }
+
+        // 利用 Linux 系统获取进程名
+        var inputStream: FileInputStream? = null
+        try {
+            inputStream = FileInputStream("/proc/self/cmdline")
+            val buffer = ByteArray(256)
+            var len = 0
+            var b: Int
+            while (inputStream.read().also { b = it } > 0 && len < buffer.size) {
+                buffer[len++] = b.toByte()
+            }
+            if (len > 0) {
+                return String(buffer, 0, len, StandardCharsets.UTF_8)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * 打印日志
+     */
+    private fun printLog(content: String) {
+        Log.i("ActivityManager", content)
     }
 
     /**

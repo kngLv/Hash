@@ -31,7 +31,7 @@ class MainNavigationAdapter(private val menuItem: List<MenuItem>) :
                 .inflate(R.layout.main_navigation_item, parent, false)
         )
         holder.itemView.setOnClickListener {
-            selectPosition = holder.adapterPosition
+            selectPosition = holder.layoutPosition
             notifyDataSetChanged()
             onTabClickPosition?.onTabClickPositionListener(selectPosition)
         }

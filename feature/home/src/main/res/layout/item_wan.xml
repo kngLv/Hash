@@ -16,7 +16,6 @@
         android:layout_height="wrap_content"
         app:cardCornerRadius="8dp"
         app:cardElevation="4dp"
-        android:foreground="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
 
@@ -43,7 +42,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@{bean.title}"
-                android:textAppearance="?attr/textAppearanceSubtitle1"
                 android:textColor="@android:color/black"
                 android:maxLines="3"
                 android:ellipsize="end"
@@ -56,7 +54,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:text='@{(bean.author != null &amp;&amp; bean.author.length() &gt; 0) ? bean.author : bean.shareUser}'
-                android:textAppearance="?attr/textAppearanceCaption"
                 android:textColor="@android:color/darker_gray"
                 app:layout_constraintTop_toBottomOf="@+id/tv_title"
                 app:layout_constraintStart_toStartOf="parent"
@@ -68,7 +65,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@{bean.niceDate}"
-                android:textAppearance="?attr/textAppearanceCaption"
                 android:textColor="@android:color/darker_gray"
                 app:layout_constraintBaseline_toBaselineOf="@+id/tv_author"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -84,7 +80,6 @@
                 android:paddingBottom="4dp"
                 android:background="@drawable/bg_chip"
                 android:text='@{bean.superChapterName != null ? bean.superChapterName : ""}'
-                android:textAppearance="?attr/textAppearanceCaption"
                 android:textColor="@android:color/black"
                 app:layout_constraintTop_toBottomOf="@+id/tv_author"
                 app:layout_constraintStart_toStartOf="parent" />
@@ -100,7 +95,6 @@
                 android:paddingBottom="4dp"
                 android:background="@drawable/bg_chip"
                 android:text='@{(bean.tags != null &amp;&amp; bean.tags.size() &gt; 0) ? bean.tags.get(0).name : ""}'
-                android:textAppearance="?attr/textAppearanceCaption"
                 android:textColor="@android:color/black"
                 app:layout_constraintTop_toBottomOf="@+id/tv_author"
                 app:layout_constraintEnd_toEndOf="parent"

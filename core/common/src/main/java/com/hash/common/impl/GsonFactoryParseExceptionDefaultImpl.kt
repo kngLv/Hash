@@ -7,6 +7,7 @@ import com.hash.database.AppDataBase
 import com.hash.database.entity.GsonFactoryPaseExceptionEntity
 import com.hjq.gson.factory.ParseExceptionCallback
 import com.hash.common.ext.safeLaunchIO
+import com.hash.umengsdk.UmengClient
 
 /**
  * Created by KngLv
@@ -43,6 +44,7 @@ class GsonFactoryParseExceptionDefaultImpl(val isDebug: Boolean) : ParseExceptio
     private fun handlerGsonParseException(message: String?) {
         logE(message)
         val exception = IllegalArgumentException(message)
+        UmengClient.generateCustomLog(exception, "GsonParseException")
         if (isDebug) {
             throw exception
         } else {

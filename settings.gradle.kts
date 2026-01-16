@@ -10,6 +10,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://repo1.maven.org/maven2/")}
     }
 }
 plugins {
@@ -21,6 +22,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://repo1.maven.org/maven2/")}
     }
 }
 
@@ -42,3 +44,4 @@ include(":core:bean")
 include(":core:agora")
 include(":core:database")
 include(":core:repository")
+include(":core:umengSdk")

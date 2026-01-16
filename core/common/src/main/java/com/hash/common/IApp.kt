@@ -3,14 +3,8 @@ package com.hash.common
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import com.hash.common.config.GlideApp
-import com.hash.common.ext.getColor
-import com.hash.common.impl.GsonFactoryParseExceptionDefaultImpl
-import com.hash.common.utils.timber.TimberUtils
-import com.hash.database.AppDataBase
-import com.hjq.gson.factory.GsonFactory
-import com.scwang.smart.refresh.footer.ClassicsFooter
-import com.scwang.smart.refresh.header.MaterialHeader
-import com.scwang.smart.refresh.layout.SmartRefreshLayout
+import com.hash.common.manager.ActivityManager
+import com.hash.common.manager.InitManager
 import kotlin.properties.Delegates
 
 
@@ -50,30 +44,14 @@ open class IApp : Application() {
         var isDebug: Boolean by Delegates.notNull()
 
         fun initSdk() {
-            initTimer()
-            initDb()
-            defaultRefresh()
-        }
-
-        private fun initDb() = AppDataBase.init(instant)
-
-        private fun initTimer() = TimberUtils.init(isDebug, enableReporting = false)
-
-        private fun initGsonFactoryException() = GsonFactory.setParseExceptionCallback(
-            GsonFactoryParseExceptionDefaultImpl(isDebug)
-        )
-
-        private fun defaultRefresh() {
-            //设置全局的Header构建器
-            SmartRefreshLayout.setDefaultRefreshHeaderCreator { context, layout ->
-                layout.setPrimaryColorsId(R.color.primary, R.color.colorOnPrimary)
-                MaterialHeader(context).setColorSchemeColors(
-                    R.color.primary.getColor(),
-                )
+            // 如果当前的进程不是主进程的话，则不进行第三方框架的初始化
+            if (!ActivityManager.isMainProcess(instant)) {
+                return
             }
-            //设置全局的Footer构建器
-            SmartRefreshLayout.setDefaultRefreshFooterCreator { context, layout ->
-                ClassicsFooter(context).setDrawableSize(20f)
+            InitManager.preInitSdk(instant, isDebug)
+//            if (InitManager.isAgreePrivacy()) {
+            if (true) {
+                InitManager.initSdk(instant)
             }
         }
     }
