@@ -51,7 +51,7 @@ open class IApp : Application() {
             InitManager.preInitSdk(instant, isDebug)
 //            if (InitManager.isAgreePrivacy()) {
             if (true) {
-                InitManager.initSdk(instant)
+                InitManager.initSdk(instant, isDebug, "kngLv")
             }
         }
     }

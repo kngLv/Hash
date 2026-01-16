@@ -116,6 +116,35 @@ object GlobalUtil {
         }
     }
 
+    // Added: cached deviceId that prefers ANDROID_ID and falls back to getDeviceSerial()
+    private var deviceId: String? = null
+
+    /**
+     * 获取设备唯一ID，优先使用 Settings.Secure.ANDROID_ID（做已知无效值过滤），
+     * 若无法获取则回退到 getDeviceSerial()。结果会缓存，避免重复读取。
+     */
+    @SuppressLint("HardwareIds")
+    fun getDeviceId(): String {
+        if (!deviceId.isNullOrEmpty()) return deviceId!!
+
+        var androidId: String? = null
+        try {
+            androidId = Settings.Secure.getString(IApp.instant.contentResolver, Settings.Secure.ANDROID_ID)
+        } catch (e: Exception) {
+            Log.e(TAG, "getDeviceId: failed to read ANDROID_ID", e)
+        }
+
+        // 过滤已知的无效 ANDROID_ID 值
+        val invalidIds = setOf("9774d56d682e549c", "0123456789abcdef", "000000000000000")
+        deviceId = if (!androidId.isNullOrEmpty() && !invalidIds.contains(androidId.lowercase(Locale.getDefault()))) {
+            androidId.replace("-", "").uppercase(Locale.getDefault())
+        } else {
+            getDeviceSerial()
+        }
+
+        return deviceId!!
+    }
+
 
     /**
      * 获取AndroidManifest.xml文件中，<application>标签下的meta-data值。

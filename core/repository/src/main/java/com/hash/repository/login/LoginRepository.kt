@@ -3,6 +3,7 @@ package com.hash.repository.login
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.hash.bean.mine.UserInfoBean
+import com.hash.common.manager.BuglyCrashManager
 import com.hash.common.storage.userInfo.UserInfoStore
 import com.hash.net.net.launch.request
 import com.hash.net.net.request.onBodyOf
@@ -38,6 +39,7 @@ class LoginRepository {
             .onBodyOf {
                 // 保存用户信息和Cookie
                 UserInfoStore.saveUserInfo(UserInfoBean(null, it))
+                BuglyCrashManager.setUserId("${it.id}")
             }.onEnd {
                 // 刷新登录状态
                 refreshLoginState()

@@ -62,4 +62,7 @@ dependencies {
     api(libs.refresh.layout.kernel)
     api(libs.refresh.header.material)
     api(libs.refresh.footer.classics)
+
+    implementation("com.tencent.bugly:crashreport:4.1.9.3")
+    implementation("com.github.getActivity:DeviceCompat:2.5")
 }

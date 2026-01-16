@@ -2,6 +2,7 @@ package com.hash.release
 
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.activity.BaseBindingActivity
+import com.hash.common.manager.BuglyCrashManager
 import com.hash.release.databinding.ActivityReleaseBinding
 import com.hash.router.RouterActivityPath
 import com.hash.umengsdk.UmengClient
@@ -26,8 +27,8 @@ class ReleaseActivity : BaseBindingActivity<ActivityReleaseBinding>() {
             throw IllegalStateException("are you ok?")
         }
         binding.crashButton.setOnClickListener {
-            val s = IllegalStateException("Custom Crash?")
-            UmengClient.generateCustomLog(s, "Custom Crash")
+            val s = RuntimeException("Custom Crash?")
+            BuglyCrashManager.postCatchException(s)
         }
     }
 

@@ -18,4 +18,9 @@
 # Avoid warnings about javax.annotation
 -dontwarn javax.annotation.**
 
+# MMKV
 -keep class com.tencent.mmkv.** { *; }
+
+# Bugly
+-dontwarn com.tencent.bugly.**
+-keep public class com.tencent.bugly.**{*;}
