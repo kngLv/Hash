@@ -23,4 +23,13 @@
 
 # Bugly
 -dontwarn com.tencent.bugly.**
--keep public class com.tencent.bugly.**{*;}
+# 保留 Bugly 全部类和成员（避免 R8 删除）
+-keep class com.tencent.bugly.** { *; }
+
+# 保留通过 JNI 调用的 native 方法
+-keepclassmembers class com.tencent.bugly.** { native * *(...); }
+# 避免关于 Bugly 的警告
+-dontwarn com.tencent.bugly.**
+
+# 如果仍然报错，可显式保留该类
+-keep class com.tencent.bugly.crashreport.crash.jni.NativeExceptionHandler { *; }

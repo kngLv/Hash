@@ -7,7 +7,6 @@ import com.hash.common.ext.mmkvGetBoolean
 import com.hash.common.ext.mmkvPut
 import com.hash.common.impl.GsonFactoryParseExceptionDefaultImpl
 import com.hash.common.storage.MMKVConst
-import com.hash.common.utils.GlobalUtil
 import com.hash.common.utils.timber.TimberUtils
 import com.hash.database.AppDataBase
 import com.hash.umengsdk.UmengClient
@@ -15,8 +14,6 @@ import com.hjq.gson.factory.GsonFactory
 import com.scwang.smart.refresh.footer.ClassicsFooter
 import com.scwang.smart.refresh.header.MaterialHeader
 import com.scwang.smart.refresh.layout.SmartRefreshLayout
-import com.tencent.bugly.crashreport.CrashReport
-import com.tencent.bugly.crashreport.CrashReport.UserStrategy
 
 
 /**

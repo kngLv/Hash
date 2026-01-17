@@ -3,6 +3,8 @@ package com.hash.common.manager
 import android.app.Application
 import android.content.Context
 import com.hash.common.utils.GlobalUtil
+import com.hjq.device.compat.DeviceBrand
+import com.hjq.device.compat.DeviceOs
 import com.tencent.bugly.crashreport.CrashReport
 import com.tencent.bugly.crashreport.CrashReport.UserStrategy
 
@@ -24,6 +26,9 @@ object BuglyCrashManager {
         strategy.isEnableCatchAnrTrace = false
         // 设置是否获取anr过程中的主线程堆栈，可能造成crash，建议只对少量用户开启
         strategy.isEnableRecordAnrMainStack = false
+        // 品牌_系统名称_系统版本名称_系统版本的大版本号
+        strategy.deviceModel =
+            "${DeviceBrand.getBrandName()}_${DeviceOs.getOsName()}_${DeviceOs.getOsVersionName()}_${DeviceOs.getOsBigVersionCode()}"
         //可能引起crash，建议只对少量用户开启
         CrashReport.setAllThreadStackEnable(application, false, false)
         CrashReport.initCrashReport(application, "49a3721003", isDebug, strategy)
@@ -43,6 +48,6 @@ object BuglyCrashManager {
 
     /** 主动上报异常信息 */
     fun postCatchException(throwable: Throwable) {
-        CrashReport.postCatchedException(throwable, Thread.currentThread(),true)
+        CrashReport.postCatchedException(throwable)
     }
 }
