@@ -4,11 +4,12 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// 顶级构建文件：在此处声明的插件可以被子模块引用
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.tencent.vasdolly) apply false
 }
 
 subprojects {

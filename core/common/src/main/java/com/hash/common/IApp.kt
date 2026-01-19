@@ -5,6 +5,7 @@ import android.content.pm.ApplicationInfo
 import com.hash.common.config.GlideApp
 import com.hash.common.manager.ActivityManager
 import com.hash.common.manager.InitManager
+import com.tencent.vasdolly.helper.ChannelReaderUtil
 import kotlin.properties.Delegates
 
 
@@ -43,6 +44,11 @@ open class IApp : Application() {
         var instant: Application by Delegates.notNull()
         var isDebug: Boolean by Delegates.notNull()
 
+        val channel: String by lazy {
+            val c = ChannelReaderUtil.getChannel(instant)
+            if (c.isNullOrEmpty()) "hashApp" else c
+        }
+
         fun initSdk() {
             // 如果当前的进程不是主进程的话，则不进行第三方框架的初始化
             if (!ActivityManager.isMainProcess(instant)) {
@@ -51,7 +57,7 @@ open class IApp : Application() {
             InitManager.preInitSdk(instant, isDebug)
 //            if (InitManager.isAgreePrivacy()) {
             if (true) {
-                InitManager.initSdk(instant, isDebug, "kngLv")
+                InitManager.initSdk(instant, isDebug, channel)
             }
         }
     }

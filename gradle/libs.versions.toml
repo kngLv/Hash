@@ -2,6 +2,7 @@
 
 activityKtx = "1.12.2"
 agp = "8.13.2"
+vasdolly = "3.0.6"
 appcompat = "1.7.1"
 arouterCompiler = "1.5.2"
 baserecyclerviewadapterhelper4 = "4.3.2"
@@ -61,4 +62,4 @@ timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-
+tencent-vasdolly = { id = "com.tencent.vasdolly", version.ref = "vasdolly" }

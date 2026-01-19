@@ -3,6 +3,7 @@ import java.util.Date
 
 plugins {
     alias(libs.plugins.android.application)
+    id("com.tencent.vasdolly")
     id("kotlin-kapt")
 }
 
@@ -76,6 +77,21 @@ android {
             }
         }
     }
+}
+
+// 执行 ./gradlew :app:rebuildChannel 生成渠道包
+rebuildChannel {
+    //指定渠道文件
+    channelFile = File(project.rootDir, "channel.txt")
+    // 已有APK文件地址（必填）,如new File(project.rootDir, "/baseApk/app_base.apk"),文件名中的base将被替换为渠道名
+//    baseApk = File(project.rootDir, "app/release/app_base.apk")
+    baseApk = File("/Users/lvkang/StudioProjects/Hash/app/release/app_base.apk")
+    //默认为new File(project.buildDir, "rebuildChannel")
+//    outputDir = 渠道包输出目录
+    //快速模式：生成渠道包时不进行校验（速度可以提升10倍以上，默认为false）
+    fastMode = false
+    //低内存模式（仅针对V2签名，默认为false）：只把签名块、中央目录和EOCD读取到内存，不把最大头的内容块读取到内存，在手机上合成APK时，可以使用该模式
+    lowMemory = false
 }
 
 dependencies {
