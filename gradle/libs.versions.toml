@@ -2,6 +2,11 @@
 
 activityKtx = "1.12.2"
 agp = "8.13.2"
+crashreport = "4.1.9.3"
+devicecompat = "2.5"
+gsonfactory = "10.5"
+helper = "3.0.6"
+leakcanaryAndroid = "2.14"
 vasdolly = "3.0.6"
 appcompat = "1.7.1"
 arouterCompiler = "1.5.2"
@@ -39,11 +44,16 @@ arouter-api = { module = "com.alibaba:arouter-api", version.ref = "arouterCompil
 arouter-compiler = { module = "com.alibaba:arouter-compiler", version.ref = "arouterCompiler" }
 baserecyclerviewadapterhelper4 = { module = "io.github.cymchad:BaseRecyclerViewAdapterHelper4", version.ref = "baserecyclerviewadapterhelper4" }
 compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
+crashreport = { module = "com.tencent.bugly:crashreport", version.ref = "crashreport" }
+devicecompat = { module = "com.github.getActivity:DeviceCompat", version.ref = "devicecompat" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+gsonfactory = { module = "com.github.getActivity:GsonFactory", version.ref = "gsonfactory" }
+helper = { module = "com.tencent.vasdolly:helper", version.ref = "helper" }
 immersionbar = { module = "com.geyifeng.immersionbar:immersionbar", version.ref = "immersionbar" }
 immersionbar-components = { module = "com.geyifeng.immersionbar:immersionbar-components", version.ref = "immersionbar" }
 immersionbar-ktx = { module = "com.geyifeng.immersionbar:immersionbar-ktx", version.ref = "immersionbar" }
+leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanaryAndroid" }
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 magicindicator = { module = "com.github.hackware1993:MagicIndicator", version.ref = "magicindicator" }
 material = { module = "com.google.android.material:material", version.ref = "material" }

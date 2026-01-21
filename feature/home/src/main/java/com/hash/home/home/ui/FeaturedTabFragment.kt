@@ -47,15 +47,15 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     }
 
     override fun loadData() {
-        viewModel.onRefresh()
+        viewModel.autoRefresh()
     }
 
     override fun listener() {
         binding.refreshLayout.setOnRefreshListener {
-            viewModel.onRefresh()
+            viewModel.useRefresh()
         }
         binding.refreshLayout.setOnLoadMoreListener {
-            viewModel.getNewsList()
+            viewModel.getNewsList(forceRefresh = false)
         }
     }
 
@@ -65,6 +65,11 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
                 adapter.submitList(it)
             } else {
                 adapter.addAll(it)
+            }
+        }
+        viewModel.isNetRequest.observe(this){
+            if (it && viewModel.page <=1) {
+                binding.refreshLayout.autoRefreshAnimationOnly()
             }
         }
         viewModel.isNextPage.observe(this) {

@@ -2,11 +2,14 @@ package com.hash.common
 
 import android.app.Application
 import android.content.pm.ApplicationInfo
+import com.hash.common.cache.CacheTrimManager
+import com.hash.common.ext.logD
 import com.hash.common.config.GlideApp
 import com.hash.common.manager.ActivityManager
 import com.hash.common.manager.InitManager
 import com.tencent.vasdolly.helper.ChannelReaderUtil
 import kotlin.properties.Delegates
+
 
 
 /**
@@ -31,12 +34,26 @@ open class IApp : Application() {
         super.onLowMemory()
         // 清理所有图片内存缓存
         GlideApp.get(this).onLowMemory()
+        // 清理模块注册的缓存
+        try {
+            CacheTrimManager.clearAll()
+        } catch (_: Throwable) {
+        }
     }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         // 根据手机内存剩余情况清理图片内存缓存
         GlideApp.get(this).onTrimMemory(level)
+        // 通知各模块根据系统内存等级调整缓存
+        try {
+            CacheTrimManager.trimAll(level)
+            // 输出 trim 统计，便于调试与参数调整
+            CacheTrimManager.getStats().let { stats ->
+                "CacheTrim stats: clear=${stats.totalClearCount}, trim=${stats.totalTrimCount}, lastTrim=${stats.lastTrimTs}, perLevel=${stats.trimCountsByLevel}".logD()
+            }
+        } catch (_: Throwable) {
+        }
     }
 
 

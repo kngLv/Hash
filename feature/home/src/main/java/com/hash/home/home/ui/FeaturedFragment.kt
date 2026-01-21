@@ -1,6 +1,7 @@
 package com.hash.home.home.ui
 
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.RecyclerView
 import com.hash.bean.home.NewsTypeListBean
 import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ext.disableNestedPaging
@@ -55,6 +56,13 @@ class FeaturedFragment : BaseBindingFragment<FragmentFeaturedBinding>() {
         binding.indicator.navigator = commonNavigator
         pagerAdapter = FeaturedPagerAdapter(childFragmentManager, lifecycle, emptyList())
         binding.viewpager.adapter = pagerAdapter
+
+        // Keep a few pages alive to avoid frequent fragment destroy/create. Tweak value as needed.
+        binding.viewpager.offscreenPageLimit = 3
+
+        // Increase RecyclerView cache size for ViewPager2 internal recycler to reuse page views.
+        (binding.viewpager.getChildAt(0) as? RecyclerView)?.setItemViewCacheSize(5)
+
         binding.viewpager.enableNestedPaging()
         ViewPager2Helper.bind(binding.indicator, binding.viewpager)
     }

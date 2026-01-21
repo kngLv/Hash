@@ -51,7 +51,7 @@ dependencies {
     kapt(libs.compiler)
 
     // Gson 解析容错：https://github.com/getActivity/GsonFactory
-    api("com.github.getActivity:GsonFactory:10.5")
+    api(libs.gsonfactory)
     api(libs.gson)
     api(libs.magicindicator)
 
@@ -63,8 +63,9 @@ dependencies {
     api(libs.refresh.header.material)
     api(libs.refresh.footer.classics)
 
-    implementation("com.tencent.bugly:crashreport:4.1.9.3") // 腾讯Bugly崩溃统计
-    implementation("com.github.getActivity:DeviceCompat:2.5") // 设备兼容适配库
+    implementation(libs.crashreport) // 腾讯Bugly崩溃统计
+    implementation(libs.devicecompat) // 设备兼容适配库
 
-    api("com.tencent.vasdolly:helper:3.0.6") // 多渠道
+    api(libs.helper) // 多渠道
+    debugImplementation(libs.leakcanary.android) //leakcanary
 }

@@ -1,7 +1,6 @@
 package com.hash.home.home.ui.adapter
 
 import android.annotation.SuppressLint
-import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
@@ -26,6 +25,14 @@ class FeaturedPagerAdapter(
     override fun createFragment(position: Int): Fragment {
         val bean = tabs[position]
         return FeaturedTabFragment.newInstance(bean.typeName, "${bean.typeId}")
+    }
+
+    override fun getItemId(position: Int): Long {
+        return tabs.getOrNull(position)?.typeId?.toLong() ?: super.getItemId(position)
+    }
+
+    override fun containsItem(itemId: Long): Boolean {
+        return tabs.any { it.typeId.toLong() == itemId }
     }
 
     @SuppressLint("NotifyDataSetChanged")
