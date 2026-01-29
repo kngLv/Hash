@@ -60,8 +60,6 @@ class FeaturedFragment : BaseBindingFragment<FragmentFeaturedBinding>() {
         // Keep a few pages alive to avoid frequent fragment destroy/create. Tweak value as needed.
         binding.viewpager.offscreenPageLimit = 3
 
-        // Increase RecyclerView cache size for ViewPager2 internal recycler to reuse page views.
-        (binding.viewpager.getChildAt(0) as? RecyclerView)?.setItemViewCacheSize(5)
 
         binding.viewpager.enableNestedPaging()
         ViewPager2Helper.bind(binding.indicator, binding.viewpager)

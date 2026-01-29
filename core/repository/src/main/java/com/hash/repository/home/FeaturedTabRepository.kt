@@ -5,7 +5,7 @@ import android.util.LruCache
 import com.hash.bean.home.NewsListBean
 import com.hash.common.cache.CacheTrimManager
 import com.hash.common.const.AppConst
-import com.hash.common.ext.mmkvGetObject
+import com.hash.common.ext.mmkvGetTypeObject
 import com.hash.common.ext.mmkvPutObject
 import com.hash.common.manager.BuglyCrashManager
 import com.hash.net.net.launch.request
@@ -67,15 +67,11 @@ class FeaturedTabRepository(
         // 在初始化时向 CacheTrimManager 注册清理/trim 处理器
         try {
             CacheTrimManager.register(object : CacheTrimManager.CacheTrimHandler {
-                override fun clear() {
-                    clearMemoryCache()
-                }
-
-                override fun trim(level: Int) {
-                    trimMemory(level)
-                }
+                override fun clear() = clearMemoryCache()
+                override fun trim(level: Int) = trimMemory(level)
             })
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
     }
 
@@ -114,9 +110,7 @@ class FeaturedTabRepository(
         // LRU 内存缓存（共享），键格式："{typeId}:{page}"，sizeOf 固定为 1（每页计 1）
         private var memoryCache: LruCache<String, CacheEntry<NewsListBean>> =
             object : LruCache<String, CacheEntry<NewsListBean>>(currentMaxEntries) {
-                override fun sizeOf(key: String?, value: CacheEntry<NewsListBean>?): Int {
-                    return 1
-                }
+                override fun sizeOf(key: String?, value: CacheEntry<NewsListBean>?): Int = 1
             }
 
         // in-flight 去重：key -> CompletableDeferred<CachedResult>
@@ -133,7 +127,8 @@ class FeaturedTabRepository(
         fun clearMemoryCache() {
             try {
                 memoryCache.evictAll()
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                e.printStackTrace()
             }
         }
 
@@ -218,7 +213,7 @@ class FeaturedTabRepository(
         enableBackgroundRefresh: Boolean = false,
         onBackgroundUpdated: ((CachedResult<NewsListBean>?) -> Unit)? = null,
         // 当 ignoreTtl 为 true 时只要有缓存即命中，不再检查是否超过 ttl
-        ignoreTtl: Boolean = false
+        ignoreTtl: Boolean = false,
     ): CachedResult<NewsListBean>? {
         val key = "$typeId:$page"
         val now = System.currentTimeMillis()
@@ -226,7 +221,6 @@ class FeaturedTabRepository(
         if (!forceRefresh) {
             memoryCache.get(key)?.let { entry ->
                 if (ignoreTtl || now - entry.timestampMs <= ttlMs) {
-                    onNetworkStarted?.invoke(false)
                     if (enableBackgroundRefresh) {
                         // 静默后台刷新（stale-while-revalidate）
                         backgroundRevalidate(key, typeId, page, onBackgroundUpdated)
@@ -235,61 +229,70 @@ class FeaturedTabRepository(
                 }
             }
         }
-
-        // 尝试从磁盘读取（MMKV），命中则回写到内存并返回（并校验磁盘时间戳）
+        // 尝试从磁盘读取，命中则回写到内存并返回（并校验磁盘时间戳）
         val diskKey = "featured:$key"
         try {
-            val diskEntry: CacheEntry<NewsListBean>? = diskKey.mmkvGetObject()
+            // 磁盘读、反序列化等可能是阻塞操作，切换到 IO 线程执行
+            val diskEntry: CacheEntry<NewsListBean>? = withContext(Dispatchers.IO) {
+                diskKey.mmkvGetTypeObject<CacheEntry<NewsListBean>>()
+            }
             if (diskEntry != null && !forceRefresh) {
-                if (ignoreTtl || now - diskEntry.timestampMs <= ttlMs) {
+                println("${ignoreTtl || ((now - diskEntry.timestampMs) <= ttlMs)}")
+                if (ignoreTtl || ((now - diskEntry.timestampMs) <= ttlMs)) {
                     if (page <= perTabMemoryPages) memoryCache.put(key, diskEntry)
-                    onNetworkStarted?.invoke(false)
+                    // 磁盘命中：同内存命中逻辑，决定是否触发刷新以及通知 UI
                     if (enableBackgroundRefresh) {
                         backgroundRevalidate(key, typeId, page, onBackgroundUpdated)
                     }
                     return CachedResult(diskEntry.data, CacheSource.DISK)
                 }
             }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            e.printStackTrace()
             // 忽略磁盘读取错误，继续网络流程
         }
 
         // 如果已有 in-flight 请求，复用之；此时说明网络已经在进行
         inFlightRequests[key]?.let { ongoing ->
-            onNetworkStarted?.invoke(true)
+            withContext(Dispatchers.Main) { onNetworkStarted?.invoke(true) }
             return try {
                 ongoing.await()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                e.printStackTrace()
                 null
             }
         }
-
         // 否则创建 CompletableDeferred 并注册到 inFlightRequests
         val deferred = CompletableDeferred<CachedResult<NewsListBean>?>()
         val prev = inFlightRequests.putIfAbsent(key, deferred)
         if (prev != null) {
-            onNetworkStarted?.invoke(true)
+            withContext(Dispatchers.Main) { onNetworkStarted?.invoke(true) }
             return try {
                 prev.await()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                e.printStackTrace()
                 null
             }
         }
 
         // 将发起网络请求，通知回调
-        onNetworkStarted?.invoke(true)
+        withContext(Dispatchers.Main) { onNetworkStarted?.invoke(true) }
 
         // 发起网络请求（在 repoScope），完成后写入内存和磁盘缓存
         repoScope.launch {
             try {
-                val resp = newsList(typeId, page.toString()).execute()
+                // 网络与序列化/磁盘写入在 IO 上执行，repoScope 使用 Dispatchers.IO，但仍将 execute 包裹以确保在 IO
+                val resp =
+                    withContext(Dispatchers.IO) { newsList(typeId, page.toString()).execute() }
+
                 val news = resp?.data()
                 if (news is NewsListBean) {
                     val entry = CacheEntry(news, System.currentTimeMillis())
                     if (page <= perTabMemoryPages) memoryCache.put(key, entry)
                     if (page == diskCachePage) {
                         try {
-                            diskKey.mmkvPutObject(entry)
+                            // 磁盘写也放到 IO
+                            withContext(Dispatchers.IO) { diskKey.mmkvPutObject(entry) }
                         } catch (e: Throwable) {
                             e.printStackTrace()
                             BuglyCrashManager.postCatchException(e)
@@ -308,7 +311,8 @@ class FeaturedTabRepository(
 
         return try {
             deferred.await()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
@@ -328,7 +332,8 @@ class FeaturedTabRepository(
                     onBackgroundUpdated?.let {
                         withContext(Dispatchers.Main) { it(res) }
                     }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    e.printStackTrace()
                     onBackgroundUpdated?.let { withContext(Dispatchers.Main) { it(null) } }
                 }
             }
@@ -342,7 +347,8 @@ class FeaturedTabRepository(
                 try {
                     val res = prev.await()
                     onBackgroundUpdated?.let { withContext(Dispatchers.Main) { it(res) } }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    e.printStackTrace()
                     onBackgroundUpdated?.let { withContext(Dispatchers.Main) { it(null) } }
                 }
             }
@@ -352,15 +358,17 @@ class FeaturedTabRepository(
         // 发起静默网络请求并在完成后更新缓存与回调
         repoScope.launch {
             try {
-                val resp = newsList(typeId, page.toString()).execute()
+                val resp =
+                    withContext(Dispatchers.IO) { newsList(typeId, page.toString()).execute() }
                 val news = resp?.data()
                 if (news is NewsListBean) {
                     val entry = CacheEntry(news, System.currentTimeMillis())
                     if (page <= perTabMemoryPages) memoryCache.put(key, entry)
                     if (page == diskCachePage) {
                         try {
-                            ("featured:$key").mmkvPutObject(entry)
-                        } catch (_: Throwable) {
+                            withContext(Dispatchers.IO) { ("featured:$key").mmkvPutObject(entry) }
+                        } catch (e: Throwable) {
+                            e.printStackTrace()
                         }
                     }
                     deferred.complete(CachedResult(news, CacheSource.NETWORK))
@@ -378,7 +386,8 @@ class FeaturedTabRepository(
                     deferred.complete(null)
                     onBackgroundUpdated?.let { withContext(Dispatchers.Main) { it(null) } }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                e.printStackTrace()
                 deferred.completeExceptionally(Exception("background fetch failed"))
                 onBackgroundUpdated?.let { withContext(Dispatchers.Main) { it(null) } }
             } finally {

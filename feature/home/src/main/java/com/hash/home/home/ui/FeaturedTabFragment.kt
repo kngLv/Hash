@@ -3,6 +3,7 @@ package com.hash.home.home.ui
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hash.common.base.fragment.BaseBindingFragment
+import com.hash.common.ext.logD
 import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedTabBinding
 import com.hash.home.home.ui.adapter.FeaturedTabAdapter
@@ -47,7 +48,12 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     }
 
     override fun loadData() {
-        viewModel.autoRefresh()
+        if (viewModel.typeId == "532") {
+            // 第一页，忽略缓存时间限制，确保能数据快速加载。
+            viewModel.autoRefresh(ignoreTtl = true, refreshIfCached = true)
+        } else {
+            viewModel.autoRefresh()
+        }
     }
 
     override fun listener() {
@@ -67,14 +73,14 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
                 adapter.addAll(it)
             }
         }
-        viewModel.isNetRequest.observe(this){
-            if (it && viewModel.page <=1) {
+        viewModel.isNetRequest.observe(this) {
+            if (it && viewModel.page <= 1) {
                 binding.refreshLayout.autoRefreshAnimationOnly()
             }
         }
         viewModel.isNextPage.observe(this) {
             if (viewModel.page <= 1) {
-                binding.refreshLayout.finishRefresh()
+                binding.refreshLayout.finishRefresh(1000)
             } else {
                 if (it) {
                     binding.refreshLayout.finishLoadMore()
