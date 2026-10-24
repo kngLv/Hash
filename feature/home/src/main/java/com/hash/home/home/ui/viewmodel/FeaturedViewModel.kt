@@ -10,7 +10,7 @@ import com.hash.common.ext.logD
 import com.hash.common.ext.mmkvGetObject
 import com.hash.common.ext.mmkvPutObject
 import com.hash.common.storage.MMKVConst
-import com.hash.net.net.request.onBodyOf
+import com.hash.net.request.onBodyOf
 import com.hash.repository.home.FeaturedRepository
 
 /**

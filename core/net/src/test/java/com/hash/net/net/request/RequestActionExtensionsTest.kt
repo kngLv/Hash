@@ -1,8 +1,9 @@
 package com.hash.net.net.request
 
 import com.hash.bean.home.HomeListBean
-import com.hash.net.net.response.IResponse
-import com.hash.net.net.launch.request
+import com.hash.net.response.IResponse
+import com.hash.net.launch.request
+import com.hash.net.request.onBodyOf
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

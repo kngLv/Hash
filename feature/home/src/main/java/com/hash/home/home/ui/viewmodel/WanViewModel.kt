@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hash.bean.home.HomeListBean
 import com.hash.common.const.AppConst
-import com.hash.net.net.request.onBodyOf
+import com.hash.net.request.onBodyOf
 import com.hash.repository.home.HomeRepository
 
 /**

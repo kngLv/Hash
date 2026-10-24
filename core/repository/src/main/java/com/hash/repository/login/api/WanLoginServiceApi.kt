@@ -1,8 +1,7 @@
 package com.hash.repository.login.api
 
 import com.hash.bean.mine.UserInfo
-import com.hash.bean.mine.UserInfoBean
-import com.hash.net.response.WanResponse
+import com.hash.common.net.response.WanResponse
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.POST

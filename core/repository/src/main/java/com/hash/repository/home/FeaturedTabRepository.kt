@@ -8,9 +8,9 @@ import com.hash.common.const.AppConst
 import com.hash.common.ext.mmkvGetTypeObject
 import com.hash.common.ext.mmkvPutObject
 import com.hash.common.manager.BuglyCrashManager
-import com.hash.net.net.launch.request
-import com.hash.net.net.request.RequestActionImpl
-import com.hash.net.response.RollResponse
+import com.hash.net.launch.request
+import com.hash.net.request.RequestActionImpl
+import com.hash.common.net.response.RollResponse
 import com.hash.repository.rollApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope

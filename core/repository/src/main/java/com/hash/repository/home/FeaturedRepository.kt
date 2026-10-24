@@ -1,14 +1,11 @@
 package com.hash.repository.home
 
-import com.hash.bean.home.HomeListBean
 import com.hash.bean.home.NewsTypeListBean
 import com.hash.common.const.AppConst
-import com.hash.net.net.launch.request
-import com.hash.net.net.request.RequestActionImpl
-import com.hash.net.response.RollResponse
-import com.hash.net.response.WanResponse
+import com.hash.net.launch.request
+import com.hash.net.request.RequestActionImpl
+import com.hash.common.net.response.RollResponse
 import com.hash.repository.rollApi
-import com.hash.repository.wanCommonApi
 
 /**
  * Created by KngLv

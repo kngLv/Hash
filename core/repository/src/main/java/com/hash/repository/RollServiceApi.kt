@@ -2,9 +2,8 @@ package com.hash.repository
 
 import com.hash.bean.home.NewsListBean
 import com.hash.bean.home.NewsTypeListBean
-import com.hash.net.NetConstants.ROLL_BASE_URL
-import com.hash.net.response.RollResponse
-import com.hash.net.response.WanResponse
+import com.hash.common.net.NetConstants.ROLL_BASE_URL
+import com.hash.common.net.response.RollResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 

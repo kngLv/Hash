@@ -1,7 +1,7 @@
 package com.hash.repository.mine.api
 
 import com.hash.bean.mine.UserInfoBean
-import com.hash.net.response.WanResponse
+import com.hash.common.net.response.WanResponse
 import retrofit2.http.GET
 
 interface WanMineServiceApi {

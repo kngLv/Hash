@@ -46,8 +46,8 @@ private suspend fun postJson(endpoint: String, body: String): String = withConte
         .build()
 
     cloudBaseHttpClient.newCall(request).execute().use { response ->
-        val responseBody = response.body.string()
-        if (!response.isSuccessful) {
+        val responseBody = response.body?.string()
+        if (responseBody ==null ||!response.isSuccessful) {
             throw IOException("CloudBase Ticket 请求失败：${response.code}")
         }
         responseBody
