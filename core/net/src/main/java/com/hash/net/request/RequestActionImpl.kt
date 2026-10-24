@@ -165,14 +165,6 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
         }
     }
 
-    suspend fun responseState(): ResultState<T> {
-        return try {
-            LvRequest().request(block)
-        } catch (e: Exception) {
-            ResultState.ErrorState(error = e)
-        }
-    }
-
     /**
      * 内部工具：分发开始/结束/数据/错误回调
      */
