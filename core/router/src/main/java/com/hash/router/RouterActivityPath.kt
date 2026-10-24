@@ -28,4 +28,11 @@ class RouterActivityPath {
         /** 登录 */
         const val LOGIN = "${ROOT}/account_login"
     }
+
+    object Floorplan {
+        private const val ROOT = "/floorplan"
+
+        /** 户型编辑器 */
+        const val EDITOR = "${ROOT}/editor"
+    }
 }

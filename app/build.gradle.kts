@@ -13,6 +13,8 @@ android {
 
     defaultConfig {
         applicationId = "com.hash.app"
+        // 户型 Flutter 模块（webview_flutter）要求 Android 7.0/API 24。
+        minSdk = 24
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -98,6 +100,11 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:router"))
     implementation(project(":core:net"))
+    implementation(project(":core:repository"))
+
+    // 由 hash-floorplan-module 的 flutter build aar 产出。
+    debugImplementation("com.hash.hash_floorplan_module:flutter_debug:1.0")
+    releaseImplementation("com.hash.hash_floorplan_module:flutter_release:1.0")
 
     implementation(project(":feature:main"))
     implementation(project(":feature:release"))

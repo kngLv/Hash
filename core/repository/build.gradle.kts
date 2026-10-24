@@ -16,5 +16,7 @@ dependencies {
     implementation(project(":core:bean"))
     implementation(project(":core:router"))
     implementation("com.google.code.gson:gson:2.13.2")
+
+    testImplementation(libs.junit)
 }
 
