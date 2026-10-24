@@ -116,6 +116,10 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
             ARouter.getInstance().build(RouterActivityPath.Login.LOGIN)
                 .navigation(requireActivity())
         }
+        binding.btnFloorplan.setOnClickListener {
+            ARouter.getInstance().build(RouterActivityPath.Floorplan.EDITOR)
+                .navigation(requireActivity())
+        }
         binding.swipeRefreshLayout.setOnRefreshListener {
             lifecycleScope.launch {
                 viewModel.refreshUserInfo()
