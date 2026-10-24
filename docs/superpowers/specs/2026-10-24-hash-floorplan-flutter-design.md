@@ -25,10 +25,13 @@ Flutter 宿主直接引用该包。Android 原生宿主采用 Flutter Add-to-App
 插件对 Flutter 提供一个 `HashFloorplanView`，调用方传入：
 
 - `planId`：当前户型标识；首版使用固定 `default`，每个 CloudBase 用户各自拥有一条数据。
-- `ticketProvider`：异步返回 CloudBase 自定义登录 Ticket 的函数。
+- `syncMode`：`localOnly` 或 `cloudSync`，默认 `localOnly`。
+- `ticketProvider`：仅 `cloudSync` 模式需要；异步返回 CloudBase 自定义登录 Ticket 的函数。
 - `onSyncStateChanged`：可选的同步状态回调。
 
 Android Add-to-App 场景中，插件通过 `MethodChannel` 调用宿主方法 `issueCloudBaseTicket`。Hash Android 的实现复用 `FloorplanIdentityProvider`：成功时返回 Ticket；未登录时返回错误码 `HASH_NOT_LOGGED_IN`；网络或服务异常返回 `HASH_TICKET_UNAVAILABLE`。
+
+插件不要求所有宿主都使用 Hash 登录。`localOnly` 模式可被任何 Flutter 或 Android 宿主直接使用，并只在设备本地保存户型；`cloudSync` 模式才要求宿主提供其自身认证体系签发的、可登录 CloudBase 的 Ticket。Hash 只是第一种 `ticketProvider` 实现。
 
 ## 内部组件
 
@@ -48,11 +51,10 @@ HashFloorplanView
 ## 数据流
 
 1. 宿主打开 `HashFloorplanView`。
-2. 插件向宿主请求 CloudBase Ticket。
-3. 插件通过 CloudBase 自定义登录建立当前用户会话。
-4. 插件按 `planId` 查询该用户的 `floorplans` 记录，将 `plan_json` 注入 WebView。
-5. 网页编辑完成后向 JavaScript Channel 发送完整 JSON。
-6. 插件更新或新增该用户、该 `planId` 对应的数据，并回调同步状态。
+2. `localOnly` 模式从本地存储读取 `plan_json` 并注入 WebView；`cloudSync` 模式向宿主请求 CloudBase Ticket。
+3. `cloudSync` 模式通过 CloudBase 自定义登录建立当前用户会话，再按 `planId` 查询该用户的 `floorplans` 记录并注入 WebView。
+4. 网页编辑完成后向 JavaScript Channel 发送完整 JSON。
+5. `localOnly` 模式写入本地存储；`cloudSync` 模式更新或新增该用户、该 `planId` 对应的数据，并回调同步状态。
 
 `floorplans` 表已有 RLS 策略；任何请求只能读写其 CloudBase 用户身份所拥有的记录。
 
