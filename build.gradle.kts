@@ -26,7 +26,7 @@ subprojects {
         extensions.configure<BaseExtension> {
             compileSdkVersion(36)
             defaultConfig {
-                minSdk = 24
+                minSdk = 23
                 // Android 版本适配指南：https://github.com/getActivity/AndroidVersionAdapter
                 targetSdk = 35
                 versionCode = 1
