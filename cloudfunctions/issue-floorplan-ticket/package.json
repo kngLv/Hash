@@ -1,0 +1,11 @@
+{
+  "name": "issue-floorplan-ticket",
+  "private": true,
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.3"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test test/index.test.js test/packaging.test.js"
+  }
+}
