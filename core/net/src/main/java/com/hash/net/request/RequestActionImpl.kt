@@ -1,9 +1,12 @@
 package com.hash.net.request
 
 import com.hash.net.response.IResponse
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
+private class ResponseDataException(val origin: Exception) : Exception(origin)
 
 /**
  * 请求动作实现类（链式回调式 API）
@@ -85,24 +88,21 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
     internal fun parseBodyOf(block: (Any?) -> Unit): RequestActionImpl<T> = apply {
         this.parsedBodyCallback = { t: T ->
             if (t is IResponse<*>) {
-                try {
+                val inner = try {
                     @Suppress("UNCHECKED_CAST")
-                    val inner = (t as IResponse<Any?>).data()
-                    if (inner == null) {
-                        dispatchNullData()
-                    } else {
-                        block(inner)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    (t as IResponse<Any?>).data()
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (error: Exception) {
+                    throw ResponseDataException(error)
+                }
+                if (inner == null) {
+                    dispatchNullData()
+                } else {
+                    block(inner)
                 }
             } else {
-                // 非 IResponse，直接当作业务对象回调
-                try {
-                    block(t as Any?)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                block(t as Any?)
             }
         }
     }
@@ -113,20 +113,22 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
     fun enqueue(scope: CoroutineScope = CoroutineScope(Dispatchers.Main)) {
         scope.launch {
             var result = false
-            // protect begin callback
             dispatchBegin()
             try {
-                when (val state = LvRequest().request(block)) { // 发起请求
+                when (val state = request()) {
                     is ResultState.SuccessState -> {
-                        result = true
-                        dispatchBody(state.body)
+                        try {
+                            dispatchBody(state.body)
+                            result = true
+                        } catch (error: ResponseDataException) {
+                            dispatchError(error.origin)
+                        }
                     }
-
                     is ResultState.CodeErrorState -> dispatchErrorCode(state.code, state.body)
                     is ResultState.ErrorState -> dispatchError(state.error)
                 }
-            } catch (e: Exception) {
-                dispatchError(e)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } finally {
                 dispatchEnd(result)
             }
@@ -141,7 +143,7 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
         dispatchBegin()
         var result = false
         try {
-            return when (val state = LvRequest().request(block)) {
+            return when (val state = request()) {
                 is ResultState.SuccessState -> {
                     result = true
                     state.body
@@ -157,13 +159,15 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
                     null
                 }
             }
-        } catch (e: Exception) {
-            dispatchError(e)
-            return null
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } finally {
             dispatchEnd(result)
         }
     }
+
+    /** 执行请求并保留成功、协议错误与异常错误的完整状态。 */
+    suspend fun request(): ResultState<T> = LvRequest().request(block)
 
     /**
      * 内部工具：分发开始/结束/数据/错误回调
@@ -171,25 +175,25 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
     private fun dispatchBegin() {
         try {
             begin?.invoke()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            error.printStackTrace()
         }
     }
 
     private fun dispatchEnd(result: Boolean) {
         try {
             end?.invoke(result)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            error.printStackTrace()
         }
     }
 
     private fun dispatchNullData() {
-        try {
-            this.nullBodyCallback?.invoke()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        this.nullBodyCallback?.invoke()
     }
 
     private fun dispatchBody(body: T?) {
@@ -199,30 +203,14 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
         }
 
         // 先回调注册的原始 body 回调
-        if (this.bodyCallback != null) {
-            try {
-                this.bodyCallback?.invoke(body)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        this.bodyCallback?.invoke(body)
 
         // 再回调解析/包装后的 body 回调（例如 IResponse.data()）
-        if (this.parsedBodyCallback != null) {
-            try {
-                this.parsedBodyCallback?.invoke(body)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        this.parsedBodyCallback?.invoke(body)
     }
 
     private fun dispatchErrorCode(code: Int, data: T?) {
-        try {
-            this.errorCodeCallback?.invoke(code, data)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        this.errorCodeCallback?.invoke(code, data)
     }
 
     private fun dispatchError(t: Exception) = this.error.invoke(t)

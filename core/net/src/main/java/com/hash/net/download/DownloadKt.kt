@@ -3,7 +3,10 @@ package com.hash.net.download
 import android.os.Build
 import com.hash.net.LvHttp
 import com.hash.net.utils.FileQUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
 import java.io.InputStream
@@ -77,6 +80,8 @@ private fun format(float: Float): Float {
 private suspend fun <T> tryCache(response: DownResponse, block: suspend () -> T) {
     try {
         block()
+    } catch (cancellation: CancellationException) {
+        throw cancellation
     } catch (e: Exception) {
         withMain { response.error(e) }
     }
@@ -87,16 +92,17 @@ private suspend inline fun <T> withMain(crossinline block: () -> T) =
         block()
     }
 
-private inline fun InputStream.copyTo(
+private suspend inline fun InputStream.copyTo(
     output: OutputStream,
     bufferSize: Int = DEFAULT_BUFFER_SIZE,
-    progress: (Long) -> Unit
+    crossinline progress: suspend (Long) -> Unit,
 ): Long {
     output.use {
         var bytesCopied: Long = 0
         val buffer = ByteArray(bufferSize)
         var bytes = read(buffer)
         while (bytes >= 0) {
+            currentCoroutineContext().ensureActive()
             output.write(buffer, 0, bytes)
             bytesCopied += bytes
             bytes = read(buffer)

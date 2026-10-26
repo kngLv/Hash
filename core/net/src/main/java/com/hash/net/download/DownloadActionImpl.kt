@@ -4,9 +4,12 @@ import com.hash.net.request.AbstractRequestAction
 import com.hash.net.request.DownloadBlockObject
 import com.hash.net.request.LvRequest
 import com.hash.net.request.ResultState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
@@ -142,6 +145,8 @@ class DownloadActionImpl<T : ResponseBody>(
                         dispatchEnd(null)
                     }
                 }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (e: Exception) {
                 dispatchError(e)
                 dispatchEnd(null)
@@ -267,6 +272,8 @@ class DownloadActionImpl<T : ResponseBody>(
                     return targetFile
                 }
             }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             dispatchError(e)
         }
@@ -281,6 +288,7 @@ class DownloadActionImpl<T : ResponseBody>(
         totalSize: Long,
         isResume: Boolean
     ) {
+        currentCoroutineContext().ensureActive()
         var preProgress = 0f
         // 先分发开始回调：告知总大小和是否断点续传
         dispatchBegin(totalSize, isResume)
@@ -297,6 +305,7 @@ class DownloadActionImpl<T : ResponseBody>(
         }
 
         while (bytes >= 0) {
+            currentCoroutineContext().ensureActive()
             output.write(buffer, 0, bytes)
             bytesCopied += bytes
             if (hasLength) {
@@ -308,8 +317,10 @@ class DownloadActionImpl<T : ResponseBody>(
                 }
             }
 
+            currentCoroutineContext().ensureActive()
             bytes = input.read(buffer)
         }
+        currentCoroutineContext().ensureActive()
         output.flush()
         // 无论是否有 totalSize，最后都回调 100%，表示完成
         dispatchProcess(100f)
@@ -318,6 +329,8 @@ class DownloadActionImpl<T : ResponseBody>(
     private suspend fun dispatchBegin(totalSize: Long, isResume: Boolean) {
         try {
             withMain { downLoadBegin?.invoke(totalSize, isResume) }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -326,6 +339,8 @@ class DownloadActionImpl<T : ResponseBody>(
     private suspend fun dispatchProcess(progress: Float) {
         try {
             withMain { this.progress?.invoke(progress) }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -334,6 +349,8 @@ class DownloadActionImpl<T : ResponseBody>(
     private suspend fun dispatchEnd(filePath: String?) {
         try {
             withMain { downLoadEnd?.invoke(filePath) }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             e.printStackTrace()
         }
