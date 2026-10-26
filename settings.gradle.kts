@@ -30,14 +30,6 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // Flutter Add-to-App 模块在本地构建后发布到此 Maven 仓库。
-        // 可使用 -PfloorplanAarRepo=/绝对路径 覆盖默认相邻目录位置。
-        val floorplanAarRepo = providers.gradleProperty("floorplanAarRepo")
-            .orElse(file("../hash-floorplan-module/build/host/outputs/repo").absolutePath)
-            .get()
-        maven { url = uri(floorplanAarRepo) }
-        // Flutter Engine（embedding 与各 ABI 的 libflutter.so）由官方 Maven 仓库提供。
-        maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }

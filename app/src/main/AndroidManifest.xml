@@ -14,10 +14,6 @@
         android:theme="@style/Theme.HashApp"
         tools:targetApi="31">
 
-        <activity
-            android:name=".floorplan.FloorplanFlutterActivity"
-            android:exported="false" />
-
     </application>
 
 </manifest>

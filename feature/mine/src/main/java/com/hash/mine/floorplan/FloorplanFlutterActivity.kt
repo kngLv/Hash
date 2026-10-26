@@ -1,4 +1,4 @@
-package com.hash.app.floorplan
+package com.hash.mine.floorplan
 
 import androidx.lifecycle.lifecycleScope
 import com.alibaba.android.arouter.facade.annotation.Route
@@ -11,7 +11,7 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.launch
 
 /**
- * Hash 中的户型 Flutter Add-to-App 页面。
+ * Mine 模块中的户型 Flutter Add-to-App 页面。
  *
  * Flutter 仅能通过 MethodChannel 获得短期 CloudBase Ticket，不会接触 Hash 的 Cookie。
  */

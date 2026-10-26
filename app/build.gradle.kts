@@ -102,10 +102,6 @@ dependencies {
     implementation(project(":core:net"))
     implementation(project(":core:repository"))
 
-    // 由 hash-floorplan-module 的 flutter build aar 产出。
-    debugImplementation("com.hash.hash_floorplan_module:flutter_debug:1.0")
-    releaseImplementation("com.hash.hash_floorplan_module:flutter_release:1.0")
-
     implementation(project(":feature:main"))
     implementation(project(":feature:release"))
     implementation(project(":feature:home"))
