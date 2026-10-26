@@ -6,7 +6,7 @@
         <import type="android.view.View" />
         <variable
             name="item"
-            type="com.hash.common.net.api.model.home.NewsListBean.NewsListBeanItem" />
+            type="com.hash.home.data.model.NewsListBean.NewsListBeanItem" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout

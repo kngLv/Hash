@@ -1,9 +1,9 @@
 package com.hash.home.data.repository
 
-import com.hash.common.net.api.model.home.HomeListBean
+import com.hash.home.data.model.HomeListBean
 import com.hash.net.launch.request
 import com.hash.net.request.RequestActionImpl
-import com.hash.common.net.api.wanCommonApi
+import com.hash.home.data.api.homeApi
 
 /**
  * Created by KngLv
@@ -17,7 +17,7 @@ class HomeRepository {
         page: Int,
         pageSize: Int
     ): RequestActionImpl<HomeListBean> {
-        return request { wanCommonApi.articleList(page, pageSize) }
+        return request { homeApi.articleList(page, pageSize) }
     }
 
 }

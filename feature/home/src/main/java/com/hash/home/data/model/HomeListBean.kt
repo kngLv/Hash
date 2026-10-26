@@ -1,8 +1,8 @@
-package com.hash.common.net.api.model.home
+package com.hash.home.data.model
 
 /**
  * @name HomeListBean
- * @package com.hash.common.net.api.model.home
+ * @package com.hash.home.data.model
  * @author 345 QQ:1831712732
  * @time 2025/01/01 00:51
  * @description

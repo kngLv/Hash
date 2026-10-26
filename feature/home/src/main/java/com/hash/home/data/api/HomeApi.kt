@@ -1,7 +1,7 @@
-package com.hash.common.net.api
+package com.hash.home.data.api
 
-import com.hash.common.net.api.model.home.BannerListBean
-import com.hash.common.net.api.model.home.HomeListBean
+import com.hash.home.data.model.BannerListBean
+import com.hash.home.data.model.HomeListBean
 import com.hash.common.net.response.WanResponse
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -17,7 +17,7 @@ import retrofit2.http.Streaming
  * @description
  */
 
-interface WanCommonServiceApi {
+interface HomeApi {
     /** 文章列表 */
     @GET("/article/list/{page}/json")
     suspend fun articleList(

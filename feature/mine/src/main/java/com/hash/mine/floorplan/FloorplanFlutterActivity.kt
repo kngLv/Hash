@@ -2,7 +2,7 @@ package com.hash.mine.floorplan
 
 import androidx.lifecycle.lifecycleScope
 import com.alibaba.android.arouter.facade.annotation.Route
-import com.hash.mine.data.floorplan.FloorplanTicketRepository
+import com.hash.mine.data.repository.FloorplanTicketRepository
 import com.hash.router.FloorplanTicketResult
 import com.hash.router.RouterActivityPath
 import io.flutter.embedding.android.FlutterActivity

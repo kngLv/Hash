@@ -23,6 +23,7 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:net"))
     implementation(project(":core:router"))
 
     // 户型 Flutter 模块及其插件、arm64 Flutter Engine 均直接随 Mine 模块保存。

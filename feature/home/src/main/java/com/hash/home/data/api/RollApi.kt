@@ -1,7 +1,7 @@
-package com.hash.common.net.api
+package com.hash.home.data.api
 
-import com.hash.common.net.api.model.home.NewsListBean
-import com.hash.common.net.api.model.home.NewsTypeListBean
+import com.hash.home.data.model.NewsListBean
+import com.hash.home.data.model.NewsTypeListBean
 import com.hash.common.net.NetConstants.ROLL_BASE_URL
 import com.hash.common.net.response.RollResponse
 import retrofit2.http.GET
@@ -13,7 +13,7 @@ import retrofit2.http.Query
  * @description
  */
 
-interface RollServiceApi {
+interface RollApi {
 
     /**
      * 新闻类型列表

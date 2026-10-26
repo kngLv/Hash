@@ -1,16 +1,16 @@
-package com.hash.common.shared.session
+package com.hash.mine.data.repository
 
 import com.hash.net.launch.request
-import com.hash.common.net.api.wanMineApi
 import com.hash.common.shared.model.UserInfoBean
 import com.hash.common.shared.storage.UserSessionStore
+import com.hash.mine.data.api.mineApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * UserInfoRepository ：使用 `wanMineApi` 和 `UserSessionStore`。
+ * UserInfoRepository ：使用 `mineApi` 和 `UserSessionStore`。
  * */
 class UserInfoRepository {
 
@@ -26,7 +26,7 @@ class UserInfoRepository {
      */
     suspend fun refreshUserInfo(coroutineScope: CoroutineScope): Boolean =
         suspendCancellableCoroutine { continuation ->
-            request { wanMineApi.userInfo() }
+            request { mineApi.userInfo() }
                 .onBody {
                     _userInfo.value = it
                     UserSessionStore.saveUserInfo(it)

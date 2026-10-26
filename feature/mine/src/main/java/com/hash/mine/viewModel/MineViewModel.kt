@@ -2,11 +2,11 @@ package com.hash.mine.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.common.shared.model.UserInfoBean
 import com.hash.net.launch.requestRaw
-import com.hash.common.net.api.wanMineApi
-import com.hash.common.shared.session.LoginRepository
-import com.hash.common.shared.session.UserInfoRepository
+import com.hash.common.shared.model.UserInfoBean
+import com.hash.common.shared.session.LoginSession
+import com.hash.mine.data.api.mineApi
+import com.hash.mine.data.repository.UserInfoRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -18,11 +18,11 @@ class MineViewModel(
 
     val userInfoFlow: StateFlow<UserInfoBean?> = userInfoRepository.userInfoFlow
 
-    val loginState = LoginRepository.instance.loginStateFlow
+    val loginState = LoginSession.loginStateFlow
 
 
     suspend fun refreshUserInfo() {
-        requestRaw { wanMineApi.test() }
+        requestRaw { mineApi.test() }
             .onBody {
                 println("test result: $it")
             }

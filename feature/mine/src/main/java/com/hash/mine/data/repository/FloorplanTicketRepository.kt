@@ -1,4 +1,4 @@
-package com.hash.mine.data.floorplan
+package com.hash.mine.data.repository
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser

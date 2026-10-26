@@ -1,4 +1,4 @@
-package com.hash.mine.data.floorplan
+package com.hash.mine.data.repository
 
 import com.hash.router.FloorplanTicketResult
 import com.google.gson.JsonParser

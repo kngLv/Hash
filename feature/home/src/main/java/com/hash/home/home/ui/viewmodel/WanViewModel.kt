@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.common.net.api.model.home.HomeListBean
+import com.hash.home.data.model.HomeListBean
 import com.hash.common.const.AppConst
 import com.hash.home.data.repository.HomeRepository
 

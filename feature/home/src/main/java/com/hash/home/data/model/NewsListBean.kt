@@ -1,4 +1,4 @@
-package com.hash.common.net.api.model.home
+package com.hash.home.data.model
 
 /**
  * 创建者: KngLv

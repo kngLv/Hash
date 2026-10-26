@@ -2,7 +2,7 @@ package com.hash.home.data.repository
 
 import android.content.ComponentCallbacks2
 import android.util.LruCache
-import com.hash.common.net.api.model.home.NewsListBean
+import com.hash.home.data.model.NewsListBean
 import com.hash.common.cache.CacheTrimManager
 import com.hash.common.const.AppConst
 import com.hash.common.ext.mmkvGetTypeObject
@@ -10,7 +10,7 @@ import com.hash.common.ext.mmkvPutObject
 import com.hash.common.manager.BuglyCrashManager
 import com.hash.net.launch.request
 import com.hash.net.request.RequestActionImpl
-import com.hash.common.net.api.rollApi
+import com.hash.home.data.api.rollApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

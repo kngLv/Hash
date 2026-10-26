@@ -1,4 +1,4 @@
-package com.hash.common.net.api
+package com.hash.login.data.api
 
 import com.hash.common.shared.model.UserInfo
 import com.hash.common.net.response.WanResponse
@@ -6,7 +6,7 @@ import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.POST
 
-interface WanLoginServiceApi {
+interface LoginApi {
 
 
 
