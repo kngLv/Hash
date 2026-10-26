@@ -16,7 +16,7 @@ import com.hash.router.RouterActivityPath
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
-import com.hash.repository.login.LoginState
+import com.hash.common.shared.session.LoginState
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 

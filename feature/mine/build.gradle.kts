@@ -24,8 +24,6 @@ android {
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:router"))
-    implementation(project(":core:bean"))
-    implementation(project(":core:repository"))
 
     // 户型 Flutter 模块及其插件、arm64 Flutter Engine 均直接随 Mine 模块保存。
     implementation(
@@ -42,6 +40,8 @@ dependencies {
     implementation("androidx.datastore:datastore:1.1.7")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("androidx.preference:preference:1.2.1")
+
+    testImplementation(libs.junit)
 
     kapt(libs.arouter.compiler)
 }

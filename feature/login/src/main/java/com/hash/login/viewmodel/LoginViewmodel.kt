@@ -2,7 +2,7 @@ package com.hash.login.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.repository.login.LoginRepository
+import com.hash.common.shared.session.LoginRepository
 
 class LoginViewmodel(val repository: LoginRepository = LoginRepository.instance) : ViewModel() {
 

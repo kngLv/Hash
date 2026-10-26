@@ -5,7 +5,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import com.hash.bean.home.NewsTypeListBean
+import com.hash.common.net.api.model.home.NewsTypeListBean
 import com.hash.home.home.ui.FeaturedInnerHostFragment
 import com.hash.home.home.ui.FeaturedTabFragment
 

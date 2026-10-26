@@ -26,7 +26,5 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:router"))
     implementation(project(":core:net"))
-    implementation(project(":core:bean"))
-    implementation(project(":core:repository"))
     kapt(libs.arouter.compiler)
 }

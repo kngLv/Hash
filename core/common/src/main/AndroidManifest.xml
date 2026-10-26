@@ -13,14 +13,14 @@
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false">
             <meta-data
-                android:name="com.hash.common.net.NetInitializer"
+                android:name="com.hash.common.startup.NetInitializer"
                 android:value="androidx.startup" />
             <meta-data
                 android:name="com.hash.router.AInitializer"
                 android:value="androidx.startup" />
 
             <meta-data
-                android:name="com.hash.common.storage.MMKVInitializer"
+                android:name="com.hash.common.startup.MMKVInitializer"
                 android:value="androidx.startup" />
 
 

@@ -4,13 +4,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.bean.home.NewsTypeListBean
+import com.hash.common.net.api.model.home.NewsTypeListBean
 import com.hash.common.ext.isNotNullAndEmpty
 import com.hash.common.ext.logD
 import com.hash.common.ext.mmkvGetObject
 import com.hash.common.ext.mmkvPutObject
-import com.hash.common.storage.MMKVConst
-import com.hash.repository.home.FeaturedRepository
+import com.hash.common.shared.storage.MMKVConst
+import com.hash.home.data.repository.FeaturedRepository
 
 /**
  * Created by KngLv

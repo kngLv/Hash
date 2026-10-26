@@ -2,7 +2,7 @@ package com.hash.home.home.ui
 
 import androidx.fragment.app.viewModels
 import androidx.viewpager2.widget.ViewPager2
-import com.hash.bean.home.NewsTypeListBean
+import com.hash.common.net.api.model.home.NewsTypeListBean
 import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ext.disableNestedPaging
 import com.hash.common.ext.enableNestedPaging

@@ -2,11 +2,11 @@ package com.hash.mine.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.bean.mine.UserInfoBean
+import com.hash.common.shared.model.UserInfoBean
 import com.hash.net.launch.requestRaw
-import com.hash.repository.login.LoginRepository
-import com.hash.repository.mine.UserInfoRepository
-import com.hash.repository.mine.api.wanMineApi
+import com.hash.common.net.api.wanMineApi
+import com.hash.common.shared.session.LoginRepository
+import com.hash.common.shared.session.UserInfoRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 

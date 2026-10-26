@@ -7,7 +7,7 @@ import androidx.recyclerview.widget.AsyncDifferConfig
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter4.BaseQuickAdapter
-import com.hash.bean.home.NewsListBean
+import com.hash.common.net.api.model.home.NewsListBean
 import com.hash.common.utils.image.ImageLoader
 import com.hash.common.utils.image.LoadOptions
 import com.hash.home.databinding.ItemFeatureTabBinding

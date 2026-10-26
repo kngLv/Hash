@@ -4,9 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.bean.home.NewsListBean
+import com.hash.common.net.api.model.home.NewsListBean
 import com.hash.common.ext.logD
-import com.hash.repository.home.FeaturedTabRepository
+import com.hash.home.data.repository.FeaturedTabRepository
 import kotlinx.coroutines.launch
 
 /**

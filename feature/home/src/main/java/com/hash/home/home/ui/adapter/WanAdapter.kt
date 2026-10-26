@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter4.BaseQuickAdapter
-import com.hash.bean.home.HomeListBean.HomeListItem
+import com.hash.common.net.api.model.home.HomeListBean.HomeListItem
 import com.hash.home.databinding.ItemWanBinding
 import timber.log.Timber
 

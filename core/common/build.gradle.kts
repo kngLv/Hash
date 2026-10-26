@@ -30,7 +30,6 @@ dependencies {
     api(libs.androidx.appcompat)
     api(project(":core:widget")) //widget模块
     api(project(":core:database"))
-    api(project(":core:bean"))
     api(project(":core:net"))
     api(project(":core:umengSdk"))
 

@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
-import com.hash.bean.mine.UserInfoBean
+import com.hash.common.shared.model.UserInfoBean
 import com.hash.common.IApp
 import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ui.indicator.IndicatorNavAdapter
@@ -20,7 +20,7 @@ import com.hash.common.ext.getColor
 import com.hash.common.ext.showToast
 import com.hash.mine.databinding.FragmentMineBinding
 import com.hash.mine.viewModel.MineViewModel
-import com.hash.repository.login.LoginState
+import com.hash.common.shared.session.LoginState
 import com.hash.router.RouterActivityPath
 import com.hash.router.RouterFragmentPath
 import kotlinx.coroutines.launch

@@ -1,7 +1,7 @@
 package com.hash.common.net.interceptor
 
 import com.hash.common.net.NetConstants
-import com.hash.common.storage.userInfo.UserInfoStore
+import com.hash.common.shared.storage.UserSessionStore
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -17,7 +17,7 @@ class WanCookieInterceptor : Interceptor {
         val newRequest = request.newBuilder()
 
         if (requestUrl.contains(NetConstants.BASE_URL)) {
-            val cookie = UserInfoStore.getCookie()
+            val cookie = UserSessionStore.getCookie()
             if (!cookie.isNullOrEmpty()) {
                 newRequest.addHeader("Cookie", cookie)
             }
@@ -28,7 +28,7 @@ class WanCookieInterceptor : Interceptor {
         if (requestUrl.contains(loginApi) || requestUrl.contains(registerApi)) {
             if (response.headers(setCookie).isNotEmpty()) {
                 val cookie = encodeCookie(response.headers(setCookie))
-                UserInfoStore.saveCookie(cookie)
+                UserSessionStore.saveCookie(cookie)
             }
         }
 

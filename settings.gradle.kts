@@ -51,8 +51,6 @@ include(":feature:mine")
 include(":feature:login")
 
 include(":core:net")
-include(":core:bean")
 include(":core:agora")
 include(":core:database")
-include(":core:repository")
 include(":core:umengSdk")

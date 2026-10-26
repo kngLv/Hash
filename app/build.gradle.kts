@@ -100,7 +100,6 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:router"))
     implementation(project(":core:net"))
-    implementation(project(":core:repository"))
 
     implementation(project(":feature:main"))
     implementation(project(":feature:release"))

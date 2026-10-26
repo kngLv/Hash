@@ -8,7 +8,7 @@
 
         <variable
             name="bean"
-            type="com.hash.bean.mine.UserInfoBean" />
+            type="com.hash.common.shared.model.UserInfoBean" />
 
         <import type="com.hash.mine.R" />
 

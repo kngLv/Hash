@@ -6,7 +6,7 @@ import com.hash.common.ext.getColor
 import com.hash.common.ext.mmkvGetBoolean
 import com.hash.common.ext.mmkvPut
 import com.hash.common.impl.GsonFactoryParseExceptionDefaultImpl
-import com.hash.common.storage.MMKVConst
+import com.hash.common.shared.storage.MMKVConst
 import com.hash.common.utils.timber.TimberUtils
 import com.hash.database.AppDataBase
 import com.hash.umengsdk.UmengClient
