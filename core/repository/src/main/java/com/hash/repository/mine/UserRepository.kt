@@ -3,7 +3,6 @@ package com.hash.repository.mine
 import com.hash.bean.mine.UserInfoBean
 import com.hash.common.storage.userInfo.UserInfoStore
 import com.hash.net.launch.request
-import com.hash.net.request.onBodyOf
 import com.hash.repository.mine.api.wanMineApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +27,7 @@ class UserInfoRepository {
     suspend fun refreshUserInfo(coroutineScope: CoroutineScope): Boolean =
         suspendCancellableCoroutine { continuation ->
             request { wanMineApi.userInfo() }
-                .onBodyOf {
+                .onBody {
                     _userInfo.value = it
                     UserInfoStore.saveUserInfo(it)
                 }

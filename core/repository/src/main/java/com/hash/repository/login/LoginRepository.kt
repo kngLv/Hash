@@ -4,7 +4,6 @@ import com.hash.bean.mine.UserInfoBean
 import com.hash.common.manager.BuglyCrashManager
 import com.hash.common.storage.userInfo.UserInfoStore
 import com.hash.net.launch.request
-import com.hash.net.request.onBodyOf
 import com.hash.repository.login.api.wanLoginApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +33,7 @@ class LoginRepository {
     fun login(coroutineScope: CoroutineScope, userName: String, password: String) {
         loginState.value = LoginState.LOGGING
         request { wanLoginApi.login(userName, password) }
-            .onBodyOf {
+            .onBody {
                 // 保存用户信息和Cookie
                 UserInfoStore.saveUserInfo(UserInfoBean(null, it))
                 BuglyCrashManager.setUserId("${it.id}")

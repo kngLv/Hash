@@ -10,7 +10,6 @@ import com.hash.common.ext.logD
 import com.hash.common.ext.mmkvGetObject
 import com.hash.common.ext.mmkvPutObject
 import com.hash.common.storage.MMKVConst
-import com.hash.net.request.onBodyOf
 import com.hash.repository.home.FeaturedRepository
 
 /**
@@ -33,11 +32,11 @@ class FeaturedViewModel : ViewModel() {
             _tabList.value = historyList!!
         } else {
             repository.newsType()
-                .onBodyOf {
+                .onBody {
                     //判断和历史数据是否相同
                     if (historyList == it) {
                         logD("FeaturedViewModel newsType data no change")
-                        return@onBodyOf
+                        return@onBody
                     }
                     _tabList.value = it
                     if (it.isNotNullAndEmpty()) {

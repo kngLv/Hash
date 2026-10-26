@@ -2,8 +2,11 @@ package com.hash.net.launch
 
 import com.hash.net.download.DownloadActionImpl
 import com.hash.net.request.DownloadBlockObject
+import com.hash.net.request.LvRequest
 import com.hash.net.request.RequestActionImpl
 import com.hash.net.request.RequestBlockObject
+import com.hash.net.request.ResultState
+import com.hash.net.response.IResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
@@ -43,7 +46,7 @@ import retrofit2.Response
  *     .enqueue(viewModelScope)
  * ```
  */
-fun <T> request(block: suspend () -> T) = RequestActionImpl(RequestBlockObject(block))
+fun <T> request(block: suspend () -> IResponse<T>) = RequestActionImpl(RequestBlockObject(block))
 
 /**
  * 将一个“下载请求”的挂起函数封装为可链式调用的下载动作对象。
@@ -119,7 +122,15 @@ fun <T : ResponseBody> download(block: suspend (existingLength: Long) -> Respons
 suspend fun <T> CoroutineScope.zipSyncHttp(block: List<suspend () -> T?>): List<T?> {
     val list = arrayListOf<Deferred<T?>>()
     block.forEach { it ->
-        list.add(async { request(it).execute() })
+        list.add(async { executeRaw(it) })
     }
     return list.awaitAll()
+}
+
+private suspend fun <T> executeRaw(block: suspend () -> T?): T? = when (
+    val state = LvRequest().request(RequestBlockObject(block))
+) {
+    is ResultState.SuccessState -> state.body
+    is ResultState.CodeErrorState -> null
+    is ResultState.ErrorState -> null
 }

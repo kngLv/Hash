@@ -4,7 +4,6 @@ import com.hash.bean.home.NewsTypeListBean
 import com.hash.common.const.AppConst
 import com.hash.net.launch.request
 import com.hash.net.request.RequestActionImpl
-import com.hash.common.net.response.RollResponse
 import com.hash.repository.rollApi
 
 /**
@@ -19,7 +18,7 @@ class FeaturedRepository {
      * 新闻类型列表
      */
     fun newsType(
-    ): RequestActionImpl<RollResponse<NewsTypeListBean>> {
+    ): RequestActionImpl<NewsTypeListBean> {
         return request { rollApi.newsTypeList(AppConst.rollAppId, AppConst.rollAppSecret) }
     }
 }

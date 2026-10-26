@@ -3,8 +3,9 @@ package com.hash.net.net.request
 import android.app.Application
 import com.hash.net.LvHttp
 import com.hash.net.launch.request
+import com.hash.net.request.LvRequest
+import com.hash.net.request.RequestBlockObject
 import com.hash.net.response.IResponse
-import com.hash.net.request.onBodyOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -30,7 +31,7 @@ class RequestActionExtensionsTest {
     }
 
     @Test
-    fun `onBodyOf should call block when response has data`() = runBlocking {
+    fun `onBody should call block with response data`() = runBlocking {
         val expected = "value"
 
         val deferred = CompletableDeferred<String>()
@@ -42,7 +43,7 @@ class RequestActionExtensionsTest {
                 override fun message(): String = ""
             }
         }
-            .onBodyOf { body: String ->
+            .onBody { body: String ->
                 deferred.complete(body)
             }
             .onNullData {
@@ -58,7 +59,7 @@ class RequestActionExtensionsTest {
     }
 
     @Test
-    fun `onBodyOf should trigger onNullData when response data is null`() = runBlocking {
+    fun `onBody should trigger onNullData when response data is null`() = runBlocking {
         val deferred = CompletableDeferred<Boolean>()
 
         request {
@@ -68,7 +69,7 @@ class RequestActionExtensionsTest {
                 override fun message(): String = ""
             }
         }
-            .onBodyOf { _: String? ->
+            .onBody { _: String? ->
                 deferred.completeExceptionally(AssertionError("block should not be called when data is null"))
             }
             .onNullData {
@@ -84,9 +85,15 @@ class RequestActionExtensionsTest {
     }
 
     @Test
-    fun `onBodyOf should trigger onError when data throws`() = runBlocking {
-        val deferred = CompletableDeferred<Throwable>()
+    fun `onBody should propagate data failure to caller scope`() = runBlocking {
+        val failure = CompletableDeferred<Throwable>()
         val ended = CompletableDeferred<Boolean>()
+        var errorCallbackCalled = false
+        val scope = CoroutineScope(
+            SupervisorJob() + Dispatchers.Unconfined + CoroutineExceptionHandler { _, error ->
+                failure.complete(error)
+            },
+        )
 
         request {
             object : IResponse<String> {
@@ -98,26 +105,25 @@ class RequestActionExtensionsTest {
                 override fun message(): String = "err"
             }
         }
-            .onBodyOf { _ ->
-                deferred.completeExceptionally(AssertionError("block should not be called when data throws"))
+            .onBody { _ ->
+                failure.completeExceptionally(AssertionError("block should not be called when data throws"))
             }
             .onNullData {
-                deferred.completeExceptionally(AssertionError("onNullData should not be called when data throws"))
+                failure.completeExceptionally(AssertionError("onNullData should not be called when data throws"))
             }
-            .onError { e ->
-                deferred.complete(e)
-            }
+            .onError { errorCallbackCalled = true }
             .onEnd { ended.complete(it) }
-            .enqueue(this)
+            .enqueue(scope)
 
-        val err = withTimeout(1_000) { deferred.await() }
+        val err = withTimeout(1_000) { failure.await() }
         assertTrue(err is RuntimeException)
         assertEquals("data parse failed", err.message)
+        assertFalse(errorCallbackCalled)
         assertFalse(ended.await())
     }
 
     @Test
-    fun `onBodyOf business callback failure is not routed to onError`() = runBlocking {
+    fun `onBody business callback failure is not routed to onError`() = runBlocking {
         val failure = CompletableDeferred<Throwable>()
         var errorCallbackCalled = false
         val scope = CoroutineScope(
@@ -133,13 +139,32 @@ class RequestActionExtensionsTest {
                 override fun message(): String = ""
             }
         }
-            .onBodyOf { throw IllegalStateException("business callback failed") }
+            .onBody { throw IllegalStateException("business callback failed") }
             .onError { errorCallbackCalled = true }
             .enqueue(scope)
 
         val error = withTimeout(1_000) { failure.await() }
         assertEquals("business callback failed", error.message)
         assertFalse(errorCallbackCalled)
+    }
+
+    @Test
+    fun `onBodyRaw should call block with complete response`() = runBlocking {
+        val expected = "value"
+        val deferred = CompletableDeferred<IResponse<String>>()
+
+        request {
+            object : IResponse<String> {
+                override fun data(): String = expected
+                override fun code(): Int = 0
+                override fun message(): String = ""
+            }
+        }
+            .onBodyRaw { response -> deferred.complete(response) }
+            .onError { deferred.completeExceptionally(it) }
+            .enqueue(this)
+
+        assertEquals(expected, deferred.await().data())
     }
 
     @Test
@@ -169,11 +194,13 @@ class RequestActionExtensionsTest {
     }
 
     @Test
-    fun `executeState rethrows cancellation`() = runBlocking {
-        val action = request<String> { throw CancellationException("cancelled") }
+    fun `LvRequest rethrows cancellation`() = runBlocking {
+        val block = RequestBlockObject<IResponse<String>> {
+            throw CancellationException("cancelled")
+        }
 
         try {
-            action.request()
+            LvRequest().request(block)
             throw AssertionError("CancellationException was expected")
         } catch (error: CancellationException) {
             assertEquals("cancelled", error.message)

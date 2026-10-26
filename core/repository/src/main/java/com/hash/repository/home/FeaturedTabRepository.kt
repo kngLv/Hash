@@ -10,7 +10,6 @@ import com.hash.common.ext.mmkvPutObject
 import com.hash.common.manager.BuglyCrashManager
 import com.hash.net.launch.request
 import com.hash.net.request.RequestActionImpl
-import com.hash.common.net.response.RollResponse
 import com.hash.repository.rollApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -84,7 +83,7 @@ class FeaturedTabRepository(
     fun newsList(
         typeId: String,
         page: String,
-    ): RequestActionImpl<RollResponse<NewsListBean>> {
+    ): RequestActionImpl<NewsListBean> {
         return request {
             rollApi.newsList(
                 AppConst.rollAppId, AppConst.rollAppSecret,

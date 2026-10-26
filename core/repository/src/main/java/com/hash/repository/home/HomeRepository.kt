@@ -3,7 +3,6 @@ package com.hash.repository.home
 import com.hash.bean.home.HomeListBean
 import com.hash.net.launch.request
 import com.hash.net.request.RequestActionImpl
-import com.hash.common.net.response.WanResponse
 import com.hash.repository.wanCommonApi
 
 /**
@@ -17,7 +16,7 @@ class HomeRepository {
     fun homeList(
         page: Int,
         pageSize: Int
-    ): RequestActionImpl<WanResponse<HomeListBean>> {
+    ): RequestActionImpl<HomeListBean> {
         return request { wanCommonApi.articleList(page, pageSize) }
     }
 

@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hash.bean.home.HomeListBean
 import com.hash.common.const.AppConst
-import com.hash.net.request.onBodyOf
 import com.hash.repository.home.HomeRepository
 
 /**
@@ -37,7 +36,7 @@ class WanViewModel : ViewModel() {
     fun getHomeList() {
         page++
         repository.homeList(page, AppConst.PAGE_LIST_SIZE)
-            .onBodyOf {
+            .onBody {
                 if (page == 1) {
                     val beans = it.datas.toMutableList()
                     beans.shuffle()
