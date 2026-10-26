@@ -4,6 +4,7 @@ import com.hash.bean.home.BannerListBean
 import com.hash.bean.home.HomeListBean
 import com.hash.common.net.response.WanResponse
 import okhttp3.ResponseBody
+import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
@@ -44,5 +45,5 @@ interface WanCommonServiceApi {
 
     @Streaming
     @GET("https://yesme-public.oss-cn-hongkong.aliyuncs.com/app/resources/345/petal/petal_y_7.apk")
-    suspend fun downFile(@Header("Range") range: String? = null): ResponseBody
+    suspend fun downFile(@Header("Range") range: String? = null): Response<ResponseBody>
 }

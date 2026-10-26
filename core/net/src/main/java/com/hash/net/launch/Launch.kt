@@ -10,6 +10,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import okhttp3.ResponseBody
+import retrofit2.Response
 
 /**
  * @name ILaunch
@@ -39,7 +40,7 @@ import okhttp3.ResponseBody
  *     .onError { e ->
  *         // 处理错误
  *     }
- *     .enqueue()
+ *     .enqueue(viewModelScope)
  * ```
  */
 fun <T> request(block: suspend () -> T) = RequestActionImpl(RequestBlockObject(block))
@@ -57,7 +58,7 @@ fun <T> request(block: suspend () -> T) = RequestActionImpl(RequestBlockObject(b
  * // Retrofit API 示例
  * @Streaming
  * @GET("...")
- * suspend fun downFile(@Header("Range") range: String? = null): ResponseBody
+ * suspend fun downFile(@Header("Range") range: String? = null): Response<ResponseBody>
  *
  * // 调用处
  * download { existingLength ->
@@ -86,7 +87,7 @@ fun <T> request(block: suspend () -> T) = RequestActionImpl(RequestBlockObject(b
  *   3）下载完后必要时再比对 MD5；
  *   这些逻辑更适合作为业务层的下载管理/校验策略，而非由本类强行判定。
  */
-fun <T : ResponseBody> download(block: suspend (existingLength: Long) -> T) =
+fun <T : ResponseBody> download(block: suspend (existingLength: Long) -> Response<T>) =
     DownloadActionImpl(DownloadBlockObject(block))
 
 

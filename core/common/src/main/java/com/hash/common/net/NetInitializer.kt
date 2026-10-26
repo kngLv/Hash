@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.startup.Initializer
 import com.hash.common.ext.showToast
 import com.hash.common.storage.userInfo.UserInfoStore
+import com.hash.common.BuildConfig
 import com.hash.common.net.interceptor.WanCookieInterceptor
 import com.hash.net.LvHttp
 import com.hash.net.error.CodeException
@@ -26,7 +27,7 @@ class NetInitializer : Initializer<Unit> {
             .isCache(false)
             .setCode(0,1)
             //是否打印 log
-            .isLog(true)
+            .isLog(BuildConfig.DEBUG)
             .addInterceptor(WanCookieInterceptor())
             //对 Code 异常的处理，可自定义,参考 ResponseData 类
             .setErrorDispose(ErrorKey.ErrorCode, ErrorValue {

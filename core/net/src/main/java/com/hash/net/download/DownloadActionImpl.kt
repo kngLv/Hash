@@ -17,6 +17,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.IOException
+import retrofit2.Response
 
 class DownloadActionImpl<T : ResponseBody>(
     val block: DownloadBlockObject<T>
@@ -237,19 +239,17 @@ class DownloadActionImpl<T : ResponseBody>(
     }
 
     private suspend fun dispatchResponseBody(
-        body: ResponseBody?,
+        response: Response<T>?,
         targetFile: File,
         tempFile: File,
         existingLength: Long
     ): File? {
-        if (body == null) {
-            dispatchError(Exception("Response body is null"))
-            return null
-        }
-        try {
+        val body = response?.body() ?: throw IOException("Response body is null")
+
             // 是否以续传方式写入：仅当 .temp 存在且长度与 existingLength 一致时才追加
-            val append =
-                existingLength > 0L && tempFile.exists() && tempFile.length() == existingLength
+            val append = existingLength > 0L && tempFile.exists() &&
+                tempFile.length() == existingLength && response.code() == 206 &&
+                response.headers()["Content-Range"]?.startsWith("bytes $existingLength-") == true
             val baseLength = if (append) existingLength else 0L
 
             // 若无法安全续传，则删除旧的 temp 文件重下
@@ -266,18 +266,16 @@ class DownloadActionImpl<T : ResponseBody>(
                 }
             }
 
-            if (tempFile.exists()) {
-                if (targetFile.exists()) targetFile.delete()
-                if (tempFile.renameTo(targetFile)) {
-                    return targetFile
-                }
+        if (tempFile.exists()) {
+            if (targetFile.exists() && !targetFile.delete()) {
+                throw IOException("Unable to replace existing file: ${targetFile.absolutePath}")
             }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (e: Exception) {
-            dispatchError(e)
+            if (!tempFile.renameTo(targetFile)) {
+                throw IOException("Unable to move downloaded file to: ${targetFile.absolutePath}")
+            }
+            return targetFile
         }
-        return null
+        throw IOException("Downloaded temporary file does not exist: ${tempFile.absolutePath}")
     }
 
 
@@ -327,33 +325,15 @@ class DownloadActionImpl<T : ResponseBody>(
     }
 
     private suspend fun dispatchBegin(totalSize: Long, isResume: Boolean) {
-        try {
-            withMain { downLoadBegin?.invoke(totalSize, isResume) }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        withMain { downLoadBegin?.invoke(totalSize, isResume) }
     }
 
     private suspend fun dispatchProcess(progress: Float) {
-        try {
-            withMain { this.progress?.invoke(progress) }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        withMain { this.progress?.invoke(progress) }
     }
 
     private suspend fun dispatchEnd(filePath: String?) {
-        try {
-            withMain { downLoadEnd?.invoke(filePath) }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        withMain { downLoadEnd?.invoke(filePath) }
     }
 
     private suspend fun dispatchError(t: Exception) {
@@ -364,48 +344,4 @@ class DownloadActionImpl<T : ResponseBody>(
     private suspend inline fun <R> withMain(crossinline block: () -> R) =
         withContext(Dispatchers.Main) { block() }
 
-    private fun executeResponseBody(
-        body: ResponseBody?,
-        targetFile: File,
-        tempFile: File,
-        existingLength: Long
-    ): File? {
-        if (body == null) {
-            throw Exception("Response body is null")
-        }
-        // 与 dispatchResponseBody 基本一致，但为同步版本，只返回最终文件
-        val append =
-            existingLength > 0L && tempFile.exists() && tempFile.length() == existingLength
-        val baseLength = if (append) existingLength else 0L
-
-        if (!append && tempFile.exists()) {
-            tempFile.delete()
-        }
-
-        val contentLength = body.contentLength()
-        val totalSize = if (contentLength > 0) baseLength + contentLength else baseLength
-
-        body.byteStream().use { input ->
-            FileOutputStream(tempFile, append).use { output ->
-                // 这里直接阻塞写入，若你希望同步下也分发进度，可以复用 download 方法
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var bytesCopied = baseLength
-                var bytes = input.read(buffer)
-                while (bytes >= 0) {
-                    output.write(buffer, 0, bytes)
-                    bytesCopied += bytes
-                    bytes = input.read(buffer)
-                }
-                output.flush()
-            }
-        }
-
-        if (tempFile.exists()) {
-            if (targetFile.exists()) targetFile.delete()
-            if (tempFile.renameTo(targetFile)) {
-                return targetFile
-            }
-        }
-        return null
-    }
 }

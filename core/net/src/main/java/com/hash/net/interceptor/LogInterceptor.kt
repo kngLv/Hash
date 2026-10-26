@@ -30,6 +30,7 @@ class LogInterceptor : Interceptor {
     companion object {
         private const val TAG = "LvHttp"
         private val COUNTER = AtomicLong(0)
+        private val SENSITIVE_HEADERS = setOf("authorization", "cookie", "set-cookie", "proxy-authorization")
     }
 
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -88,7 +89,8 @@ class LogInterceptor : Interceptor {
                 append("{URL:${response.request.url}}\n")
                 append("{Content-Type:$mediaType  Content-Length:${contentLength}}\n")
                 response.headers.forEach {
-                    append("{Header: ${it.first}=${it.second}}\n")
+                    val value = if (it.first.lowercase(Locale.ROOT) in SENSITIVE_HEADERS) "██" else it.second
+                    append("{Header: ${it.first}=$value}\n")
                 }
             }
 

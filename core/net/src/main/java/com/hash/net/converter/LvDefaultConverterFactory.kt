@@ -1,7 +1,5 @@
 package com.hash.net.converter
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.google.gson.Gson
 import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
@@ -49,14 +47,16 @@ class LvDefaultConverterFactory(private val gson: Gson) : Converter.Factory() {
 
     override fun responseBodyConverter(
         type: Type, annotations: Array<Annotation>, retrofit: Retrofit
-    ): Converter<ResponseBody, *> {
+    ): Converter<ResponseBody, *>? {
+        if (type == ResponseBody::class.java) {
+            return null
+        }
         return LvResponseBodyConverter<Any>(gson, type)
     }
 
 
     class LvResponseBodyConverter<T>(private val gson: Gson, private val type: Type) :
         Converter<ResponseBody, T> {
-        @RequiresApi(Build.VERSION_CODES.P)
         override fun convert(value: ResponseBody): T? {
             val string = value.string()
             return gson.fromJson(string, type)

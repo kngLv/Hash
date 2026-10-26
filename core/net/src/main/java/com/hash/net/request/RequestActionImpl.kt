@@ -3,7 +3,7 @@ package com.hash.net.request
 import com.hash.net.response.IResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 private class ResponseDataException(val origin: Exception) : Exception(origin)
@@ -110,11 +110,12 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
     /**
      * 异步发起请求：在协程上下文中执行 request，并根据结果分发到对应回调
      */
-    fun enqueue(scope: CoroutineScope = CoroutineScope(Dispatchers.Main)) {
-        scope.launch {
+    fun enqueue(scope: CoroutineScope): Job {
+        return scope.launch {
             var result = false
-            dispatchBegin()
+            var primaryError: Throwable? = null
             try {
+                dispatchBegin()
                 when (val state = request()) {
                     is ResultState.SuccessState -> {
                         try {
@@ -128,21 +129,29 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
                     is ResultState.ErrorState -> dispatchError(state.error)
                 }
             } catch (cancellation: CancellationException) {
+                primaryError = cancellation
                 throw cancellation
+            } catch (error: Throwable) {
+                primaryError = error
+                throw error
             } finally {
-                dispatchEnd(result)
+                try {
+                    dispatchEnd(result)
+                } catch (endError: Throwable) {
+                    primaryError?.addSuppressed(endError) ?: throw endError
+                }
             }
         }
-        return
     }
 
     /**
      * 同步执行请求（挂起函数），返回原始 T 或 null
      */
     suspend fun execute(): T? {
-        dispatchBegin()
         var result = false
+        var primaryError: Throwable? = null
         try {
+            dispatchBegin()
             return when (val state = request()) {
                 is ResultState.SuccessState -> {
                     result = true
@@ -160,9 +169,17 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
                 }
             }
         } catch (cancellation: CancellationException) {
+            primaryError = cancellation
             throw cancellation
+        } catch (error: Throwable) {
+            primaryError = error
+            throw error
         } finally {
-            dispatchEnd(result)
+            try {
+                dispatchEnd(result)
+            } catch (endError: Throwable) {
+                primaryError?.addSuppressed(endError) ?: throw endError
+            }
         }
     }
 
@@ -173,23 +190,11 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
      * 内部工具：分发开始/结束/数据/错误回调
      */
     private fun dispatchBegin() {
-        try {
-            begin?.invoke()
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (error: Exception) {
-            error.printStackTrace()
-        }
+        begin?.invoke()
     }
 
     private fun dispatchEnd(result: Boolean) {
-        try {
-            end?.invoke(result)
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (error: Exception) {
-            error.printStackTrace()
-        }
+        end?.invoke(result)
     }
 
     private fun dispatchNullData() {

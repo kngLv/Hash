@@ -34,10 +34,10 @@ class LvRequest {
                     return ResultState.SuccessState(invoke)
                 }
 
-                is DownloadBlockObject -> {
+                is DownloadBlockObject<*> -> {
                     // 确保阻塞/网络调用在 IO 线程池执行
                     val invoke = withContext(Dispatchers.IO) { block.invoke() }
-                    return ResultState.SuccessState(invoke)
+                    return ResultState.SuccessState(invoke as T)
                 }
             }
         } catch (error: CancellationException) {
@@ -75,7 +75,8 @@ class LvRequest {
         val code = response.code()
         val msg = response.message()
         // Code 验证
-        if (!LvHttp.getCode().contains(code)) {
+        val successCodes = LvHttp.getCode()
+        if (successCodes.isNotEmpty() && !successCodes.contains(code)) {
             // Code 异常处理
             notifyError(ErrorKey.ErrorCode, CodeException(code, msg))
             return false

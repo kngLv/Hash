@@ -49,7 +49,7 @@ class LvController {
     private fun setOkhttpCommonParams(builder: OkHttpClient.Builder): OkHttpClient.Builder {
         if (params.isCache) {
             builder.cache(Cache(params.appContext.cacheDir, params.cacheSize))
-            builder.addNetworkInterceptor(CacheInterceptor())
+            builder.addInterceptor(CacheInterceptor())
         }
         if (params.isLog) {
             builder.addInterceptor(LogInterceptor())
