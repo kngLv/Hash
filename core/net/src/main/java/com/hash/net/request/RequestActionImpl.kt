@@ -11,7 +11,7 @@ import kotlinx.coroutines.Job
  * [RequestCallbacks]、[RequestExecutor] 负责。
  */
 class RequestActionImpl<T>(
-    block: AbstractRequestBlock<IResponse<T>>,
+    block: suspend () -> IResponse<T>,
 ) {
     private val callbacks = RequestCallbacks<T>()
     private val executor = RequestExecutor(block, callbacks)

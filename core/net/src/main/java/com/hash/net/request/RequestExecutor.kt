@@ -7,13 +7,16 @@ import kotlinx.coroutines.launch
 
 /** 负责请求执行、ResultState 分流及 begin/end 生命周期。 */
 internal class RequestExecutor<T>(
-    private val block: AbstractRequestBlock<IResponse<T>>,
+    private val block: suspend () -> IResponse<T>,
     private val callbacks: RequestCallbacks<T>,
 ) {
     fun enqueue(scope: CoroutineScope): Job = scope.launch {
         runWithLifecycle {
             when (val state = request()) {
-                is ResultState.SuccessState -> callbacks.dispatchSuccess(state.body)
+                is ResultState.SuccessState -> {
+                    callbacks.dispatchSuccess(state.body)
+                    true
+                }
                 is ResultState.CodeErrorState -> {
                     callbacks.dispatchCodeError(state.code, state.body)
                     false

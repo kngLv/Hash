@@ -15,37 +15,26 @@ import kotlinx.coroutines.withContext
  * @time 2024/12/23 23:23
  * @description 请求发起类，返回自定义的数据类型
  */
-class LvRequest {
+internal class LvRequest {
 
-    suspend fun <T> request(block: AbstractRequestBlock<T>): ResultState<T> {
+    suspend fun <T> request(block: suspend () -> T): ResultState<T> {
         try {
-            when (block) {
-                is RequestBlockObject -> {
-                    // 确保阻塞/网络调用在 IO 线程池执行
-                    val invoke = withContext(Dispatchers.IO) { block.invoke() }
-                    if (invoke == null) {
-                        return ResultState.SuccessState(null)
-                    }
-                    if (invoke is IResponse<*>) {
-                        val s = parseIResponse(invoke as IResponse<*>)
-                        if (s) return ResultState.SuccessState(invoke as T)
-                        return ResultState.CodeErrorState(invoke.code(), invoke as T)
-                    }
-                    return ResultState.SuccessState(invoke)
-                }
-
-                is DownloadBlockObject<*> -> {
-                    // 确保阻塞/网络调用在 IO 线程池执行
-                    val invoke = withContext(Dispatchers.IO) { block.invoke() }
-                    return ResultState.SuccessState(invoke as T)
-                }
+            // 确保阻塞/网络调用在 IO 线程池执行
+            val invoke = withContext(Dispatchers.IO) { block() }
+            if (invoke == null) {
+                return ResultState.SuccessState(null)
             }
+            if (invoke is IResponse<*>) {
+                val success = parseIResponse(invoke)
+                if (success) return ResultState.SuccessState(invoke as T)
+                return ResultState.CodeErrorState(invoke.code(), invoke as T)
+            }
+            return ResultState.SuccessState(invoke)
         } catch (error: CancellationException) {
             throw error
         } catch (e: Exception) {
             return parseError(e)
         }
-        return ResultState.ErrorState(error = IllegalStateException("Unsupported request block"))
     }
 
     private fun <T> parseError(e: Exception): ResultState<T> {

@@ -1,10 +1,8 @@
-package com.hash.net.net.request
+package com.hash.net.request
 
 import android.app.Application
 import com.hash.net.LvHttp
 import com.hash.net.launch.request
-import com.hash.net.request.LvRequest
-import com.hash.net.request.RequestBlockObject
 import com.hash.net.response.IResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -195,12 +193,10 @@ class RequestActionExtensionsTest {
 
     @Test
     fun `LvRequest rethrows cancellation`() = runBlocking {
-        val block = RequestBlockObject<IResponse<String>> {
-            throw CancellationException("cancelled")
-        }
-
         try {
-            LvRequest().request(block)
+            LvRequest().request {
+                throw CancellationException("cancelled")
+            }
             throw AssertionError("CancellationException was expected")
         } catch (error: CancellationException) {
             assertEquals("cancelled", error.message)

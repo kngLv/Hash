@@ -12,21 +12,20 @@ internal class RequestCallbacks<T> {
     var error: (Exception) -> Unit = Exception::printStackTrace
     var end: ((Boolean) -> Unit)? = null
 
-    fun dispatchSuccess(response: IResponse<T>?): Boolean {
+    fun dispatchSuccess(response: IResponse<T>?) {
         if (response == null) {
             nullData?.invoke()
-            return true
+            return
         }
 
         rawBody?.invoke(response)
-        val callback = body ?: return true
+        val callback = body ?: return
         val data = response.data()
         if (data == null) {
             nullData?.invoke()
         } else {
             callback(data)
         }
-        return true
     }
 
     fun dispatchCodeError(code: Int, response: IResponse<T>?) {

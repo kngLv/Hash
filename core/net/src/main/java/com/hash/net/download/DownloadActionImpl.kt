@@ -1,7 +1,5 @@
 package com.hash.net.download
 
-import com.hash.net.request.AbstractRequestAction
-import com.hash.net.request.DownloadBlockObject
 import com.hash.net.request.LvRequest
 import com.hash.net.request.ResultState
 import kotlinx.coroutines.CancellationException
@@ -21,8 +19,8 @@ import java.io.IOException
 import retrofit2.Response
 
 class DownloadActionImpl<T : ResponseBody>(
-    val block: DownloadBlockObject<T>
-) : AbstractRequestAction<T>() {
+    private val block: suspend (existingLength: Long) -> Response<T>,
+) {
 
 
     private var downLoadBegin: ((Long, Boolean) -> Unit)? = null
@@ -30,6 +28,8 @@ class DownloadActionImpl<T : ResponseBody>(
     private var downLoadEnd : ((String?) -> Unit)? = null
 
     private var progress: ((Float) -> Unit)? = null
+
+    private var error: (Exception) -> Unit = Exception::printStackTrace
 
     /**
      * 注册：开始下载的回调
@@ -122,10 +122,7 @@ class DownloadActionImpl<T : ResponseBody>(
                     existingLength = 0L
                 }
 
-                // 告知调用方本地已下载长度，供其构造 Range 头
-                block.existingLength = existingLength
-
-                val state = LvRequest().request(block)
+                val state = LvRequest().request { block(existingLength) }
                 when (state) {
                     is ResultState.SuccessState -> {
                         val finalFile = dispatchResponseBody(
@@ -337,7 +334,6 @@ class DownloadActionImpl<T : ResponseBody>(
     }
 
     private suspend fun dispatchError(t: Exception) {
-        // 使用 AbstractRequestAction 中的默认实现（打印日志）作为兜底
         withMain { this.error.invoke(t) }
     }
 

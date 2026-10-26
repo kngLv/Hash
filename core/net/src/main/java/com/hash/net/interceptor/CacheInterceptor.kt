@@ -1,7 +1,7 @@
 package com.hash.net.interceptor
 
 import com.hash.net.LvHttp
-import com.hash.net.utils.isNetworkConnected
+import com.hash.net.connectivity.isNetworkAvailable
 import okhttp3.Interceptor
 import okhttp3.Response
 import okhttp3.CacheControl
@@ -17,14 +17,14 @@ import java.util.concurrent.TimeUnit
 class CacheInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         var request = chain.request()
-        if (!isNetworkConnected(LvHttp.getAppContext())) {
+        if (!isNetworkAvailable(LvHttp.getAppContext())) {
             request = request.newBuilder()
                 .cacheControl(CacheControl.Builder().onlyIfCached().maxStale(7, TimeUnit.DAYS).build())
                 .build()
         }
         val response = chain.proceed(request)
 
-        if (isNetworkConnected(LvHttp.getAppContext())) {
+        if (isNetworkAvailable(LvHttp.getAppContext())) {
             //如果缓存已经存在：不超过maxAge---->不进行请求,直接返回缓存数据
             //超出了maxAge--->发起请求获取数据更新，请求失败返回旧的缓存数据
             val maxAge = 60
