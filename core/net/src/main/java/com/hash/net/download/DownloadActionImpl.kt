@@ -16,6 +16,7 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.IOException
+import retrofit2.HttpException
 import retrofit2.Response
 
 class DownloadActionImpl<T : ResponseBody>(
@@ -86,6 +87,7 @@ class DownloadActionImpl<T : ResponseBody>(
     ): Job {
         return scope.launch(Dispatchers.IO) {
             try {
+                validateFileName(fileName)
                 val dirFile = File(dir)
                 if (!dirFile.exists() && !dirFile.mkdirs()) {
                     throw IOException("Unable to create download directory: ${dirFile.absolutePath}")
@@ -127,11 +129,18 @@ class DownloadActionImpl<T : ResponseBody>(
                     existingLength = 0L
                 }
 
-                val state = LvRequest().request { block(existingLength) }
+                val state = LvRequest().request {
+                    block(existingLength).also { response ->
+                        if (!response.isSuccessful) {
+                            throw HttpException(response)
+                        }
+                    }
+                }
                 when (state) {
                     is ResultState.SuccessState -> {
+                        val response = state.body ?: throw IOException("Download response is null")
                         val finalFile = dispatchResponseBody(
-                            state.body,
+                            response,
                             targetFile,
                             tempFile,
                             existingLength
@@ -162,6 +171,15 @@ class DownloadActionImpl<T : ResponseBody>(
                 }
             }
         }
+    }
+
+    private fun validateFileName(fileName: String) {
+        require(fileName.isNotBlank() &&
+            fileName != "." &&
+            fileName != ".." &&
+            !fileName.contains('/') &&
+            !fileName.contains('\\')
+        ) { "fileName must be a single file name: $fileName" }
     }
 
     /**

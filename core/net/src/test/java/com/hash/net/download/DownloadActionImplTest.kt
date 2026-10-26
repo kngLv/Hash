@@ -24,6 +24,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
+import retrofit2.HttpException
 import java.io.IOException
 import java.nio.file.Files
 
@@ -112,6 +113,49 @@ class DownloadActionImplTest {
             assertTrue(withTimeout(1_000) { failure.await() } is IOException)
             assertFalse(downloadDir.resolve("test.apk").exists())
             assertTrue(downloadDir.resolve("test.apk.temp").exists())
+        } finally {
+            downloadDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `http failure is delivered as HttpException`() = runTest {
+        val failure = CompletableDeferred<Exception>()
+        val downloadDir = Files.createTempDirectory("hash-download-test").toFile()
+
+        try {
+            val job = download<ResponseBody> {
+                Response.error(404, "not found".toResponseBody())
+            }
+                .onError { failure.complete(it) }
+                .enqueue(downloadDir.absolutePath, "test.apk", this)
+            job.join()
+
+            val error = withTimeout(1_000) { failure.await() }
+            assertTrue(error is HttpException)
+            assertEquals(404, (error as HttpException).code())
+        } finally {
+            downloadDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `file name containing a path is rejected`() = runTest {
+        val failure = CompletableDeferred<Exception>()
+        val downloadDir = Files.createTempDirectory("hash-download-test").toFile()
+        var requestStarted = false
+
+        try {
+            val job = download<ResponseBody> {
+                requestStarted = true
+                Response.success("content".toResponseBody())
+            }
+                .onError { failure.complete(it) }
+                .enqueue(downloadDir.absolutePath, "../outside.apk", this)
+            job.join()
+
+            assertTrue(withTimeout(1_000) { failure.await() } is IllegalArgumentException)
+            assertFalse(requestStarted)
         } finally {
             downloadDir.deleteRecursively()
         }
