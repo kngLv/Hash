@@ -8,4 +8,7 @@ interface WanMineServiceApi {
 
     @GET("/user/lg/userinfo/json")
     suspend fun userInfo(): WanResponse<UserInfoBean>
+
+    @GET("/string")
+    suspend fun test(): String
 }
