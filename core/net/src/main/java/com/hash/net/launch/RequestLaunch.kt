@@ -1,6 +1,7 @@
 package com.hash.net.launch
 
 import com.hash.net.request.LvRequest
+import com.hash.net.request.RawRequestActionImpl
 import com.hash.net.request.RequestActionImpl
 import com.hash.net.request.ResultState
 import com.hash.net.response.IResponse
@@ -11,6 +12,9 @@ import kotlinx.coroutines.awaitAll
 
 /** 将一个接口请求封装为支持生命周期回调的请求动作。 */
 fun <T> request(block: suspend () -> IResponse<T>) = RequestActionImpl(block)
+
+/** 将不遵循 [IResponse] 协议的普通接口封装为请求动作。 */
+fun <T> requestRaw(block: suspend () -> T) = RawRequestActionImpl(block)
 
 /**
  * 并发执行请求列表，保持输入顺序返回结果。

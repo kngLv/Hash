@@ -13,8 +13,13 @@ import kotlinx.coroutines.Job
 class RequestActionImpl<T>(
     block: suspend () -> IResponse<T>,
 ) {
-    private val callbacks = RequestCallbacks<T>()
-    private val executor = RequestExecutor(block, callbacks)
+    private val callbacks = RequestCallbacks<T, IResponse<T>>()
+    private val executor = RequestExecutor(
+        block = block,
+        callbacks = callbacks,
+        success = { response -> RequestSuccess(response.data(), response) },
+        errorResponse = { it },
+    )
 
     fun onBegin(block: () -> Unit): RequestActionImpl<T> = apply { callbacks.begin = block }
 

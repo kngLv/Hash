@@ -2,30 +2,29 @@ package com.hash.net.request
 
 import com.hash.net.response.IResponse
 
-/** 保存请求回调，并负责将响应分发为原始响应或业务 data。 */
-internal class RequestCallbacks<T> {
+/** 保存请求回调，并负责分发业务数据与原始返回值。 */
+internal class RequestCallbacks<T, Raw> {
     var begin: (() -> Unit)? = null
-    var rawBody: ((IResponse<T>) -> Unit)? = null
+    var rawBody: ((Raw) -> Unit)? = null
     var body: ((T) -> Unit)? = null
     var nullData: (() -> Unit)? = null
     var errorCode: ((Int, IResponse<T>?) -> Unit)? = null
     var error: (Exception) -> Unit = Exception::printStackTrace
     var end: ((Boolean) -> Unit)? = null
 
-    fun dispatchSuccess(response: IResponse<T>?) {
-        if (response == null) {
-            nullData?.invoke()
-            return
-        }
-
-        rawBody?.invoke(response)
+    fun dispatchSuccess(response: RequestSuccess<T, Raw>) {
+        rawBody?.invoke(response.raw)
         val callback = body ?: return
-        val data = response.data()
+        val data = response.body
         if (data == null) {
             nullData?.invoke()
         } else {
             callback(data)
         }
+    }
+
+    fun dispatchEmptySuccess() {
+        nullData?.invoke()
     }
 
     fun dispatchCodeError(code: Int, response: IResponse<T>?) {

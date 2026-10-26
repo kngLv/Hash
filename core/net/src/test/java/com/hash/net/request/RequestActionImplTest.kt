@@ -3,6 +3,7 @@ package com.hash.net.request
 import android.app.Application
 import com.hash.net.LvHttp
 import com.hash.net.launch.request
+import com.hash.net.launch.requestRaw
 import com.hash.net.response.IResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -163,6 +164,22 @@ class RequestActionExtensionsTest {
             .enqueue(this)
 
         assertEquals(expected, deferred.await().data())
+    }
+
+    @Test
+    fun `plain response should dispatch its value to body and raw callbacks`() = runBlocking {
+        val expected = "payment-token"
+        val body = CompletableDeferred<String>()
+        val raw = CompletableDeferred<String>()
+
+        requestRaw { expected }
+            .onBody { body.complete(it) }
+            .onBodyRaw { raw.complete(it) }
+            .onError { body.completeExceptionally(it) }
+            .enqueue(this)
+
+        assertEquals(expected, body.await())
+        assertEquals(expected, raw.await())
     }
 
     @Test

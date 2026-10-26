@@ -6,19 +6,26 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /** 负责请求执行、ResultState 分流及 begin/end 生命周期。 */
-internal class RequestExecutor<T>(
-    private val block: suspend () -> IResponse<T>,
-    private val callbacks: RequestCallbacks<T>,
+internal class RequestExecutor<Response, T, Raw>(
+    private val block: suspend () -> Response,
+    private val callbacks: RequestCallbacks<T, Raw>,
+    private val success: (Response) -> RequestSuccess<T, Raw>,
+    private val errorResponse: (Response?) -> IResponse<T>?,
 ) {
     fun enqueue(scope: CoroutineScope): Job = scope.launch {
         runWithLifecycle {
             when (val state = request()) {
                 is ResultState.SuccessState -> {
-                    callbacks.dispatchSuccess(state.body)
+                    val response = state.body
+                    if (response == null) {
+                        callbacks.dispatchEmptySuccess()
+                    } else {
+                        callbacks.dispatchSuccess(success(response))
+                    }
                     true
                 }
                 is ResultState.CodeErrorState -> {
-                    callbacks.dispatchCodeError(state.code, state.body)
+                    callbacks.dispatchCodeError(state.code, errorResponse(state.body))
                     false
                 }
 
@@ -30,8 +37,8 @@ internal class RequestExecutor<T>(
         }
     }
 
-    suspend fun execute(): IResponse<T>? {
-        var response: IResponse<T>? = null
+    suspend fun execute(): Response? {
+        var response: Response? = null
         runWithLifecycle {
             when (val state = request()) {
                 is ResultState.SuccessState -> {
@@ -40,7 +47,7 @@ internal class RequestExecutor<T>(
                 }
 
                 is ResultState.CodeErrorState -> {
-                    callbacks.dispatchCodeError(state.code, state.body)
+                    callbacks.dispatchCodeError(state.code, errorResponse(state.body))
                     false
                 }
 
@@ -53,7 +60,7 @@ internal class RequestExecutor<T>(
         return response
     }
 
-    suspend fun request(): ResultState<IResponse<T>> = LvRequest().request(block)
+    suspend fun request(): ResultState<Response> = LvRequest().request(block)
 
     private suspend fun runWithLifecycle(block: suspend () -> Boolean): Boolean {
         var result = false
