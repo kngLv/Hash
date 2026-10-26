@@ -14,12 +14,11 @@ internal class RequestCallbacks<T, Raw> {
 
     fun dispatchSuccess(response: RequestSuccess<T, Raw>) {
         rawBody?.invoke(response.raw)
-        val callback = body ?: return
         val data = response.body
         if (data == null) {
             nullData?.invoke()
         } else {
-            callback(data)
+            body?.invoke(data)
         }
     }
 

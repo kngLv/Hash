@@ -84,6 +84,24 @@ class RequestActionExtensionsTest {
     }
 
     @Test
+    fun `onNullData should not require an onBody callback`() = runBlocking {
+        val deferred = CompletableDeferred<Boolean>()
+
+        request {
+            object : IResponse<String?> {
+                override fun data(): String? = null
+                override fun code(): Int = 0
+                override fun message(): String = ""
+            }
+        }
+            .onNullData { deferred.complete(true) }
+            .onError { deferred.completeExceptionally(it) }
+            .enqueue(this)
+
+        assertTrue(deferred.await())
+    }
+
+    @Test
     fun `onBody should propagate data failure to caller scope`() = runBlocking {
         val failure = CompletableDeferred<Throwable>()
         val ended = CompletableDeferred<Boolean>()

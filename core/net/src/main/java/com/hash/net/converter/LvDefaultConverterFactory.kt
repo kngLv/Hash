@@ -33,6 +33,30 @@ class LvDefaultConverterFactory(private val gson: Gson) : Converter.Factory() {
         fun create(gson: Gson): LvDefaultConverterFactory {
             return LvDefaultConverterFactory(gson)
         }
+
+        internal fun isScalarType(type: Type): Boolean {
+            return type is Class<*> && type in SCALAR_TYPES
+        }
+
+        private val SCALAR_TYPES = setOf(
+            String::class.java,
+            Boolean::class.javaPrimitiveType,
+            Boolean::class.javaObjectType,
+            Byte::class.javaPrimitiveType,
+            Byte::class.javaObjectType,
+            Short::class.javaPrimitiveType,
+            Short::class.javaObjectType,
+            Int::class.javaPrimitiveType,
+            Int::class.javaObjectType,
+            Long::class.javaPrimitiveType,
+            Long::class.javaObjectType,
+            Float::class.javaPrimitiveType,
+            Float::class.javaObjectType,
+            Double::class.javaPrimitiveType,
+            Double::class.javaObjectType,
+            Char::class.javaPrimitiveType,
+            Char::class.javaObjectType,
+        )
     }
 
     override fun requestBodyConverter(
@@ -40,7 +64,10 @@ class LvDefaultConverterFactory(private val gson: Gson) : Converter.Factory() {
         parameterAnnotations: Array<out Annotation>,
         methodAnnotations: Array<out Annotation>,
         retrofit: Retrofit
-    ): Converter<*, RequestBody> {
+    ): Converter<*, RequestBody>? {
+        if (type == RequestBody::class.java) {
+            return null
+        }
         val adapter = gson.getAdapter(TypeToken.get(type))
         return GsonRequestBodyConverter(gson, adapter)
     }
@@ -50,6 +77,9 @@ class LvDefaultConverterFactory(private val gson: Gson) : Converter.Factory() {
     ): Converter<ResponseBody, *>? {
         if (type == ResponseBody::class.java) {
             return null
+        }
+        if (isScalarType(type)) {
+            return ScalarResponseBodyConverter(type as Class<*>)
         }
         return LvResponseBodyConverter<Any>(gson, type)
     }
@@ -62,6 +92,39 @@ class LvDefaultConverterFactory(private val gson: Gson) : Converter.Factory() {
             return gson.fromJson(string, type)
         }
 
+    }
+
+    private class ScalarResponseBodyConverter(
+        private val type: Class<*>,
+    ) : Converter<ResponseBody, Any> {
+
+        override fun convert(value: ResponseBody): Any {
+            return convertText(value.string())
+        }
+
+        private fun convertText(value: String): Any = when (type) {
+            String::class.java -> value
+            Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> value.toStrictBoolean()
+            Byte::class.javaPrimitiveType, Byte::class.javaObjectType -> value.toByte()
+            Short::class.javaPrimitiveType, Short::class.javaObjectType -> value.toShort()
+            Int::class.javaPrimitiveType, Int::class.javaObjectType -> value.toInt()
+            Long::class.javaPrimitiveType, Long::class.javaObjectType -> value.toLong()
+            Float::class.javaPrimitiveType, Float::class.javaObjectType -> value.toFloat()
+            Double::class.javaPrimitiveType, Double::class.javaObjectType -> value.toDouble()
+            Char::class.javaPrimitiveType, Char::class.javaObjectType -> value.toSingleChar()
+            else -> error("Unsupported scalar response type: $type")
+        }
+
+        private fun String.toStrictBoolean(): Boolean = when (this) {
+            "true" -> true
+            "false" -> false
+            else -> throw IllegalArgumentException("Expected true or false but was '$this'")
+        }
+
+        private fun String.toSingleChar(): Char {
+            require(length == 1) { "Expected a single character but was '$this'" }
+            return single()
+        }
     }
 
 }

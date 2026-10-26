@@ -19,6 +19,7 @@ object LvHttp {
     /** 创建 API */
     @JvmStatic
     fun <T> createApi(clazz: Class<T>): T {
+        check(::mController.isInitialized) { "LvHttp 尚未初始化，请先调用 LvHttp.Builder(...).build()" }
         return mController.newInstance(clazz)
     }
 
@@ -45,14 +46,11 @@ object LvHttp {
 
 
     class Builder(application: Application) {
-        init {
-            p = LvParams()
-            p.appContext = application
-        }
+        private val params = LvParams().apply { appContext = application }
 
         /** 设置 BaseUrl */
         fun setBaseUrl(baseUrl: String): Builder {
-            p.baseUrl = baseUrl
+            params.baseUrl = baseUrl
             return this
         }
 
@@ -60,7 +58,7 @@ object LvHttp {
          * 连接时间，秒为单位
          */
         fun setConnectTimeOut(connectTime: Long): Builder {
-            p.connectTimeOut = connectTime
+            params.connectTimeOut = connectTime
             return this
         }
 
@@ -68,7 +66,7 @@ object LvHttp {
          * 下载响应的时候等待时间，秒为单位
          */
         fun setReadTimeOut(readTime: Long): Builder {
-            p.readTimeOut = readTime
+            params.readTimeOut = readTime
             return this
         }
 
@@ -76,7 +74,7 @@ object LvHttp {
          * 写入请求的等待时间，秒为单位
          */
         fun setWriteTimeOut(writeTimeOut: Long): Builder {
-            p.writeTimeOut = writeTimeOut
+            params.writeTimeOut = writeTimeOut
             return this
         }
 
@@ -85,7 +83,7 @@ object LvHttp {
          * @param isLog true 表示打印
          */
         fun isLog(isLog: Boolean): Builder {
-            p.isLog = isLog
+            params.isLog = isLog
             return this
         }
 
@@ -94,7 +92,7 @@ object LvHttp {
          * @param isCache true 表示开启缓存
          */
         fun isCache(isCache: Boolean): Builder {
-            p.isCache = isCache
+            params.isCache = isCache
             return this
         }
 
@@ -103,7 +101,7 @@ object LvHttp {
          * 不设置默认不进行 code 判断
          */
         fun setCode(vararg code: Int): Builder {
-            p.successCode = code
+            params.successCode = code
             return this
         }
 
@@ -112,7 +110,7 @@ object LvHttp {
          * @param cacheSize 缓存大小
          */
         fun setCacheSize(cacheSize: Long): Builder {
-            p.cacheSize = cacheSize
+            params.cacheSize = cacheSize
             return this
         }
 
@@ -120,12 +118,12 @@ object LvHttp {
          * 添加拦截器
          */
         fun addInterceptor(vararg interceptor: Interceptor): Builder {
-            p.interceptors.addAll(interceptor)
+            params.interceptors.addAll(interceptor)
             return this
         }
 
         fun setCerResId(@RawRes cerRes: Int): Builder {
-            p.cerResId = cerRes
+            params.cerResId = cerRes
             return this
         }
 
@@ -133,7 +131,7 @@ object LvHttp {
          * 设置异常处理
          */
         fun setErrorDispose(errorKey: ErrorKey, errorValue: ErrorValue): Builder {
-            p.errorDisposes[errorKey] = errorValue
+            params.errorDisposes[errorKey] = errorValue
             return this
         }
 
@@ -141,12 +139,13 @@ object LvHttp {
          * 设置 Gson 解析器，默认使用gson，如果有自定义的Gson解析器，可以在此设置
          */
         fun setGsonParser(gson: Gson): Builder {
-            p.gson = gson
+            params.gson = gson
             return this
         }
 
         fun build() {
-            mController = LvController().build(p)
+            p = params
+            mController = LvController().build(params)
         }
     }
 }

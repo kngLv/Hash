@@ -22,6 +22,8 @@ class DownloadActionImpl<T : ResponseBody>(
     private val block: suspend (existingLength: Long) -> Response<T>,
 ) {
 
+    private class CallbackException(cause: Throwable) : RuntimeException(cause)
+
 
     private var downLoadBegin: ((Long, Boolean) -> Unit)? = null
 
@@ -85,8 +87,11 @@ class DownloadActionImpl<T : ResponseBody>(
         return scope.launch(Dispatchers.IO) {
             try {
                 val dirFile = File(dir)
-                if (!dirFile.exists()) {
-                    dirFile.mkdirs()
+                if (!dirFile.exists() && !dirFile.mkdirs()) {
+                    throw IOException("Unable to create download directory: ${dirFile.absolutePath}")
+                }
+                if (!dirFile.isDirectory) {
+                    throw IOException("Download path is not a directory: ${dirFile.absolutePath}")
                 }
 
                 var targetFile: File // 最终目标文件（无 .temp）
@@ -144,11 +149,17 @@ class DownloadActionImpl<T : ResponseBody>(
                         dispatchEnd(null)
                     }
                 }
+            } catch (callbackError: CallbackException) {
+                throw callbackError.cause ?: callbackError
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (e: Exception) {
-                dispatchError(e)
-                dispatchEnd(null)
+                try {
+                    dispatchError(e)
+                    dispatchEnd(null)
+                } catch (callbackError: CallbackException) {
+                    throw callbackError.cause ?: callbackError
+                }
             }
         }
     }
@@ -185,12 +196,8 @@ class DownloadActionImpl<T : ResponseBody>(
                 return Triple(candidateTarget, candidateTemp, existingLength)
             }
 
-            // 情况 B：当前副本文件存在，且 temp 存在且有内容 -> 未完成下载的副本，继续续传
-            if (tempExists && tempLength > 0L) {
-                return Triple(candidateTarget, candidateTemp, tempLength)
-            }
-
-            // 情况 C：当前副本文件存在，但 temp 不存在或长度为 0 -> 认为该副本已完整存在，尝试下一个副本
+            // 目标文件已经存在时，即使同名 temp 存在也不能确认二者属于同一次下载。
+            // 为避免陈旧 temp 覆盖完整文件，始终选择下一个副本。
             index++
         }
     }
@@ -250,8 +257,8 @@ class DownloadActionImpl<T : ResponseBody>(
             val baseLength = if (append) existingLength else 0L
 
             // 若无法安全续传，则删除旧的 temp 文件重下
-            if (!append && tempFile.exists()) {
-                tempFile.delete()
+            if (!append && tempFile.exists() && !tempFile.delete()) {
+                throw IOException("Unable to clear temporary file: ${tempFile.absolutePath}")
             }
 
             val contentLength = body.contentLength()
@@ -259,7 +266,12 @@ class DownloadActionImpl<T : ResponseBody>(
 
             body.byteStream().use { input ->
                 FileOutputStream(tempFile, append).use { output ->
-                    download(input, output, baseLength, totalSize, baseLength > 0L)
+                    val copiedBytes = download(input, output, baseLength, totalSize, baseLength > 0L)
+                    if (contentLength >= 0 && copiedBytes - baseLength != contentLength) {
+                        throw IOException(
+                            "Incomplete download: expected=$contentLength, actual=${copiedBytes - baseLength}",
+                        )
+                    }
                 }
             }
 
@@ -282,7 +294,7 @@ class DownloadActionImpl<T : ResponseBody>(
         alreadyBytes: Long,
         totalSize: Long,
         isResume: Boolean
-    ) {
+    ): Long {
         currentCoroutineContext().ensureActive()
         var preProgress = 0f
         // 先分发开始回调：告知总大小和是否断点续传
@@ -319,22 +331,31 @@ class DownloadActionImpl<T : ResponseBody>(
         output.flush()
         // 无论是否有 totalSize，最后都回调 100%，表示完成
         dispatchProcess(100f)
+        return bytesCopied
     }
 
     private suspend fun dispatchBegin(totalSize: Long, isResume: Boolean) {
-        withMain { downLoadBegin?.invoke(totalSize, isResume) }
+        dispatchCallback { downLoadBegin?.invoke(totalSize, isResume) }
     }
 
     private suspend fun dispatchProcess(progress: Float) {
-        withMain { this.progress?.invoke(progress) }
+        dispatchCallback { this.progress?.invoke(progress) }
     }
 
     private suspend fun dispatchEnd(filePath: String?) {
-        withMain { downLoadEnd?.invoke(filePath) }
+        dispatchCallback { downLoadEnd?.invoke(filePath) }
     }
 
     private suspend fun dispatchError(t: Exception) {
-        withMain { this.error.invoke(t) }
+        dispatchCallback { this.error.invoke(t) }
+    }
+
+    private suspend fun dispatchCallback(block: () -> Unit) {
+        try {
+            withMain(block)
+        } catch (error: Throwable) {
+            throw CallbackException(error)
+        }
     }
 
     private suspend inline fun <R> withMain(crossinline block: () -> R) =

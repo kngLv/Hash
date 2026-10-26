@@ -10,9 +10,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -21,53 +19,15 @@ import okhttp3.OkHttpClient;
 
 public class HTTPSCerUtils {
 
-    //信任所有证书
-    public static void setTrustAllCertificate(OkHttpClient.Builder okHttpClientBuilder) {
-        try {
-            SSLContext sc = SSLContext.getInstance("TLS");
-            X509TrustManager trustAllManager = new X509TrustManager() {
-                @Override
-                public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
-                }
-
-                @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-
-                }
-
-                @Override
-                public X509Certificate[] getAcceptedIssuers() {
-                    return new X509Certificate[0];
-                }
-            };
-            sc.init(null, new TrustManager[]{trustAllManager}, new SecureRandom());
-            okHttpClientBuilder.sslSocketFactory(sc.getSocketFactory(), trustAllManager);
-            //如果需要兼容安卓5.0以下，可以使用这句
-            //okHttpClientBuilder.sslSocketFactory(new TLSSocketFactory(), trustAllManager);
-            okHttpClientBuilder.hostnameVerifier(new HostnameVerifier() {
-                @Override
-                public boolean verify(String hostname, SSLSession session) {
-                    return true;
-                }
-            });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     //只信任指定证书（传入raw资源ID）
     public static void setCertificate(Context context, OkHttpClient.Builder okHttpClientBuilder, int cerResID) {
-        try {
+        try (InputStream inputStream = context.getResources().openRawResource(cerResID)) {
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-            InputStream inputStream = context.getResources().openRawResource(cerResID);
             Certificate ca = certificateFactory.generateCertificate(inputStream);
 
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
             keyStore.load(null, null);
             keyStore.setCertificateEntry("ca", ca);
-
-            inputStream.close();
 
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(keyStore);
@@ -75,14 +35,8 @@ public class HTTPSCerUtils {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, tmf.getTrustManagers(), new SecureRandom());
             okHttpClientBuilder.sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) tmf.getTrustManagers()[0]);
-            okHttpClientBuilder.hostnameVerifier(new HostnameVerifier() {
-                @Override
-                public boolean verify(String hostname, SSLSession session) {
-                    return true;
-                }
-            });
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Unable to configure custom certificate", e);
         }
     }
 
@@ -94,8 +48,10 @@ public class HTTPSCerUtils {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
             keyStore.load(null, null);
             for (int i = 0; i < cerResIDs.length; i++) {
-                Certificate ca = certificateFactory.generateCertificate(context.getResources().openRawResource(cerResIDs[i]));
-                keyStore.setCertificateEntry("ca" + i, ca);
+                try (InputStream inputStream = context.getResources().openRawResource(cerResIDs[i])) {
+                    Certificate ca = certificateFactory.generateCertificate(inputStream);
+                    keyStore.setCertificateEntry("ca" + i, ca);
+                }
             }
 
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -104,14 +60,8 @@ public class HTTPSCerUtils {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, tmf.getTrustManagers(), new SecureRandom());
             okHttpClientBuilder.sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) tmf.getTrustManagers()[0]);
-            okHttpClientBuilder.hostnameVerifier(new HostnameVerifier() {
-                @Override
-                public boolean verify(String hostname, SSLSession session) {
-                    return true;
-                }
-            });
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Unable to configure custom certificates", e);
         }
     }
 }

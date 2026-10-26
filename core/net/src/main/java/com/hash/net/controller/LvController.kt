@@ -7,9 +7,7 @@ import com.hash.net.interceptor.LogInterceptor
 import com.hash.net.utils.HTTPSCerUtils
 import okhttp3.Cache
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
 import retrofit2.Retrofit
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 @Suppress("UNCHECKED_CAST")
@@ -19,13 +17,10 @@ class LvController {
     private lateinit var retrofit: Retrofit
     private lateinit var params: LvParams
 
+    @Synchronized
     fun <T> newInstance(clazz: Class<T>): T {
-        if (apiServiceCache[clazz.name] == null) {
-            val create = retrofit.create(clazz) as Any
-            apiServiceCache[clazz.name] = create
-            return create as T
-        }
-        return apiServiceCache[clazz.name] as T
+        val service = apiServiceCache.getOrPut(clazz.name) { retrofit.create(clazz) as Any }
+        return service as T
     }
 
 
@@ -34,7 +29,6 @@ class LvController {
             .readTimeout(params.readTimeOut, TimeUnit.SECONDS)
             .writeTimeout(params.writeTimeOut, TimeUnit.SECONDS)
             .connectTimeout(params.connectTimeOut, TimeUnit.SECONDS)
-            .protocols(Collections.singletonList(Protocol.HTTP_1_1))
             .retryOnConnectionFailure(true)
     }
 

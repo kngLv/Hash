@@ -1,10 +1,9 @@
 package com.hash.net.request
 
-import com.hash.net.response.IResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 
-/** 不遵循 [IResponse] 协议的普通接口请求动作。 */
+/** 不遵循 [com.hash.net.response.IResponse] 协议的普通接口请求动作。 */
 class RawRequestActionImpl<T>(
     block: suspend () -> T,
 ) {
@@ -25,11 +24,6 @@ class RawRequestActionImpl<T>(
     }
 
     fun onNullData(block: () -> Unit): RawRequestActionImpl<T> = apply { callbacks.nullData = block }
-
-    /** 普通接口没有业务 code，此回调不会触发。 */
-    fun onErrorCode(block: (Int, IResponse<T>?) -> Unit): RawRequestActionImpl<T> = apply {
-        callbacks.errorCode = block
-    }
 
     fun onError(block: (Exception) -> Unit): RawRequestActionImpl<T> = apply { callbacks.error = block }
 

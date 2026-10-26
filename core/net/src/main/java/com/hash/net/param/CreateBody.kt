@@ -44,7 +44,7 @@ fun createRequestBodyMap(params: Map<String, Any>)
         : MutableMap<String, RequestBody> {
     val par: MutableMap<String, RequestBody> = mutableMapOf()
     params.forEach {
-        par[it.key] = createStrRequestBody(it.value as String)
+        par[it.key] = createStrRequestBody(it.value.toString())
     }
     return par
 }
