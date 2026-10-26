@@ -128,9 +128,6 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
                     is ResultState.CodeErrorState -> dispatchErrorCode(state.code, state.body)
                     is ResultState.ErrorState -> dispatchError(state.error)
                 }
-            } catch (cancellation: CancellationException) {
-                primaryError = cancellation
-                throw cancellation
             } catch (error: Throwable) {
                 primaryError = error
                 throw error
@@ -168,9 +165,6 @@ class RequestActionImpl<T>(val block: AbstractRequestBlock<T>) : AbstractRequest
                     null
                 }
             }
-        } catch (cancellation: CancellationException) {
-            primaryError = cancellation
-            throw cancellation
         } catch (error: Throwable) {
             primaryError = error
             throw error
