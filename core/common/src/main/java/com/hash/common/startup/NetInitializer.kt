@@ -36,13 +36,12 @@ class NetInitializer : Initializer<Unit> {
                     if (code == -1001) {
                         UserSessionStore.clearUserInfo()
                     }
-                    "${it.message}".showToast()
+                    "${it.code}：${it.message}".showToast()
                 }
             })
-            //全局异常处理，参考 ILaunch.kt ，可自定义异常处理，参考 ErrorKey 即可
             .setErrorDispose(ErrorKey.AllException, ErrorValue {
                 it.printStackTrace()
-                "${it.message}".showToast()
+                "NET:${it.message}".showToast()
             })
             .build()
     }

@@ -16,10 +16,6 @@
                 android:name="com.hash.common.startup.NetInitializer"
                 android:value="androidx.startup" />
             <meta-data
-                android:name="com.hash.router.AInitializer"
-                android:value="androidx.startup" />
-
-            <meta-data
                 android:name="com.hash.common.startup.MMKVInitializer"
                 android:value="androidx.startup" />
 
