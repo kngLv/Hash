@@ -13,7 +13,7 @@ class RollResponse<T>(
     private val code: Int,
     private val msg: String
 ) : IResponse<T> {
-    override fun data(): T = data ?: Any() as T
+    override fun data(): T? = data
 
     override fun code(): Int = code
 

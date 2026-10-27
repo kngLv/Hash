@@ -58,6 +58,8 @@ dependencies {
     api(libs.baserecyclerviewadapterhelper4)
     implementation(libs.mmkv)
 
+    testImplementation(libs.junit)
+
     // SmartRefreshLayout，
     api(libs.refresh.layout.kernel)
     api(libs.refresh.header.material)

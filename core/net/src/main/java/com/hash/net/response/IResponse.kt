@@ -8,7 +8,7 @@ package com.hash.net.response
  * @description
  */
 interface IResponse<T> {
-    fun data():T
+    fun data(): T?
     fun code():Int
     fun message():String
 }

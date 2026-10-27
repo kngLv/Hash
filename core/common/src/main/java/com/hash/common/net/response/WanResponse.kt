@@ -14,7 +14,7 @@ data class WanResponse<T>(
     private val errorCode: Int,
     private val errorMsg: String
 ) : IResponse<T> {
-    override fun data(): T = data ?: Any() as T
+    override fun data(): T? = data
 
     override fun code(): Int = errorCode
 
