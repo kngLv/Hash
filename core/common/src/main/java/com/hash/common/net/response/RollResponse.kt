@@ -1,5 +1,6 @@
 package com.hash.common.net.response
 
+import com.google.gson.annotations.SerializedName
 import com.hash.net.response.IResponse
 
 /**
@@ -9,9 +10,9 @@ import com.hash.net.response.IResponse
  */
 
 class RollResponse<T>(
-    private val data: T?,
-    private val code: Int,
-    private val msg: String
+    @field:SerializedName("data") private val data: T?,
+    @field:SerializedName("code") private val code: Int,
+    @field:SerializedName("msg") private val msg: String
 ) : IResponse<T> {
     override fun data(): T? = data
 

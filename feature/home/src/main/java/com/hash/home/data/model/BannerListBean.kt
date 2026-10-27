@@ -1,5 +1,7 @@
 package com.hash.home.data.model
 
+import com.google.gson.annotations.SerializedName
+
 /**
  * @name BannerListBean
  * @package com.hash.home.data.model
@@ -9,13 +11,13 @@ package com.hash.home.data.model
  */
 class BannerListBean : ArrayList<BannerListBean.BannerListBeanItem>() {
     data class BannerListBeanItem(
-        val desc: String, // 我们支持订阅啦~
-        val id: Int, // 30
-        val imagePath: String, // https://www.wanandroid.com/blogimgs/42da12d8-de56-4439-b40c-eab66c227a4b.png
-        val isVisible: Int, // 1
-        val order: Int, // 2
-        val title: String, // 我们支持订阅啦~
-        val type: Int, // 0
-        val url: String // https://www.wanandroid.com/blog/show/3352
+        @field:SerializedName("desc") val desc: String, // 我们支持订阅啦~
+        @field:SerializedName("id") val id: Int, // 30
+        @field:SerializedName("imagePath") val imagePath: String, // https://www.wanandroid.com/blogimgs/42da12d8-de56-4439-b40c-eab66c227a4b.png
+        @field:SerializedName("isVisible") val isVisible: Int, // 1
+        @field:SerializedName("order") val order: Int, // 2
+        @field:SerializedName("title") val title: String, // 我们支持订阅啦~
+        @field:SerializedName("type") val type: Int, // 0
+        @field:SerializedName("url") val url: String // https://www.wanandroid.com/blog/show/3352
     )
 }

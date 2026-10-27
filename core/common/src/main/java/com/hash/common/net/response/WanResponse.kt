@@ -1,5 +1,6 @@
 package com.hash.common.net.response
 
+import com.google.gson.annotations.SerializedName
 import com.hash.net.response.IResponse
 
 /**
@@ -10,9 +11,9 @@ import com.hash.net.response.IResponse
  * @description
  */
 data class WanResponse<T>(
-    private val data: T?,
-    private val errorCode: Int,
-    private val errorMsg: String
+    @field:SerializedName("data") private val data: T?,
+    @field:SerializedName("errorCode") private val errorCode: Int,
+    @field:SerializedName("errorMsg") private val errorMsg: String
 ) : IResponse<T> {
     override fun data(): T? = data
 
