@@ -1,16 +1,16 @@
-package com.hash.home.home.ui.viewmodel
+package com.hash.home.ui.wan.vm
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hash.home.data.model.HomeListBean
 import com.hash.common.const.AppConst
+import com.hash.home.data.model.HomeListBean
 import com.hash.home.data.repository.HomeRepository
 
 /**
- * @name RecommendViewModel
- * @package com.hash.home.home.viewmodel
+ * @name WanViewModel
+ * @package com.hash.home.ui.wan.vm
  * @author 345 QQ:1831712732
  * @time 2024/12/21 22:44
  * @description

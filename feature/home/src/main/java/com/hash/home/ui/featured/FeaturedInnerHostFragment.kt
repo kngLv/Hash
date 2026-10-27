@@ -1,4 +1,4 @@
-package com.hash.home.home.ui
+package com.hash.home.ui.featured
 
 import android.os.Bundle
 import androidx.viewpager2.widget.ViewPager2
@@ -7,7 +7,7 @@ import com.hash.common.ext.disableNestedPaging
 import com.hash.common.ext.enableNestedPaging
 import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedInnerBinding
-import com.hash.home.home.ui.adapter.FeaturedInnerPagerAdapter
+import com.hash.home.ui.featured.adapter.FeaturedInnerPagerAdapter
 
 /**
  * Host fragment that contains an inner ViewPager2 for remaining tabs (index 1..n)

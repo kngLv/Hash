@@ -1,6 +1,8 @@
-package com.hash.home.home.ui.adapter
+package com.hash.home.ui.featured.adapter
 
+import android.content.Context
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.AsyncDifferConfig
@@ -10,6 +12,7 @@ import com.chad.library.adapter4.BaseQuickAdapter
 import com.hash.home.data.model.NewsListBean
 import com.hash.common.utils.image.ImageLoader
 import com.hash.common.utils.image.LoadOptions
+import com.hash.home.R
 import com.hash.home.databinding.ItemFeatureTabBinding
 
 /**
@@ -53,7 +56,7 @@ class FeaturedTabAdapter :
 
 
     override fun onCreateViewHolder(
-        context: android.content.Context,
+        context: Context,
         parent: ViewGroup,
         viewType: Int
     ): NewsListVH = NewsListVH(parent)
@@ -71,9 +74,9 @@ class FeaturedTabAdapter :
             val size = imgs.size
 
             // 重置可见性
-            ivImg1.visibility = if (size >= 1) android.view.View.VISIBLE else android.view.View.GONE
-            ivImg2.visibility = if (size >= 2) android.view.View.VISIBLE else android.view.View.GONE
-            ivImg3.visibility = if (size >= 3) android.view.View.VISIBLE else android.view.View.GONE
+            ivImg1.visibility = if (size >= 1) View.VISIBLE else View.GONE
+            ivImg2.visibility = if (size >= 2) View.VISIBLE else View.GONE
+            ivImg3.visibility = if (size >= 3) View.VISIBLE else View.GONE
 
             // 布局中已将前 3 张图的 tag 预设为 url，可直接用项目的图片加载器按 tag 加载
             ivImg1.tag = if (size >= 1) imgs[0] else null
@@ -86,19 +89,19 @@ class FeaturedTabAdapter :
                 val params = ivImg1.layoutParams
                 params.width = ViewGroup.LayoutParams.MATCH_PARENT
                 params.height =
-                    root.resources.getDimensionPixelSize(com.hash.home.R.dimen.img_single_height)
+                    root.resources.getDimensionPixelSize(R.dimen.img_single_height)
                 ivImg1.layoutParams = params
 
                 // 隐藏其余图片视图
-                ivImg2.visibility = android.view.View.GONE
-                ivImg3.visibility = android.view.View.GONE
+                ivImg2.visibility = View.GONE
+                ivImg3.visibility = View.GONE
 
                 // 使用统一 14dp 圆角加载单张图片
                 loadImage(ivImg1, imgs.getOrNull(0), uniformRadiusDp = 14, centerCrop = true)
             } else {
                 // 多图：等分宽度并使用 multiHeight
                 val multiHeight =
-                    root.resources.getDimensionPixelSize(com.hash.home.R.dimen.img_multi_height)
+                    root.resources.getDimensionPixelSize(R.dimen.img_multi_height)
 
                 // iv_img1
                 val p1 = ivImg1.layoutParams

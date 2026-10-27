@@ -1,10 +1,10 @@
-package com.hash.home.home.ui.adapter
+package com.hash.home.ui.featured.adapter
 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import com.hash.home.home.ui.FeaturedTabFragment
+import com.hash.home.ui.featured.FeaturedTabFragment
 
 class FeaturedInnerPagerAdapter(
     fm: FragmentManager,

@@ -1,18 +1,15 @@
-package com.hash.home.home
+package com.hash.home
 
 import android.view.View
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.fragment.BaseBindingFragment
-import com.hash.common.ui.indicator.IndicatorNavAdapter
 import com.hash.common.ui.helper.ViewPager2Helper
-import com.hash.home.R
+import com.hash.common.ui.indicator.IndicatorNavAdapter
 import com.hash.home.databinding.FragmentHomeBinding
-import com.hash.home.home.ui.FeaturedFragment
-import com.hash.home.home.ui.WanFragment
-import com.hash.home.home.viewmodel.HomeViewModel
+import com.hash.home.ui.featured.FeaturedFragment
+import com.hash.home.ui.wan.WanFragment
 import com.hash.router.RouterFragmentPath
 import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigator
 
@@ -27,7 +24,6 @@ import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigat
 @Route(path = RouterFragmentPath.Home.HOME)
 class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
 
-    val viewModel by viewModels<HomeViewModel>()
 
     private val tabList = arrayListOf("推荐", "精选")
 

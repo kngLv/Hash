@@ -1,4 +1,4 @@
-package com.hash.home.home.ui.viewmodel
+package com.hash.home.ui.featured.vm
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

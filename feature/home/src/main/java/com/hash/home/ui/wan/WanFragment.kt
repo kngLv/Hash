@@ -1,23 +1,20 @@
-package com.hash.home.home.ui
+package com.hash.home.ui.wan
 
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.chad.library.adapter4.util.setOnDebouncedItemClick
 import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ext.logD
 import com.hash.common.ext.showToast
-import com.hash.common.ext.toJson
 import com.hash.common.ui.GridSpaceItemDecoration
 import com.hash.home.R
+import com.hash.home.ui.wan.adapter.WanAdapter
 import com.hash.home.databinding.FragmentWanBinding
-import com.hash.home.home.ui.adapter.WanAdapter
-import com.hash.home.home.ui.viewmodel.WanViewModel
+import com.hash.home.ui.wan.vm.WanViewModel
 
 /**
- * @name RecommendFragment
- * @package com.hash.home
+ * @name WanFragment
+ * @package com.hash.home.ui.wan
  * @author 345 QQ:1831712732
  * @time 2024/12/21 00:12
  * @description

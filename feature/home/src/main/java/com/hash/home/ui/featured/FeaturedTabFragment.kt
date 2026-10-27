@@ -1,13 +1,13 @@
-package com.hash.home.home.ui
+package com.hash.home.ui.featured
 
+import android.os.Bundle
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hash.common.base.fragment.BaseBindingFragment
-import com.hash.common.ext.logD
 import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedTabBinding
-import com.hash.home.home.ui.adapter.FeaturedTabAdapter
-import com.hash.home.home.ui.viewmodel.FeaturedTabViewModel
+import com.hash.home.ui.featured.adapter.FeaturedTabAdapter
+import com.hash.home.ui.featured.vm.FeaturedTabViewModel
 
 /**
  * Created by KngLv
@@ -26,7 +26,7 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
         const val KEY_TYPE_ID = "typeId"
         fun newInstance(typeName: String, typeId: String): FeaturedTabFragment {
             val fragment = FeaturedTabFragment()
-            fragment.arguments = android.os.Bundle().apply {
+            fragment.arguments = Bundle().apply {
                 putString(KEY_TYPE_NAME, typeName)
                 putString(KEY_TYPE_ID, typeId)
             }

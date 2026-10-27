@@ -1,4 +1,4 @@
-package com.hash.home.home.ui
+package com.hash.home.ui.featured
 
 import androidx.fragment.app.viewModels
 import androidx.viewpager2.widget.ViewPager2
@@ -10,13 +10,13 @@ import com.hash.common.ui.helper.ViewPager2Helper
 import com.hash.common.ui.indicator.IndicatorNavAdapter
 import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedBinding
-import com.hash.home.home.ui.adapter.FeaturedPagerAdapter
-import com.hash.home.home.ui.viewmodel.FeaturedViewModel
+import com.hash.home.ui.featured.adapter.FeaturedPagerAdapter
+import com.hash.home.ui.featured.vm.FeaturedViewModel
 import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigator
 
 /**
  * @name FeaturedFragment
- * @package com.hash.home
+ * @package com.hash.home.ui.featured
  * @author 345 QQ:1831712732
  * @time 2024/12/21 00:14
  * @description

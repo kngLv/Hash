@@ -1,15 +1,14 @@
-package com.hash.home.home.ui.adapter
+package com.hash.home.ui.wan.adapter
 
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter4.BaseQuickAdapter
-import com.hash.home.data.model.HomeListBean.HomeListItem
+import com.hash.home.data.model.HomeListBean
 import com.hash.home.databinding.ItemWanBinding
-import timber.log.Timber
 
-class WanAdapter : BaseQuickAdapter<HomeListItem, WanAdapter.WanVH>() {
+class WanAdapter : BaseQuickAdapter<HomeListBean.HomeListItem, WanAdapter.WanVH>() {
     override fun onCreateViewHolder(
         context: Context,
         parent: ViewGroup,
@@ -19,7 +18,7 @@ class WanAdapter : BaseQuickAdapter<HomeListItem, WanAdapter.WanVH>() {
     override fun onBindViewHolder(
         holder: WanVH,
         position: Int,
-        item: HomeListItem?
+        item: HomeListBean.HomeListItem?
     ) {
         item?.run {
             holder.binding.bean = this

@@ -1,4 +1,4 @@
-package com.hash.home.home.ui.adapter
+package com.hash.home.ui.featured.adapter
 
 import android.annotation.SuppressLint
 import androidx.fragment.app.Fragment
@@ -6,8 +6,8 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.hash.home.data.model.NewsTypeListBean
-import com.hash.home.home.ui.FeaturedInnerHostFragment
-import com.hash.home.home.ui.FeaturedTabFragment
+import com.hash.home.ui.featured.FeaturedInnerHostFragment
+import com.hash.home.ui.featured.FeaturedTabFragment
 
 /**
  * Created by KngLv
