@@ -11,7 +11,6 @@ import com.tencent.vasdolly.helper.ChannelReaderUtil
 import kotlin.properties.Delegates
 
 
-
 /**
  * @name IApp
  * @package com.hash.main
@@ -24,10 +23,9 @@ open class IApp : Application() {
         super.onCreate()
         instant = this
         //是否是debug模式， 设置 debuggable 后无效
-        isDebug = applicationInfo != null &&
-                (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        isDebug =
+            applicationInfo != null && (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
-        initSdk()
     }
 
     override fun onLowMemory() {
@@ -66,7 +64,7 @@ open class IApp : Application() {
             if (c.isNullOrEmpty()) "hashApp" else c
         }
 
-        fun initSdk() {
+        fun initializeAfterFirstFrame() {
             // 如果当前的进程不是主进程的话，则不进行第三方框架的初始化
             if (!ActivityManager.isMainProcess(instant)) {
                 return

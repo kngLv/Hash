@@ -1,6 +1,7 @@
 package com.hash.app
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -38,5 +39,19 @@ class LaunchActivityInstrumentedTest {
 
         assertEquals(200f, branding.intrinsicWidth / density, 0.1f)
         assertEquals(80f, branding.intrinsicHeight / density, 0.1f)
+    }
+
+    @Test
+    fun startupProvider_doesNotInitializeAppComponentsBeforeSplashIsDrawn() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val provider = context.packageManager.resolveContentProvider(
+            "${context.packageName}.androidx-startup",
+            PackageManager.GET_META_DATA,
+        )
+        val metadata = provider?.metaData
+
+        assertFalse(metadata?.containsKey("com.hash.common.startup.NetInitializer") == true)
+        assertFalse(metadata?.containsKey("com.hash.common.startup.MMKVInitializer") == true)
+        assertFalse(metadata?.containsKey("com.hash.router.AInitializer") == true)
     }
 }

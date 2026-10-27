@@ -14,6 +14,22 @@
         android:theme="@style/Theme.HashApp"
         tools:targetApi="31">
 
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="com.hash.common.startup.NetInitializer"
+                tools:node="remove" />
+            <meta-data
+                android:name="com.hash.common.startup.MMKVInitializer"
+                tools:node="remove" />
+            <meta-data
+                android:name="com.hash.router.AInitializer"
+                tools:node="remove" />
+        </provider>
+
         <activity
             android:name="com.hash.main.MainActivity"
             android:exported="false" />
