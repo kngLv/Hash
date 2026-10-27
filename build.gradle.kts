@@ -14,8 +14,8 @@ plugins {
 
 subprojects {
     pluginManager.withPlugin("com.android.base") {
-        // 为所有模块应用 Kotlin 插件
-        apply(plugin = "org.jetbrains.kotlin.android")
+        // 自动为所有 Android 子模块应用 Kotlin Android 插件
+        pluginManager.apply("org.jetbrains.kotlin.android")
 
         tasks.withType<KotlinCompile>().configureEach {
             compilerOptions {

@@ -9,12 +9,10 @@ plugins {
 
 android {
     namespace = "com.hash.app"
-    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.hash.app"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        minSdk = 24
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -42,7 +40,6 @@ android {
         getByName("debug") {
             isDebuggable = true
             isJniDebuggable = true
-            isShrinkResources = false
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("config")
             manifestPlaceholders["app_name"] = "Hash Debug 版"
