@@ -1,0 +1,186 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.hash.hash_floorplan_module",
+    "module": "flutter_release",
+    "version": "1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.flutter",
+          "module": "flutter_embedding_release",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "io.flutter",
+          "module": "armeabi_v7a_release",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "io.flutter",
+          "module": "arm64_v8a_release",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "com.hash.hash_floorplan",
+          "module": "hash_floorplan_release",
+          "version": {
+            "requires": "1.0"
+          }
+        },
+        {
+          "group": "io.flutter.plugins.sharedpreferences",
+          "module": "shared_preferences_android_release",
+          "version": {
+            "requires": "1.0"
+          }
+        },
+        {
+          "group": "io.flutter.plugins.webviewflutter",
+          "module": "webview_flutter_android_release",
+          "version": {
+            "requires": "1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "flutter_release-1.0.aar",
+          "url": "flutter_release-1.0.aar",
+          "size": 3033928,
+          "sha512": "0cf2288236f0167071b8bc20522351c85b1b6d12cdb6d9c8b9d6b643a4528365c9ee33a42848f397b4ab0b7863f44ac0ad468d9781f0f813b112e2078a498e86",
+          "sha256": "326097f878a08407cc4e59463bee1cf278d6e7cd0a1e8ef5ec9bc81215bfe482",
+          "sha1": "c3850b9da64d1b49da47f620d0e242079d7b36fb",
+          "md5": "5a874b496847bdb24f5f0fb1ccc88a7d"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.flutter",
+          "module": "flutter_embedding_release",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "io.flutter",
+          "module": "armeabi_v7a_release",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "io.flutter",
+          "module": "arm64_v8a_release",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "com.hash.hash_floorplan",
+          "module": "hash_floorplan_release",
+          "version": {
+            "requires": "1.0"
+          }
+        },
+        {
+          "group": "io.flutter.plugins.sharedpreferences",
+          "module": "shared_preferences_android_release",
+          "version": {
+            "requires": "1.0"
+          }
+        },
+        {
+          "group": "io.flutter.plugins.webviewflutter",
+          "module": "webview_flutter_android_release",
+          "version": {
+            "requires": "1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "flutter_release-1.0.aar",
+          "url": "flutter_release-1.0.aar",
+          "size": 3033928,
+          "sha512": "0cf2288236f0167071b8bc20522351c85b1b6d12cdb6d9c8b9d6b643a4528365c9ee33a42848f397b4ab0b7863f44ac0ad468d9781f0f813b112e2078a498e86",
+          "sha256": "326097f878a08407cc4e59463bee1cf278d6e7cd0a1e8ef5ec9bc81215bfe482",
+          "sha1": "c3850b9da64d1b49da47f620d0e242079d7b36fb",
+          "md5": "5a874b496847bdb24f5f0fb1ccc88a7d"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "flutter_release-1.0-sources.jar",
+          "url": "flutter_release-1.0-sources.jar",
+          "size": 1179,
+          "sha512": "b018b602fc26c15c55823804c902bc125cf95bba29e872fd04048137d8f4b65bb0c6426283e2c75344501a42e70dbc8e4fe8dc6d7d7b6487943558d393008d1d",
+          "sha256": "1037dadf0323e1be526dc9e361f0afcdd1c1c39f953eae2da4e306decb58688b",
+          "sha1": "5a85cb506a03255bc4f301a2278cd0d39194da42",
+          "md5": "3ff02365392db2565fc6faffd83a8d57"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseJavaDocPublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "flutter_release-1.0-javadoc.jar",
+          "url": "flutter_release-1.0-javadoc.jar",
+          "size": 261616,
+          "sha512": "5b64cd42625ec2c75c9437f18bd3e5c69969556ad3c068ca7bd0242f8c7d23ce6c65d2f8097e005e229d5f241d05929b5c0bf94caa334d45fd2f8e456b2c347f",
+          "sha256": "3c5197d7e5a0df80632c6be2dcc3d32fe22a7c0acd3b7be2fa4d01973e5759b0",
+          "sha1": "acd5578a961c4af43f01bb0d35115becc8c2d530",
+          "md5": "4fdbf6eb2ad0e81958a11cf3a2e9d327"
+        }
+      ]
+    }
+  ]
+}
