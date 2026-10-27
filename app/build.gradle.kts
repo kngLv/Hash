@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.hash.app"
-        // 户型 Flutter 模块（webview_flutter）要求 Android 7.0/API 24。
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
 
         javaCompileOptions {
@@ -108,5 +108,9 @@ dependencies {
     implementation(project(":feature:msg"))
     implementation(project(":feature:mine"))
     implementation(project(":feature:login"))
+    implementation(libs.androidx.core.splashscreen)
     kapt(libs.arouter.compiler)
+
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }
