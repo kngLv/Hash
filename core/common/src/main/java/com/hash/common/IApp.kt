@@ -71,6 +71,7 @@ open class IApp : Application() {
             if (!ActivityManager.isMainProcess(instant)) {
                 return
             }
+            ActivityManager.init(instant)
             InitManager.preInitSdk(instant, isDebug)
 //            if (InitManager.isAgreePrivacy()) {
             if (true) {

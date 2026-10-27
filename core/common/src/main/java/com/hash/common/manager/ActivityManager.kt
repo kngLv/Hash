@@ -11,12 +11,17 @@ import com.hash.common.ktx.isAndroid9
 import java.io.FileInputStream
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
+import java.lang.ref.WeakReference
 import java.nio.charset.StandardCharsets
 
 object ActivityManager : Application.ActivityLifecycleCallbacks {
 
-    /** Activity 存放集合 */
-    private val activityList: MutableList<Activity> = mutableListOf()
+    /**
+     * Activity 弱引用集合。
+     *
+     * ActivityManager 是进程级单例，不能强引用 Activity，避免生命周期异常时阻止页面回收。
+     */
+    private val activityReferences: MutableList<WeakReference<Activity>> = mutableListOf()
 
     /** 应用生命周期回调 */
     private val lifecycleCallbacks: MutableList<ApplicationLifecycleCallback> = mutableListOf()
@@ -25,10 +30,10 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
     private lateinit var application: Application
 
     /** 栈顶的 Activity 对象 */
-    private var topActivity: Activity? = null
+    private var topActivityReference: WeakReference<Activity>? = null
 
     /** 前台并且可见的 Activity 对象 */
-    private var resumedActivity: Activity? = null
+    private var resumedActivityReference: WeakReference<Activity>? = null
 
     fun init(application: Application) {
         this.application = application
@@ -46,21 +51,21 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
      * 获取栈顶的 Activity
      */
     fun getTopActivity(): Activity? {
-        return topActivity
+        return topActivityReference?.get()
     }
 
     /**
      * 获取前台并且可见的 Activity
      */
     fun getResumedActivity(): Activity? {
-        return resumedActivity
+        return resumedActivityReference?.get()
     }
 
     /**
      * 获取 Activity 集合
      */
-    fun getActivityList(): MutableList<Activity> {
-        return activityList
+    fun getActivityList(): List<Activity> {
+        return activeActivities()
     }
 
     /**
@@ -92,9 +97,13 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
             return
         }
 
-        val iterator: MutableIterator<Activity> = activityList.iterator()
+        val iterator = activityReferences.iterator()
         while (iterator.hasNext()) {
-            val activity = iterator.next()
+            val activity = iterator.next().get()
+            if (activity == null) {
+                iterator.remove()
+                continue
+            }
             if (activity.javaClass != clazz) {
                 continue
             }
@@ -119,9 +128,13 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
      */
     @SafeVarargs
     fun finishAllActivities(vararg classArray: Class<out Activity>?) {
-        val iterator: MutableIterator<Activity> = activityList.iterator()
+        val iterator = activityReferences.iterator()
         while (iterator.hasNext()) {
-            val activity = iterator.next()
+            val activity = iterator.next().get()
+            if (activity == null) {
+                iterator.remove()
+                continue
+            }
             var whiteClazz = false
             for (clazz in classArray) {
                 if (activity.javaClass == clazz) {
@@ -141,14 +154,14 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         printLog(String.format("%s - onCreate", activity.javaClass.simpleName))
-        if (activityList.isEmpty()) {
+        if (activeActivities().isEmpty()) {
             for (callback: ApplicationLifecycleCallback? in lifecycleCallbacks) {
                 callback?.onApplicationCreate(activity)
             }
             printLog(String.format("%s - onApplicationCreate", activity.javaClass.simpleName))
         }
-        activityList.add(activity)
-        topActivity = activity
+        activityReferences.add(WeakReference(activity))
+        topActivityReference = WeakReference(activity)
     }
 
     override fun onActivityStarted(activity: Activity) {
@@ -157,14 +170,14 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityResumed(activity: Activity) {
         printLog(String.format("%s - onResume", activity.javaClass.simpleName))
-        if (topActivity === activity && resumedActivity == null) {
+        if (getTopActivity() === activity && getResumedActivity() == null) {
             for (callback: ApplicationLifecycleCallback in lifecycleCallbacks) {
                 callback.onApplicationForeground(activity)
             }
             printLog(String.format("%s - onApplicationForeground", activity.javaClass.simpleName))
         }
-        topActivity = activity
-        resumedActivity = activity
+        topActivityReference = WeakReference(activity)
+        resumedActivityReference = WeakReference(activity)
     }
 
     override fun onActivityPaused(activity: Activity) {
@@ -173,10 +186,10 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityStopped(activity: Activity) {
         printLog(String.format("%s - onStop", activity.javaClass.simpleName))
-        if (resumedActivity === activity) {
-            resumedActivity = null
+        if (getResumedActivity() === activity) {
+            resumedActivityReference = null
         }
-        if (resumedActivity == null) {
+        if (getResumedActivity() == null) {
             for (callback: ApplicationLifecycleCallback in lifecycleCallbacks) {
                 callback.onApplicationBackground(activity)
             }
@@ -190,11 +203,14 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityDestroyed(activity: Activity) {
         printLog(String.format("%s - onDestroy", activity.javaClass.simpleName))
-        activityList.remove(activity)
-        if (topActivity === activity) {
-            topActivity = null
+        activityReferences.removeAll { it.get() == null || it.get() === activity }
+        if (getTopActivity() === activity) {
+            topActivityReference = null
         }
-        if (activityList.isEmpty()) {
+        if (getResumedActivity() === activity) {
+            resumedActivityReference = null
+        }
+        if (activeActivities().isEmpty()) {
             for (callback: ApplicationLifecycleCallback in lifecycleCallbacks) {
                 callback.onApplicationDestroy(activity)
             }
@@ -275,6 +291,20 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
      */
     private fun printLog(content: String) {
         Log.i("ActivityManager", content)
+    }
+
+    private fun activeActivities(): List<Activity> {
+        val activities = mutableListOf<Activity>()
+        val iterator = activityReferences.iterator()
+        while (iterator.hasNext()) {
+            val activity = iterator.next().get()
+            if (activity == null) {
+                iterator.remove()
+            } else {
+                activities.add(activity)
+            }
+        }
+        return activities
     }
 
     /**
