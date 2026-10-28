@@ -22,6 +22,7 @@ class FeaturedTabViewModel : ViewModel() {
     var hasMore = true
         private set
     private var isRequesting = false
+    private var hasLoadedInitial = false
     private var currentLoadMode = FeaturedLoadMode.INITIAL
 
     val isLoadingMore: Boolean
@@ -38,7 +39,41 @@ class FeaturedTabViewModel : ViewModel() {
     }
 
     fun loadInitial(): Boolean {
-        return load(FeaturedLoadMode.INITIAL)
+        if (isRequesting || !::typeId.isInitialized) return false
+
+        isRequesting = true
+        currentLoadMode = FeaturedLoadMode.INITIAL
+
+        viewModelScope.launch {
+            var hasCachedPage = false
+            try {
+                repository.findCachedPage(
+                    typeId = typeId,
+                    page = FIRST_PAGE,
+                    allowExpired = !hasLoadedInitial,
+                )?.let { cachedNews ->
+                    hasCachedPage = true
+                    publishPage(FIRST_PAGE, cachedNews, append = false)
+                }
+                // 缓存只用于快速展示，随后始终以网络数据校准首页内容。
+                publishPage(
+                    FIRST_PAGE,
+                    repository.loadPage(typeId, FIRST_PAGE, bypassCache = true),
+                    append = false,
+                )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                // 已有缓存时保留可用内容，静默等待下次校准，避免首次进入时弹出无意义提示。
+                if (!hasCachedPage) {
+                    _errorMessage.value = error.message ?: "加载失败，请稍后重试"
+                }
+            } finally {
+                hasLoadedInitial = true
+                isRequesting = false
+            }
+        }
+        return true
     }
 
     fun refresh(): Boolean {
@@ -58,13 +93,10 @@ class FeaturedTabViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val result = repository.loadPage(typeId, page, mode.bypassCache)
-                currentPage = page
-                hasMore = result.size >= PAGE_SIZE
-                if (mode.append) news.addAll(result) else news.apply {
-                    clear()
-                    addAll(result)
+                if (mode == FeaturedLoadMode.REFRESH) {
+                    repository.clearCachedNextPages(typeId)
                 }
-                _newsList.value = NewsListBean().apply { addAll(news) }
+                publishPage(page, result, append = mode.append)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
@@ -74,6 +106,19 @@ class FeaturedTabViewModel : ViewModel() {
             }
         }
         return true
+    }
+
+    private fun publishPage(page: Int, pageNews: NewsListBean, append: Boolean) {
+        currentPage = page
+        hasMore = pageNews.size >= PAGE_SIZE
+        if (append) {
+            news.addAll(pageNews)
+        } else {
+            news.clear()
+            news.addAll(pageNews)
+        }
+        // 提交新的 List 容器，避免 AsyncListDiffer 持有的旧快照被后续分页修改。
+        _newsList.value = NewsListBean().apply { addAll(news) }
     }
 
     private companion object {

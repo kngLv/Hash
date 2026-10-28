@@ -26,16 +26,38 @@ class FeaturedTabRepository(
         /** 为 true 时跳过内存、磁盘缓存并直接请求网络。 */
         bypassCache: Boolean,
     ): NewsListBean {
-        val key = "$typeId:$page"
         if (!bypassCache) {
-            readMemory(key)?.let { return it }
-            readDisk(key, page)?.let { entry ->
-                memoryCache.put(key, entry)
-                return entry.data
-            }
+            findCachedPage(typeId, page)?.let { return it }
         }
 
-        return requestPage(key, typeId, page)
+        return requestPage(pageKey(typeId, page), typeId, page)
+    }
+
+    /**
+     * 查询缓存，不会触发网络请求。
+     *
+     * [allowExpired] 用于首屏兜底：即使缓存已过期，也先展示旧数据避免页面空白。
+     */
+    suspend fun findCachedPage(
+        typeId: String,
+        page: Int,
+        allowExpired: Boolean = false,
+    ): NewsListBean? {
+        val key = pageKey(typeId, page)
+        readMemory(key, allowExpired)?.let { return it }
+        readDisk(key, page, allowExpired)?.let { entry ->
+            memoryCache.put(key, entry)
+            return entry.data
+        }
+        return null
+    }
+
+    /** 刷新首页后清除后续页缓存，防止新首页与旧分页混用。 */
+    fun clearCachedNextPages(typeId: String) {
+        val prefix = "$typeId:"
+        memoryCache.snapshot().keys
+            .filter { it.startsWith(prefix) && it != pageKey(typeId, FIRST_PAGE) }
+            .forEach(memoryCache::remove)
     }
 
     private suspend fun requestPage(key: String, typeId: String, page: Int): NewsListBean {
@@ -85,17 +107,21 @@ class FeaturedTabRepository(
             ?: IllegalStateException("新闻列表为空")
     }
 
-    private fun readMemory(key: String): NewsListBean? {
+    private fun readMemory(key: String, allowExpired: Boolean = false): NewsListBean? {
         val entry = memoryCache.get(key) ?: return null
-        return entry.takeIf { !it.isExpired() }?.data
+        return entry.takeIf { allowExpired || !it.isExpired() }?.data
     }
 
-    private suspend fun readDisk(key: String, page: Int): CacheEntry? {
+    private suspend fun readDisk(
+        key: String,
+        page: Int,
+        allowExpired: Boolean = false,
+    ): CacheEntry? {
         if (page != FIRST_PAGE) return null
         val entry = withContext(Dispatchers.IO) {
             diskKey(key).mmkvGetTypeObject<CacheEntry>()
         } ?: return null
-        return entry.takeIf { !it.isExpired() }
+        return entry.takeIf { allowExpired || !it.isExpired() }
     }
 
     private fun CacheEntry.isExpired(): Boolean =
@@ -133,6 +159,8 @@ class FeaturedTabRepository(
                 }
             })
         }
+
+        private fun pageKey(typeId: String, page: Int): String = "$typeId:$page"
 
         private fun diskKey(key: String): String = "featured:$key"
     }
