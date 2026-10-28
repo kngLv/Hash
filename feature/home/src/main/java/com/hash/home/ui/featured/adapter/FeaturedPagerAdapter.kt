@@ -1,12 +1,10 @@
 package com.hash.home.ui.featured.adapter
 
-import android.annotation.SuppressLint
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.hash.home.data.model.NewsTypeListBean
-import com.hash.home.ui.featured.FeaturedInnerHostFragment
 import com.hash.home.ui.featured.FeaturedTabFragment
 
 /**
@@ -21,51 +19,44 @@ class FeaturedPagerAdapter(
     private var tabs: List<NewsTypeListBean.NewsTypeListBeanItem> = emptyList(),
 ) : FragmentStateAdapter(fm, lifecycle) {
 
-    // When there are more than one tab, implement a 2-page outer pager:
-    // position 0 -> first tab fragment
-    // position 1 -> a host fragment that contains inner ViewPager2 for remaining tabs
-    override fun getItemCount(): Int = if (tabs.size <= 1) tabs.size else 2
+    override fun getItemCount(): Int = tabs.size
 
     override fun createFragment(position: Int): Fragment {
-        if (tabs.isEmpty()) return Fragment()
-        if (tabs.size == 1) {
-            val bean = tabs[0]
-            return FeaturedTabFragment.newInstance(bean.typeName, "${bean.typeId}")
-        }
-        return if (position == 0) {
-            val bean = tabs[0]
-            FeaturedTabFragment.newInstance(bean.typeName, "${bean.typeId}")
-        } else {
-            // build arrays of remaining tabs to pass into the inner host fragment
-            val remainNames = ArrayList<String>()
-            val remainIds = ArrayList<Int>()
-            for (i in 1 until tabs.size) {
-                remainNames.add(tabs[i].typeName)
-                remainIds.add(tabs[i].typeId)
-            }
-            FeaturedInnerHostFragment.newInstance(remainNames, remainIds)
-        }
+        val tab = tabs[position]
+        return FeaturedTabFragment.newInstance(tab.typeId.toString())
     }
 
-    override fun getItemId(position: Int): Long {
-        // provide stable ids: first page uses its typeId; inner host uses a sentinel id
-        return if (tabs.size <= 1) {
-            tabs.getOrNull(position)?.typeId?.toLong() ?: super.getItemId(position)
-        } else {
-            if (position == 0) tabs.getOrNull(0)?.typeId?.toLong() ?: super.getItemId(position)
-            else Long.MIN_VALUE // sentinel for inner host
-        }
+    override fun getItemId(position: Int): Long = tabs[position].typeId.toLong()
+
+    override fun containsItem(itemId: Long): Boolean = tabs.any { it.typeId.toLong() == itemId }
+
+    fun tabIdAt(position: Int): Long? = tabs.getOrNull(position)?.typeId?.toLong()
+
+    fun resolvePosition(selectedTabId: Long?, fallbackPosition: Int): Int {
+        return FeaturedTabPositionResolver.resolve(
+            tabIds = tabs.map { it.typeId.toLong() },
+            selectedTabId = selectedTabId,
+            fallbackPosition = fallbackPosition,
+        )
     }
 
-    override fun containsItem(itemId: Long): Boolean {
-        if (tabs.size <= 1) return tabs.any { it.typeId.toLong() == itemId }
-        if (itemId == Long.MIN_VALUE) return true
-        return tabs.any { it.typeId.toLong() == itemId }
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
     fun updateTabs(newTabs: List<NewsTypeListBean.NewsTypeListBeanItem>) {
         tabs = newTabs
         notifyDataSetChanged()
+    }
+}
+
+/** 在 Tab 列表更新后尽量保持用户当前浏览的分类。 */
+internal object FeaturedTabPositionResolver {
+
+    fun resolve(tabIds: List<Long>, selectedTabId: Long?, fallbackPosition: Int): Int {
+        require(tabIds.isNotEmpty())
+
+        // stable ID 未变化时，即使 Tab 顺序变化也仍回到用户正在浏览的分类。
+        val selectedPosition = selectedTabId?.let(tabIds::indexOf)
+        if (selectedPosition != null && selectedPosition >= 0) return selectedPosition
+
+        // 当前分类被服务端移除时，保持最接近的有效下标。
+        return fallbackPosition.coerceIn(0, tabIds.lastIndex)
     }
 }

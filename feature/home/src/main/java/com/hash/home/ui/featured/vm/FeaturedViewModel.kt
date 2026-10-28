@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hash.home.data.model.NewsTypeListBean
 import com.hash.common.ext.isNotNullAndEmpty
-import com.hash.common.ext.logD
 import com.hash.common.ext.mmkvGetObject
 import com.hash.common.ext.mmkvPutObject
 import com.hash.common.shared.storage.MMKVConst
@@ -26,25 +25,19 @@ class FeaturedViewModel : ViewModel() {
     val tabList: LiveData<NewsTypeListBean> = _tabList
 
     fun newsType() {
-        val historyList = MMKVConst.KEY_FEATURED_NEWS_TYPE_LIST.mmkvGetObject<NewsTypeListBean>()
-        if (historyList.isNotNullAndEmpty()) {
-            logD("FeaturedViewModel newsType use history data")
-            _tabList.value = historyList!!
-        } else {
-            repository.newsType()
-                .onBody {
-                    //判断和历史数据是否相同
-                    if (historyList == it) {
-                        logD("FeaturedViewModel newsType data no change")
-                        return@onBody
-                    }
-                    _tabList.value = it
-                    if (it.isNotNullAndEmpty()) {
-                        MMKVConst.KEY_FEATURED_NEWS_TYPE_LIST.mmkvPutObject(it)
-                    }
-                }
-                .enqueue(viewModelScope)
+        val cachedTabs = MMKVConst.KEY_FEATURED_NEWS_TYPE_LIST.mmkvGetObject<NewsTypeListBean>()
+        if (cachedTabs.isNotNullAndEmpty()) {
+            _tabList.value = cachedTabs
         }
+
+        repository.newsType()
+            .onBody { networkTabs ->
+                if (networkTabs.isNotNullAndEmpty() && networkTabs != cachedTabs) {
+                    _tabList.value = networkTabs
+                    MMKVConst.KEY_FEATURED_NEWS_TYPE_LIST.mmkvPutObject(networkTabs)
+                }
+            }
+            .enqueue(viewModelScope)
     }
 
 }
