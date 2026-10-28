@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hash.common.base.fragment.BaseBindingFragment
+import com.hash.common.ui.loading.LoadingStateOwner
 import com.hash.common.ext.showToast
 import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedTabBinding
@@ -19,6 +20,9 @@ import com.hash.home.ui.featured.vm.FeaturedTabViewModel
 class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
 
     val viewModel by viewModels<FeaturedTabViewModel>()
+
+    override val loadingStateOwner: LoadingStateOwner
+        get() = viewModel
 
     val adapter by lazy { FeaturedTabAdapter() }
 

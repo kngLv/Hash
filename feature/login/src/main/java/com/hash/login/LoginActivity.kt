@@ -7,6 +7,7 @@ import com.hash.common.ext.SpanPart
 import com.hash.common.ext.setSpannableParts
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.activity.BaseBindingActivity
+import com.hash.common.ui.loading.LoadingStateOwner
 import com.hash.common.impl.TextWatcherImpl
 import com.hash.common.ext.selectToggle
 import com.hash.common.ext.showToast
@@ -24,6 +25,9 @@ import kotlinx.coroutines.launch
 class LoginActivity : BaseBindingActivity<ActivityLoginBinding>() {
 
     val viewMode by viewModels<LoginViewmodel>()
+
+    override val loadingStateOwner: LoadingStateOwner
+        get() = viewMode
 
     override fun layoutId(): Int = R.layout.activity_login
 
@@ -46,7 +50,6 @@ class LoginActivity : BaseBindingActivity<ActivityLoginBinding>() {
                                 showToast(R.string.login_success)
                                 finish()
                             }
-
                             LoginState.UN_LOGIN -> {
                                 dismissLoading()
                             }

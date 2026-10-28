@@ -12,6 +12,11 @@ import com.gyf.immersionbar.ktx.immersionBar
 import com.hash.common.R
 import com.hash.common.base.dialog.BaseDialog
 import com.hash.common.base.dialog.WaitDialog
+import com.hash.common.ui.loading.LoadingStateOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 
 /**
  * @name BaseAppActivity
@@ -23,17 +28,34 @@ import com.hash.common.base.dialog.WaitDialog
 abstract class BaseAppActivity : BaseActivity() {
 
     private var dialog: BaseDialog? = null
-    private var dialogCount: Int = 0
+    private var showDialogRunnable: Runnable? = null
 
-    open fun isShowDialog(): Boolean = dialog != null && dialog!!.isShowing
+    /** 页面自行创建 ViewModel 后按需覆写；未覆写时不观察 Loading 状态。 */
+    protected open val loadingStateOwner: LoadingStateOwner? = null
 
-    override fun showLoading() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        loadingStateOwner?.let { owner ->
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    owner.loadingState.shouldShowLoading.collect { shouldShow ->
+                        if (shouldShow) showLoadingDialog() else dismissLoadingDialog()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun isShowDialog(): Boolean = dialog != null && dialog!!.isShowing
+
+    private fun showLoadingDialog() {
         if (isFinishing || isDestroyed) {
             return
         }
-        dialogCount++
-        postDelayed(Runnable {
-            if ((dialogCount <= 0) || isFinishing || isDestroyed) {
+        if (isShowDialog() || showDialogRunnable != null) return
+        showDialogRunnable = Runnable {
+            showDialogRunnable = null
+            if (isFinishing || isDestroyed) {
                 return@Runnable
             }
             if (dialog == null) {
@@ -44,23 +66,36 @@ abstract class BaseAppActivity : BaseActivity() {
             if (!dialog!!.isShowing) {
                 dialog!!.show()
             }
-        }, 300)
+        }
+        showDialogRunnable?.let { postDelayed(it, 300) }
     }
 
     /**
      * 隐藏加载对话框
      */
-    override fun dismissLoading() {
-        if (isFinishing || isDestroyed) {
-            return
-        }
-        if (dialogCount > 0) {
-            dialogCount--
-        }
-        if ((dialogCount != 0) || (dialog == null) || !dialog!!.isShowing) {
-            return
-        }
+    private fun dismissLoadingDialog() {
+        showDialogRunnable?.let(::removeCallbacks)
+        showDialogRunnable = null
+        if (!isShowDialog()) return
         dialog?.dismiss()
+    }
+
+    /**
+     * 将页面级 Loading 状态切换为显示。
+     *
+     * Dialog 的创建与展示由状态观察者根据生命周期统一处理。
+     */
+    protected fun showLoading() {
+        loadingStateOwner?.loadingState?.show()
+    }
+
+    /**
+     * 将页面级 Loading 状态切换为隐藏。
+     *
+     * Dialog 的关闭由状态观察者根据生命周期统一处理。
+     */
+    protected fun dismissLoading() {
+        loadingStateOwner?.loadingState?.dismiss()
     }
 
     override fun initLayout() {
@@ -105,7 +140,7 @@ abstract class BaseAppActivity : BaseActivity() {
             traverse(this)
         }
         if (isShowDialog()) {
-            dismissLoading()
+            dismissLoadingDialog()
         }
         dialog = null
     }

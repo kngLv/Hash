@@ -2,15 +2,15 @@ package com.hash.home.ui.featured.vm
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hash.common.base.viewmodel.BaseViewModel
 import com.hash.home.data.model.NewsListBean
 import com.hash.home.data.repository.FeaturedTabRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** 管理单个精选分类的首次加载、刷新与分页状态。 */
-class FeaturedTabViewModel : ViewModel() {
+class FeaturedTabViewModel : BaseViewModel() {
 
     private val repository = FeaturedTabRepository()
     private val news = NewsListBean()

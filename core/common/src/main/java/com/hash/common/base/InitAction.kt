@@ -33,7 +33,4 @@ interface InitAction {
     /** Br 数据 */
     fun getBrMap(): Map<Int, Any> = emptyMap()
 
-    fun showLoading() = Unit
-
-    fun dismissLoading() = Unit
 }
