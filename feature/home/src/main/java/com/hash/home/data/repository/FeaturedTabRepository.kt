@@ -98,7 +98,7 @@ class FeaturedTabRepository(
         }
             .onError { requestError = it }
             .onErrorCode { code, errorResponse ->
-                requestError = IllegalStateException(errorResponse?.message() ?: "请求失败，错误码：$code")
+                requestError = IllegalStateException(errorResponse?.message() ?: "CodeError：$code")
             }
             .execute()
 

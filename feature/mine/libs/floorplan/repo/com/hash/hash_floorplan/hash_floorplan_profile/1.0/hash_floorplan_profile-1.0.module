@@ -1,0 +1,130 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.hash.hash_floorplan",
+    "module": "hash_floorplan_profile",
+    "version": "1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14"
+    }
+  },
+  "variants": [
+    {
+      "name": "profileVariantProfileApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.flutter",
+          "module": "flutter_embedding_profile",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "hash_floorplan_profile-1.0.aar",
+          "url": "hash_floorplan_profile-1.0.aar",
+          "size": 2705,
+          "sha512": "637b99a189cdf03873fc434342d2f796e768439cf98ab35f82e9c84f64e94ecb51319a7aa907b183f2761fbf3878196c3df105554252277a91dbe753e401b86d",
+          "sha256": "2a9a80a99573172c6b2571d4fb126107f529cbf88f6c071317c22661515ee6b2",
+          "sha1": "159bd7805b9ee9a6ba29400fd51f7a45f6c2cd2e",
+          "md5": "6ef5339769292e4d1c79d544d10f617d"
+        }
+      ]
+    },
+    {
+      "name": "profileVariantProfileRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.flutter",
+          "module": "flutter_embedding_profile",
+          "version": {
+            "requires": "1.0.0-42d3d75a56efe1a2e9902f52dc8006099c45d937"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.2.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "hash_floorplan_profile-1.0.aar",
+          "url": "hash_floorplan_profile-1.0.aar",
+          "size": 2705,
+          "sha512": "637b99a189cdf03873fc434342d2f796e768439cf98ab35f82e9c84f64e94ecb51319a7aa907b183f2761fbf3878196c3df105554252277a91dbe753e401b86d",
+          "sha256": "2a9a80a99573172c6b2571d4fb126107f529cbf88f6c071317c22661515ee6b2",
+          "sha1": "159bd7805b9ee9a6ba29400fd51f7a45f6c2cd2e",
+          "md5": "6ef5339769292e4d1c79d544d10f617d"
+        }
+      ]
+    },
+    {
+      "name": "profileVariantProfileSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "hash_floorplan_profile-1.0-sources.jar",
+          "url": "hash_floorplan_profile-1.0-sources.jar",
+          "size": 1254,
+          "sha512": "5f44c241958de57420f185801a33110de6d582da52e610b1e06b890e116d1aea4a016cf56decb3c34275eb35cc5534dec957bbf9b2143ddcee79a521023f8386",
+          "sha256": "b4c092e0363bb4c2b9dce8a1a6381c0d6cada60c78a75735cfab9187175322e7",
+          "sha1": "3889f92e3faaec4ef56a32dc25fbe4cd22778d2f",
+          "md5": "6b7257209f52dcfbd016dab4cc8892eb"
+        }
+      ]
+    },
+    {
+      "name": "profileVariantProfileJavaDocPublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "hash_floorplan_profile-1.0-javadoc.jar",
+          "url": "hash_floorplan_profile-1.0-javadoc.jar",
+          "size": 262170,
+          "sha512": "8c71371b468c473f7f856877578beefa0f01b18613731cbbbbde62a8d55b86e6e9c48d5de30b8f39e933ee259369f714c8cc195530c789cd74b9d4ef9e7f6a90",
+          "sha256": "6bc7efbb606cd7811b78d23823d20a256aa771b8109122a987afed9ca075c7ad",
+          "sha1": "1ce22c62304919fe7f1e030330c1b1d017993c41",
+          "md5": "fd8b3f64d9dd071402e541f6fd15237b"
+        }
+      ]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ class FeaturedTabViewModel : ViewModel() {
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
 
-    fun initialize(typeId: String) {
+    fun initTypeId(typeId: String) {
         this.typeId = typeId
     }
 
@@ -100,7 +100,7 @@ class FeaturedTabViewModel : ViewModel() {
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
-                _errorMessage.value = error.message ?: "加载失败，请稍后重试"
+                _errorMessage.value = error.message ?: "Error..."
             } finally {
                 isRequesting = false
             }

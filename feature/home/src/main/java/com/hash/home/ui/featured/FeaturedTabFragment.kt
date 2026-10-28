@@ -37,7 +37,7 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     override fun layoutId(): Int = R.layout.fragment_featured_tab
 
     override fun initParam() {
-        viewModel.initialize(getString(KEY_TYPE_ID).orEmpty())
+        viewModel.initTypeId(getString(KEY_TYPE_ID).orEmpty())
     }
 
     override fun initView() {
