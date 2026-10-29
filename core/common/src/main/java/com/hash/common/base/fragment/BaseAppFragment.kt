@@ -1,19 +1,15 @@
 package com.hash.common.base.fragment
 
 import android.os.Bundle
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.ProgressBar
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.gyf.immersionbar.ImmersionBar
 import com.hash.common.R
 import com.hash.common.base.activity.BaseActivity
+import com.hash.common.base.activity.BaseAppActivity
+import com.hash.common.ui.loading.LoadingConfig
 import com.hash.common.ui.loading.LoadingStateOwner
 import kotlinx.coroutines.launch
 
@@ -26,76 +22,46 @@ import kotlinx.coroutines.launch
  */
 abstract class BaseAppFragment : BaseFragment() {
 
-    private var loadingOverlay: View? = null
-    private var showLoadingRunnable: Runnable? = null
-
     protected open val loadingStateOwner: LoadingStateOwner? = null
 
-    /**
-     * 将当前 Fragment 的局部 Loading 状态切换为显示。
-     *
-     * 覆盖层由状态观察者在当前 Fragment 根布局上统一渲染。
-     */
-    protected fun showLoading() {
-        loadingStateOwner?.loadingState?.show()
+    /** Dialog 由宿主 Activity 统一持有和渲染。*/
+    protected fun showLoading(
+        delayMillis: Long = LoadingConfig.DEFAULT_DELAY_MILLIS,
+        cancelOnTouchOutside: Boolean = true,
+    ) {
+        loadingStateOwner?.loadingState?.show(delayMillis, cancelOnTouchOutside)
     }
 
-    /**
-     * 将当前 Fragment 的局部 Loading 状态切换为隐藏。
-     *
-     * 覆盖层由状态观察者从当前 Fragment 根布局中移除。
-     */
+    /** Dialog 由宿主 Activity 统一关闭。*/
     protected fun dismissLoading() {
         loadingStateOwner?.loadingState?.dismiss()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        loadingStateOwner?.let { owner ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    owner.loadingState.shouldShowLoading.collect { shouldShow ->
-                        if (shouldShow) showLoadingOverlay() else dismissLoadingOverlay()
+        (activity as? BaseAppActivity)?.let(::observeLoadingState)
+    }
+
+    private fun observeLoadingState(hostActivity: BaseAppActivity) {
+        val owner = loadingStateOwner ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                owner.loadingState.config.collect { config ->
+                    if (config == null) {
+                        hostActivity.dismissLoading()
+                    } else {
+                        hostActivity.showLoading(
+                            delayMillis = config.delayMillis,
+                            cancelOnTouchOutside = config.cancelOnTouchOutside,
+                        )
                     }
                 }
             }
         }
     }
 
-    private fun showLoadingOverlay() {
-        if (loadingOverlay != null || showLoadingRunnable != null) return
-        val root = view as? ViewGroup ?: return
-        showLoadingRunnable = Runnable {
-            showLoadingRunnable = null
-            if (!isAdded || loadingOverlay != null) return@Runnable
-            loadingOverlay = FrameLayout(requireContext()).apply {
-                background = ColorDrawable(Color.parseColor("#33000000"))
-                isClickable = true
-                setOnClickListener { loadingStateOwner?.loadingState?.dismiss() }
-                addView(ProgressBar(context), FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.CENTER,
-                ))
-            }
-            root.addView(loadingOverlay, ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            ))
-        }
-        root.postDelayed(showLoadingRunnable, 300)
-    }
-
-    private fun dismissLoadingOverlay() {
-        val root = view as? ViewGroup
-        showLoadingRunnable?.let { root?.removeCallbacks(it) }
-        showLoadingRunnable = null
-        loadingOverlay?.let { root?.removeView(it) }
-        loadingOverlay = null
-    }
-
     override fun onDestroyView() {
-        dismissLoadingOverlay()
+        (activity as? BaseAppActivity)?.dismissLoading()
         super.onDestroyView()
     }
 

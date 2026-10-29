@@ -12,6 +12,7 @@ import com.gyf.immersionbar.ktx.immersionBar
 import com.hash.common.R
 import com.hash.common.base.dialog.BaseDialog
 import com.hash.common.base.dialog.WaitDialog
+import com.hash.common.ui.loading.LoadingConfig
 import com.hash.common.ui.loading.LoadingStateOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -35,11 +36,20 @@ abstract class BaseAppActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        loadingStateOwner?.let { owner ->
-            lifecycleScope.launch {
-                repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    owner.loadingState.shouldShowLoading.collect { shouldShow ->
-                        if (shouldShow) showLoadingDialog() else dismissLoadingDialog()
+        loadingStateOwner?.let(::observeLoadingState)
+    }
+
+    private fun observeLoadingState(owner: LoadingStateOwner) {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                owner.loadingState.config.collect { config ->
+                    if (config == null) {
+                        dismissLoading()
+                    } else {
+                        showLoading(
+                            delayMillis = config.delayMillis,
+                            cancelOnTouchOutside = config.cancelOnTouchOutside,
+                        )
                     }
                 }
             }
@@ -48,11 +58,25 @@ abstract class BaseAppActivity : BaseActivity() {
 
     private fun isShowDialog(): Boolean = dialog != null && dialog!!.isShowing
 
-    private fun showLoadingDialog() {
+    /**
+     * 显示当前 Activity 唯一持有的 Loading Dialog。
+     *
+     * [delayMillis] 用于避免短请求造成闪烁；[cancelOnTouchOutside] 为 true 时，
+     * 用户可点击弹窗外部关闭弹窗。
+     */
+    fun showLoading(
+        delayMillis: Long = LoadingConfig.DEFAULT_DELAY_MILLIS,
+        cancelOnTouchOutside: Boolean = true,
+    ) {
         if (isFinishing || isDestroyed) {
             return
         }
-        if (isShowDialog() || showDialogRunnable != null) return
+        if (isShowDialog()) {
+            dialog?.setCancelable(cancelOnTouchOutside)
+            dialog?.setCanceledOnTouchOutside(cancelOnTouchOutside)
+            return
+        }
+        if (showDialogRunnable != null) return
         showDialogRunnable = Runnable {
             showDialogRunnable = null
             if (isFinishing || isDestroyed) {
@@ -60,42 +84,26 @@ abstract class BaseAppActivity : BaseActivity() {
             }
             if (dialog == null) {
                 dialog = WaitDialog.Builder(this)
-                    .setCancelable(false)
                     .create()
             }
+            dialog?.setCancelable(cancelOnTouchOutside)
+            dialog?.setCanceledOnTouchOutside(cancelOnTouchOutside)
             if (!dialog!!.isShowing) {
                 dialog!!.show()
             }
         }
-        showDialogRunnable?.let { postDelayed(it, 300) }
+        showDialogRunnable?.let { postDelayed(it, delayMillis.coerceAtLeast(0L)) }
     }
 
     /**
      * 隐藏加载对话框
      */
-    private fun dismissLoadingDialog() {
+    fun dismissLoading() {
         showDialogRunnable?.let(::removeCallbacks)
         showDialogRunnable = null
-        if (!isShowDialog()) return
-        dialog?.dismiss()
-    }
-
-    /**
-     * 将页面级 Loading 状态切换为显示。
-     *
-     * Dialog 的创建与展示由状态观察者根据生命周期统一处理。
-     */
-    protected fun showLoading() {
-        loadingStateOwner?.loadingState?.show()
-    }
-
-    /**
-     * 将页面级 Loading 状态切换为隐藏。
-     *
-     * Dialog 的关闭由状态观察者根据生命周期统一处理。
-     */
-    protected fun dismissLoading() {
-        loadingStateOwner?.loadingState?.dismiss()
+        if (isShowDialog()) {
+            dialog?.dismiss()
+        }
     }
 
     override fun initLayout() {
@@ -139,9 +147,7 @@ abstract class BaseAppActivity : BaseActivity() {
         getContentView()?.run {
             traverse(this)
         }
-        if (isShowDialog()) {
-            dismissLoadingDialog()
-        }
+        dismissLoading()
         dialog = null
     }
 
@@ -171,4 +177,5 @@ abstract class BaseAppActivity : BaseActivity() {
         super.finish()
         overridePendingTransition(R.anim.left_in_activity, R.anim.left_out_activity)
     }
+
 }
