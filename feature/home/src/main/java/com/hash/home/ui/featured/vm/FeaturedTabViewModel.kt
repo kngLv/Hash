@@ -77,6 +77,7 @@ class FeaturedTabViewModel : BaseViewModel() {
     }
 
     fun refresh(): Boolean {
+        if (!hasLoadedInitial) return loadInitial()
         return load(FeaturedLoadMode.REFRESH)
     }
 

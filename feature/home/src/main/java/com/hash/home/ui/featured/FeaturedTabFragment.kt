@@ -50,7 +50,7 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     }
 
     override fun loadData() {
-        viewModel.loadInitial()
+        binding.refreshLayout.autoRefresh()
     }
 
     override fun listener() {
