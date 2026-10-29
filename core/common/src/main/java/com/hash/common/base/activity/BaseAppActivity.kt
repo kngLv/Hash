@@ -11,12 +11,10 @@ import com.gyf.immersionbar.ImmersionBar.setTitleBar
 import com.gyf.immersionbar.ktx.immersionBar
 import com.hash.common.R
 import com.hash.common.base.dialog.BaseDialog
-import com.hash.common.base.dialog.WaitDialog
+import com.hash.common.base.dialog.LoadingDialog
 import com.hash.common.ui.loading.LoadingConfig
 import com.hash.common.ui.loading.LoadingStateOwner
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 
 /**
@@ -41,16 +39,14 @@ abstract class BaseAppActivity : BaseActivity() {
 
     private fun observeLoadingState(owner: LoadingStateOwner) {
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                owner.loadingState.config.collect { config ->
-                    if (config == null) {
-                        dismissLoading()
-                    } else {
-                        showLoading(
-                            delayMillis = config.delayMillis,
-                            cancelOnTouchOutside = config.cancelOnTouchOutside,
-                        )
-                    }
+            owner.loadingState.config.collect { config ->
+                if (config == null) {
+                    dismissLoading()
+                } else {
+                    showLoading(
+                        delayMillis = config.delayMillis,
+                        cancelOnTouchOutside = config.cancelOnTouchOutside,
+                    )
                 }
             }
         }
@@ -83,7 +79,7 @@ abstract class BaseAppActivity : BaseActivity() {
                 return@Runnable
             }
             if (dialog == null) {
-                dialog = WaitDialog.Builder(this)
+                dialog = LoadingDialog.Builder(this)
                     .create()
             }
             dialog?.setCancelable(cancelOnTouchOutside)

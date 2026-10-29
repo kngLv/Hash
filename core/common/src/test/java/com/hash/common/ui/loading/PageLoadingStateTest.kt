@@ -22,7 +22,6 @@ class PageLoadingStateTest {
     fun dismiss_clears_loading_config() {
         val state = PageLoadingState()
         state.show()
-
         state.dismiss()
 
         assertNull(state.config.value)

@@ -2,9 +2,7 @@ package com.hash.common.base.fragment
 
 import android.os.Bundle
 import android.view.View
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.gyf.immersionbar.ImmersionBar
 import com.hash.common.R
 import com.hash.common.base.activity.BaseActivity
@@ -29,12 +27,12 @@ abstract class BaseAppFragment : BaseFragment() {
         delayMillis: Long = LoadingConfig.DEFAULT_DELAY_MILLIS,
         cancelOnTouchOutside: Boolean = true,
     ) {
-        loadingStateOwner?.loadingState?.show(delayMillis, cancelOnTouchOutside)
+        (activity as? BaseAppActivity)?.showLoading(delayMillis, cancelOnTouchOutside)
     }
 
     /** Dialog 由宿主 Activity 统一关闭。*/
     protected fun dismissLoading() {
-        loadingStateOwner?.loadingState?.dismiss()
+        (activity as? BaseAppActivity)?.dismissLoading()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -45,26 +43,18 @@ abstract class BaseAppFragment : BaseFragment() {
     private fun observeLoadingState(hostActivity: BaseAppActivity) {
         val owner = loadingStateOwner ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                owner.loadingState.config.collect { config ->
-                    if (config == null) {
-                        hostActivity.dismissLoading()
-                    } else {
-                        hostActivity.showLoading(
-                            delayMillis = config.delayMillis,
-                            cancelOnTouchOutside = config.cancelOnTouchOutside,
-                        )
-                    }
+            owner.loadingState.config.collect { config ->
+                if (config == null) {
+                    hostActivity.dismissLoading()
+                } else {
+                    hostActivity.showLoading(
+                        delayMillis = config.delayMillis,
+                        cancelOnTouchOutside = config.cancelOnTouchOutside,
+                    )
                 }
             }
         }
     }
-
-    override fun onDestroyView() {
-        (activity as? BaseAppActivity)?.dismissLoading()
-        super.onDestroyView()
-    }
-
 
     override fun onResume() {
         initStatusBar()
