@@ -21,8 +21,12 @@ class FeaturedTabViewModel : BaseViewModel() {
     private var currentPage = 0
     var hasMore = true
         private set
+    /** 防止首次加载、下拉刷新和分页请求并发执行。 */
     private var isRequesting = false
+    /** 是否已经完成过首次内容加载，用于区分首次进入与后续手动刷新。 */
     private var hasLoadedInitial = false
+    /** 首次未命中缓存后，等待 RefreshLayout 回调以发起首次网络请求。 */
+    private var awaitingInitialRefresh = false
     private var currentLoadMode = FeaturedLoadMode.INITIAL
 
     val isLoadingMore: Boolean
@@ -33,6 +37,10 @@ class FeaturedTabViewModel : BaseViewModel() {
 
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
+
+    /** 通知页面显示顶部刷新动画；动画触发刷新回调后才开始首次网络请求。 */
+    private val _initialRefreshRequested = MutableLiveData<Unit>()
+    val initialRefreshRequested: LiveData<Unit> = _initialRefreshRequested
 
     fun initTypeId(typeId: String) {
         this.typeId = typeId
@@ -47,36 +55,38 @@ class FeaturedTabViewModel : BaseViewModel() {
         viewModelScope.launch {
             var hasCachedPage = false
             try {
-                repository.findCachedPage(
+                val cachedNews = repository.findCachedPage(
                     typeId = typeId,
                     page = FIRST_PAGE,
                     allowExpired = !hasLoadedInitial,
-                )?.let { cachedNews ->
-                    hasCachedPage = true
-                    publishPage(FIRST_PAGE, cachedNews, append = false)
-                }
-                // 缓存只用于快速展示，随后始终以网络数据校准首页内容。
-                publishPage(
-                    FIRST_PAGE,
-                    repository.loadPage(typeId, FIRST_PAGE, bypassCache = true),
-                    append = false,
                 )
+                hasCachedPage = cachedNews != null
+                if (cachedNews != null) {
+                    publishPage(FIRST_PAGE, cachedNews, append = false)
+                    // 缓存只用于快速展示，随后静默以网络数据校准首页内容。
+                    publishInitialPageFromNetwork()
+                    hasLoadedInitial = true
+                    isRequesting = false
+                } else {
+                    isRequesting = false
+                    awaitingInitialRefresh = true
+                    _initialRefreshRequested.value = Unit
+                }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
-                // 已有缓存时保留可用内容，静默等待下次校准，避免首次进入时弹出无意义提示。
+                hasLoadedInitial = true
+                isRequesting = false
                 if (!hasCachedPage) {
                     _errorMessage.value = error.message ?: "加载失败，请稍后重试"
                 }
-            } finally {
-                hasLoadedInitial = true
-                isRequesting = false
             }
         }
         return true
     }
 
     fun refresh(): Boolean {
+        if (awaitingInitialRefresh) return requestInitialPageFromNetwork()
         if (!hasLoadedInitial) return loadInitial()
         return load(FeaturedLoadMode.REFRESH)
     }
@@ -107,6 +117,35 @@ class FeaturedTabViewModel : BaseViewModel() {
             }
         }
         return true
+    }
+
+    private fun requestInitialPageFromNetwork(): Boolean {
+        if (isRequesting || !::typeId.isInitialized) return false
+
+        awaitingInitialRefresh = false
+        isRequesting = true
+        currentLoadMode = FeaturedLoadMode.INITIAL
+        viewModelScope.launch {
+            try {
+                publishInitialPageFromNetwork()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                _errorMessage.value = error.message ?: "加载失败，请稍后重试"
+            } finally {
+                hasLoadedInitial = true
+                isRequesting = false
+            }
+        }
+        return true
+    }
+
+    private suspend fun publishInitialPageFromNetwork() {
+        publishPage(
+            FIRST_PAGE,
+            repository.loadPage(typeId, FIRST_PAGE, bypassCache = true),
+            append = false,
+        )
     }
 
     private fun publishPage(page: Int, pageNews: NewsListBean, append: Boolean) {

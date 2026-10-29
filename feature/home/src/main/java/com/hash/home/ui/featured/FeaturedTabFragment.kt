@@ -50,7 +50,7 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     }
 
     override fun loadData() {
-        binding.refreshLayout.autoRefresh()
+        viewModel.loadInitial()
     }
 
     override fun listener() {
@@ -64,6 +64,9 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     }
 
     override fun observer() {
+        viewModel.initialRefreshRequested.observe(this) {
+            binding.refreshLayout.autoRefresh()
+        }
         viewModel.newsList.observe(this) { news ->
             adapter.submitList(news)
             if (viewModel.isLoadingMore) {
