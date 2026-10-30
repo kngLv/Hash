@@ -10,12 +10,14 @@
     <com.scwang.smart.refresh.layout.SmartRefreshLayout
         android:id="@+id/refreshLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/background">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:background="@color/background"
             app:layoutManager="StaggeredGridLayoutManager"
             app:spanCount="2"
             tools:listitem="@layout/item_wan" />

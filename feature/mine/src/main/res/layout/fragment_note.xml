@@ -7,16 +7,19 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/background">
 
 
         <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:background="@color/background">
 
             <androidx.appcompat.widget.LinearLayoutCompat
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="@color/background"
                 android:orientation="vertical">
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -24,6 +27,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="1"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -31,6 +35,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="2"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -38,6 +43,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="3"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -45,6 +51,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="4"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -52,6 +59,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="5"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -59,6 +67,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="6"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -66,6 +75,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="7"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -73,6 +83,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="8"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -80,6 +91,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="9"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -87,6 +99,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="10"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -94,6 +107,7 @@
                     android:layout_height="@dimen/dp_100"
                     android:gravity="center"
                     android:text="11"
+                    android:textColor="@color/textTitle"
                     android:textSize="@dimen/dp_34" />
 
 

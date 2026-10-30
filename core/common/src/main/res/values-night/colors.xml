@@ -26,6 +26,8 @@
     <color name="textTitle">#FFFFFFFF</color>
     <color name="textBody">#FFFFFFFF</color>
     <color name="textSecondary">#B3FFFFFF</color>
+    <!-- Tab 未选中态比常规次要文本更弱，和选中态形成清晰层级 -->
+    <color name="tabTextNormal">#8AFFFFFF</color>
     <color name="textCaption">#8AFFFFFF</color>
     <color name="textLabel">#E6FFFFFF</color>
     <color name="textButton">#FFFFFFFF</color>
@@ -39,6 +41,7 @@
 
     <!-- 分割线 / 边框 -->
     <color name="divider">#FF2A2A2A</color>
+    <color name="dividerLight">#FF2A2A2A</color>
 
     <!-- 透明与通用色 -->
     <color name="transparent">#00000000</color>

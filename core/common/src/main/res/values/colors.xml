@@ -39,6 +39,8 @@
     <color name="textBody">#DE000000</color>
     <!-- textSecondary: 次要文字（描述、辅助信息） -->
     <color name="textSecondary">#8A000000</color>
+    <!-- tabTextNormal: Tab 未选中态文字，避免与选中态混淆 -->
+    <color name="tabTextNormal">#8A000000</color>
     <!-- textCaption: 更低优先级的文字（注释、元信息） -->
     <color name="textCaption">#61000000</color>
     <!-- textLabel: 表单字段 label / 小标题 -->

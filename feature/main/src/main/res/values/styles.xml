@@ -5,12 +5,11 @@
 
         <!--将ActionBar隐藏,这里使用ToolBar-->
         <item name="windowActionBar">false</item>
-        <item name="isLightTheme">false</item>
         <!-- 使用 API Level 22以上编译的话，要拿掉前綴字 -->
         <item name="windowNoTitle">true</item>
         <!--Android 5.x开始需要把颜色设置透明，否则顶部导航栏会呈现系统默认的浅灰色-->
 <!--        <item name="android:statusBarColor">@android:color/transparent</item>-->
-        <item name="android:windowBackground">@color/white</item>
+        <item name="android:windowBackground">@color/background</item>
 
         <!--        &lt;!&ndash; 窗口背景颜色 &ndash;&gt;-->
         <!--        <item name="android:windowBackground">@color/page_background</item>-->

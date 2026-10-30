@@ -1,5 +1,6 @@
 package com.hash.common.base.fragment
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.lifecycleScope
@@ -83,8 +84,10 @@ abstract class BaseAppFragment : BaseFragment() {
     /** 是否启用沉浸式状态栏 */
     open fun isStatusBarEnable(): Boolean = true
 
-    /** 状态栏字体深色模式 */
-    open fun isStatusDarkFont(): Boolean = true
+    /** 状态栏图标颜色随系统深色模式自动切换，确保与页面背景保持对比度。 */
+    open fun isStatusDarkFont(): Boolean =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK !=
+            Configuration.UI_MODE_NIGHT_YES
 
     open fun getTitleBar(): View? = null
 

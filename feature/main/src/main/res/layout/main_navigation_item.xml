@@ -21,7 +21,8 @@
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/iv_main_tab_icon"
             android:layout_width="@dimen/dp_16"
-            android:layout_height="@dimen/dp_16" />
+            android:layout_height="@dimen/dp_16"
+            android:tint="@color/main_navigation_icon_tint" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_main_tab_title"
