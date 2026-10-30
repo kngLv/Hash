@@ -12,6 +12,7 @@
     <color name="primary">#F50057</color>
     <color name="loadingHashActive">#E72A36</color>
     <color name="loadingHashInactive">#FFFFF2F3</color>
+    <color name="loadingHashBackground">#FFFFEEF1</color>
 
     <!-- 主要背景与 surface（浅色主题） -->
     <color name="background">#FFFFFFFF</color>

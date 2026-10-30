@@ -6,15 +6,24 @@
     android:gravity="center"
     android:orientation="vertical">
 
-    <com.hash.common.base.dialog.HashLoadingView
-        android:layout_width="@dimen/dp_48"
-        android:layout_height="@dimen/dp_48" />
+    <FrameLayout
+        android:id="@+id/loading_hash_container"
+        android:layout_width="@dimen/dp_112"
+        android:layout_height="@dimen/dp_88"
+        android:background="@drawable/loading_hash_background">
+
+        <com.hash.common.base.dialog.HashLoadingView
+            android:layout_width="@dimen/dp_64"
+            android:layout_height="@dimen/dp_64"
+            android:layout_gravity="center" />
+
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tv_loading_message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/dp_8"
+        android:layout_marginTop="@dimen/dp_10"
         android:gravity="center"
         android:maxLines="1"
         android:textColor="@color/textSecondary"
