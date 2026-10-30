@@ -4,5 +4,6 @@
     <dimen name="img_multi_height">96dp</dimen>
     <!-- Height used for single large image -->
     <dimen name="img_single_height">180dp</dimen>
+    <dimen name="news_detail_image_margin">16dp</dimen>
 </resources>
 

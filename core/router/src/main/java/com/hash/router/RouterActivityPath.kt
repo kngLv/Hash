@@ -8,6 +8,13 @@ package com.hash.router
  * @description
  */
 class RouterActivityPath {
+    object Home {
+        private const val ROOT = "/home"
+
+        /** 新闻详情 */
+        const val NEWS_DETAIL = "${ROOT}/news_detail"
+    }
+
     object Main {
         private const val ROOT = "/main"
 

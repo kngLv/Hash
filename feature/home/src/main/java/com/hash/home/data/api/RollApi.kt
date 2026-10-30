@@ -1,6 +1,7 @@
 package com.hash.home.data.api
 
 import com.hash.home.data.model.NewsListBean
+import com.hash.home.data.model.NewsDetailBean
 import com.hash.home.data.model.NewsTypeListBean
 import com.hash.common.net.NetConstants.ROLL_BASE_URL
 import com.hash.common.net.response.RollResponse
@@ -34,4 +35,12 @@ interface RollApi {
         @Query("typeId") type: String,
         @Query("page") page: String,
     ): RollResponse<NewsListBean>
+
+    /** 根据新闻 id 获取新闻详情。 */
+    @GET("$ROLL_BASE_URL/api/news/details/v2")
+    suspend fun newsDetail(
+        @Query("app_id") appId: String,
+        @Query("app_secret") appSecret: String,
+        @Query("newsId") newsId: String,
+    ): RollResponse<NewsDetailBean>
 }

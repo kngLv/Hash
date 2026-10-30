@@ -1,6 +1,7 @@
 package com.hash.common.base.activity
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -134,7 +135,9 @@ abstract class BaseAppActivity : BaseActivity() {
     open fun isStatusBarEnable(): Boolean = true
 
     /** 状态栏字体深色模式 */
-    open fun isStatusDarkFont(): Boolean = true
+    open fun isStatusDarkFont(): Boolean =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK !=
+            Configuration.UI_MODE_NIGHT_YES
 
     open fun getTitleBar(): View? = null
 

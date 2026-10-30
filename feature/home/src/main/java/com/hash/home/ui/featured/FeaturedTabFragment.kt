@@ -3,6 +3,7 @@ package com.hash.home.ui.featured
 import android.os.Bundle
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.alibaba.android.arouter.launcher.ARouter
 import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ui.loading.LoadingStateOwner
 import com.hash.common.ext.showToast
@@ -10,6 +11,8 @@ import com.hash.home.R
 import com.hash.home.databinding.FragmentFeaturedTabBinding
 import com.hash.home.ui.featured.adapter.FeaturedTabAdapter
 import com.hash.home.ui.featured.vm.FeaturedTabViewModel
+import com.hash.home.ui.featured.detail.NewsDetailActivity
+import com.hash.router.RouterActivityPath
 
 /**
  * Created by KngLv
@@ -24,7 +27,20 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
     override val loadingStateOwner: LoadingStateOwner
         get() = viewModel
 
-    val adapter by lazy { FeaturedTabAdapter() }
+    val adapter by lazy {
+        FeaturedTabAdapter().apply {
+            setOnItemClickListener { adapter, _, position ->
+                val news = adapter.getItem(position)
+                ARouter.getInstance()
+                    .build(RouterActivityPath.Home.NEWS_DETAIL)
+                    .withString(NewsDetailActivity.EXTRA_NEWS_ID, news.newsId)
+                    .withString(NewsDetailActivity.EXTRA_TITLE, news.title)
+                    .withString(NewsDetailActivity.EXTRA_SOURCE, news.source)
+                    .withString(NewsDetailActivity.EXTRA_POST_TIME, news.postTime)
+                    .navigation()
+            }
+        }
+    }
 
     companion object {
         const val KEY_TYPE_ID = "typeId"

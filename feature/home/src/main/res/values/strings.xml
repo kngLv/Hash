@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <string name="news_detail_back">返回</string>
+    <string name="news_detail_title">新闻详情</string>
+    <string name="news_detail_empty_content">暂无正文内容</string>
+    <string name="news_detail_image">新闻图片</string>
+    <string name="news_detail_video">新闻视频</string>
+    <string name="news_detail_play_video">播放视频</string>
+    <string name="news_detail_video_unavailable">暂无法打开该视频</string>
 </resources>
 
