@@ -22,11 +22,6 @@ class MineViewModel(
 
 
     suspend fun refreshUserInfo() {
-        requestRaw { mineApi.test() }
-            .onBody {
-                println("test result: $it")
-            }
-            .enqueue(viewModelScope)
         userInfoRepository.refreshUserInfo(viewModelScope)
     }
 }
