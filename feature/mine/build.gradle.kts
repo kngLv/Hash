@@ -26,19 +26,8 @@ dependencies {
     implementation(project(":core:net"))
     implementation(project(":core:router"))
 
-    // 户型 Flutter 模块及其插件、arm64 Flutter Engine 均直接随 Mine 模块保存。
-    debugImplementation(
-        files(
-            "libs/floorplan/flutter_debug-1.0.aar",
-            "libs/floorplan/hash_floorplan_debug-1.0.aar",
-            "libs/floorplan/shared_preferences_android_debug-1.0.aar",
-            "libs/floorplan/webview_flutter_android_debug-1.0.aar",
-            "libs/floorplan/flutter_embedding_debug.jar",
-            "libs/floorplan/flutter_arm64_v8a_debug.jar",
-        ),
-    )
-    releaseImplementation("com.hash.hash_floorplan_module:flutter_release:1.0")
-    previewImplementation("com.hash.hash_floorplan_module:flutter_release:1.0")
+    // 所有构建变体统一使用 Flutter Release 产物，避免提交大体积 Debug Engine。
+    implementation("com.hash.hash_floorplan_module:flutter_release:1.0")
     implementation("com.getkeepsafe.relinker:relinker:1.4.5")
     implementation("com.google.android.play:core:1.10.3")
     implementation("androidx.webkit:webkit:1.15.0")
