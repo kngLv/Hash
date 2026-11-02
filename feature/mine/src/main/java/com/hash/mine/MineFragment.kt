@@ -127,7 +127,7 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
             }
         }
         binding.btnScan.setOnClickListener {
-            "channel:${IApp.channel}".showToast()
+            showLoading()
         }
     }
 
