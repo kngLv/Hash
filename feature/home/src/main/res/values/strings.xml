@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="news_detail_back">返回</string>
     <string name="news_detail_listen">听</string>
     <string name="news_detail_stop_listening">停止朗读</string>
     <string name="news_detail_share">分享</string>

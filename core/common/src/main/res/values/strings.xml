@@ -2,6 +2,8 @@
 <resources>
     <!-- 通用的 -->
     <string name="common_loading">加载中&#8230;</string>
+    <string name="common_back">返回</string>
+    <string name="common_action">操作</string>
 
     <string name="common_unknown_error">未知错误</string>
 

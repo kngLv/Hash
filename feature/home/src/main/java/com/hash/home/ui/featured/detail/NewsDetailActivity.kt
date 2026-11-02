@@ -2,15 +2,21 @@ package com.hash.home.ui.featured.detail
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.TypedValue
 import android.view.View
 import androidx.activity.viewModels
+import androidx.appcompat.widget.AppCompatTextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alibaba.android.arouter.facade.annotation.Route
+import com.hash.common.R as CommonR
 import com.hash.common.base.activity.BaseBindingActivity
 import com.hash.common.ext.showToast
 import com.hash.common.ui.loading.LoadingStateOwner
@@ -22,6 +28,7 @@ import com.hash.home.ui.featured.detail.adapter.NewsDetailContentFormatter
 import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItem
 import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItemFactory
 import com.hash.home.ui.featured.detail.vm.NewsDetailViewModel
+import com.hash.common.ui.toolbar.HashToolbar.TitleGravity
 import com.hash.router.RouterActivityPath
 import java.util.Locale
 
@@ -43,6 +50,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private var isTextToSpeechReady = false
     private var isReading = false
     private var isSourceVisible = false
+    private lateinit var listenAction: AppCompatTextView
 
     override val loadingStateOwner: LoadingStateOwner
         get() = viewModel
@@ -52,9 +60,23 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     override fun initView() = with(binding) {
         contentRecycler.layoutManager = LinearLayoutManager(this@NewsDetailActivity)
         contentRecycler.adapter = detailAdapter
-        sourceView.text = newsSource
-        listenButton.setOnClickListener { toggleReading() }
-        shareButton.setOnClickListener { shareNews() }
+        toolbar.setDefaultActionClickListener { shareNews() }
+        listenAction = toolbar.createTextAction(
+            text = getString(R.string.news_detail_listen),
+            onClick = View.OnClickListener { toggleReading() },
+        ).apply {
+            typeface = Typeface.create("serif", Typeface.NORMAL)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            setTextColor(
+                ContextCompat.getColorStateList(
+                    this@NewsDetailActivity,
+                    R.color.news_detail_listen_text,
+                ) ?: ColorStateList.valueOf(
+                    ContextCompat.getColor(this@NewsDetailActivity, CommonR.color.textTitle),
+                ),
+            )
+        }
+        toolbar.addAction(listenAction)
         contentRecycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 updateToolbarSource()
@@ -101,23 +123,12 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         if (shouldShow == isSourceVisible) return
 
         isSourceVisible = shouldShow
-        binding.sourceView.animate().cancel()
         if (shouldShow) {
-            binding.sourceView.apply {
-                alpha = 0f
-                visibility = View.VISIBLE
-                animate().alpha(1f).setDuration(160).start()
-            }
+            binding.toolbar.setTitleGravity(TitleGravity.START)
+            binding.toolbar.setTitle(newsSource)
         } else {
-            binding.sourceView.animate()
-                .alpha(0f)
-                .setDuration(120)
-                .withEndAction {
-                    if (!isSourceVisible) {
-                        binding.sourceView.visibility = View.INVISIBLE
-                    }
-                }
-                .start()
+            binding.toolbar.setTitle(null)
+            binding.toolbar.setTitleGravity(TitleGravity.CENTER)
         }
     }
 
@@ -185,10 +196,10 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
 
     private fun updateReadingState(reading: Boolean) {
         isReading = reading
-        binding.listenButton.contentDescription = getString(
+        listenAction.contentDescription = getString(
             if (reading) R.string.news_detail_stop_listening else R.string.news_detail_listen,
         )
-        binding.listenButton.isSelected = reading
+        listenAction.isSelected = reading
     }
 
     private fun shareNews() {

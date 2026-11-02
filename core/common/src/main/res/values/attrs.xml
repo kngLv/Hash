@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="HashToolbar">
+        <attr name="hashTitle" format="string" />
+        <attr name="hashTitlePadding" format="dimension" />
+        <attr name="hashTitleGravity">
+            <enum name="center" value="0" />
+            <enum name="start" value="1" />
+            <enum name="end" value="2" />
+        </attr>
+        <attr name="showBackButton" format="boolean" />
+        <attr name="backIcon" format="reference" />
+        <attr name="backIconSize" format="dimension" />
+        <attr name="actionIcon" format="reference" />
+        <attr name="actionIconSize" format="dimension" />
+        <attr name="actionContentDescription" format="string" />
+    </declare-styleable>
+</resources>
