@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import com.hash.common.base.InitAction
@@ -38,6 +39,7 @@ abstract class BaseActivity : AppCompatActivity(), InitAction, ActivityAction, H
     private val activityCallbacks: SparseArray<OnActivityCallback?> by lazy { SparseArray(1) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         initContentView()
         initActivity()

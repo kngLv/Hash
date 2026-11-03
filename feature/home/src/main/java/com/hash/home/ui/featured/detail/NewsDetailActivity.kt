@@ -20,6 +20,8 @@ import com.hash.common.R as CommonR
 import com.hash.common.base.activity.BaseBindingActivity
 import com.hash.common.ext.showToast
 import com.hash.common.ui.loading.LoadingStateOwner
+import com.hash.common.ui.insets.applyScrollContentInsets
+import com.hash.common.ui.insets.applyTopBarInsets
 import com.hash.home.R
 import com.hash.home.data.model.NewsDetailBean
 import com.hash.home.databinding.ActivityNewsDetailBinding
@@ -58,6 +60,8 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     override fun layoutId(): Int = R.layout.activity_news_detail
 
     override fun initView() = with(binding) {
+        toolbar.applyTopBarInsets()
+        contentRecycler.applyScrollContentInsets()
         contentRecycler.layoutManager = LinearLayoutManager(this@NewsDetailActivity)
         contentRecycler.adapter = detailAdapter
         toolbar.setDefaultActionClickListener { shareNews() }
@@ -98,8 +102,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             }
         }
     }
-
-    override fun getTitleBar(): View = binding.toolbar
 
     private fun renderDetail(detail: NewsDetailBean) = with(binding) {
         contentRecycler.visibility = View.VISIBLE

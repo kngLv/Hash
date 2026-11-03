@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.zip
 import net.lucode.hackware.magicindicator.buildins.commonnavigator.CommonNavigator
 import com.hash.common.ui.helper.ViewPagerSwipeRefreshHelper
 import com.hash.common.ui.helper.ProfileBgPullScaleHelper
+import com.hash.common.ui.insets.applyTopBarInsets
 import kotlin.math.abs
 
 /**
@@ -61,6 +62,7 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
     override fun layoutId(): Int = R.layout.fragment_mine
 
     override fun initView() {
+        binding.toolbar.applyTopBarInsets()
         setAppBar()
         initTabIndicator()
         initSwipeRefreshLayout()

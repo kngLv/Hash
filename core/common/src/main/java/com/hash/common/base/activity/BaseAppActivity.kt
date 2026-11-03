@@ -8,8 +8,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import androidx.core.widget.addTextChangedListener
-import com.gyf.immersionbar.ImmersionBar.setTitleBar
-import com.gyf.immersionbar.ktx.immersionBar
+import androidx.core.view.WindowCompat
 import com.hash.common.R
 import com.hash.common.base.dialog.BaseDialog
 import com.hash.common.base.dialog.LoadingDialog
@@ -105,7 +104,7 @@ abstract class BaseAppActivity : BaseActivity() {
 
     override fun initLayout() {
         super.initLayout()
-        initStatusBar()
+        configureSystemBarIcons()
         setBack()
     }
 
@@ -115,31 +114,28 @@ abstract class BaseAppActivity : BaseActivity() {
         }
     }
 
-    private fun initStatusBar() {
-        if (isStatusBarEnable()) {
-            immersionBar {
-                statusBarColor(R.color.transparent)
-                statusBarDarkFont(isStatusDarkFont())
-                getTitleBar()?.let {
-                    setTitleBar(this@BaseAppActivity, it)
-                } ?: kotlin.run {
-                    findViewById<View>(R.id.toolbar)?.let {
-                        setTitleBar(this@BaseAppActivity, it)
-                    }
-                }
-            }
+    private fun configureSystemBarIcons() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = useDarkStatusBarIcons()
+            isAppearanceLightNavigationBars = useDarkNavigationBarIcons()
         }
     }
 
-    /** 是否启用沉浸式状态栏 */
-    open fun isStatusBarEnable(): Boolean = true
-
-    /** 状态栏字体深色模式 */
-    open fun isStatusDarkFont(): Boolean =
+    /**
+     * 状态栏和导航栏图标是否统一使用深色，默认随应用深色模式自动切换。
+     *
+     * 若两个系统栏需要不同图标颜色，分别覆写 [useDarkStatusBarIcons] 和
+     * [useDarkNavigationBarIcons]。
+     */
+    open fun useDarkSystemBarIcons(): Boolean =
         resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK !=
             Configuration.UI_MODE_NIGHT_YES
 
-    open fun getTitleBar(): View? = null
+    /** 状态栏图标是否使用深色。 */
+    open fun useDarkStatusBarIcons(): Boolean = useDarkSystemBarIcons()
+
+    /** 导航栏图标是否使用深色。 */
+    open fun useDarkNavigationBarIcons(): Boolean = useDarkSystemBarIcons()
 
     override fun onDestroy() {
         super.onDestroy()

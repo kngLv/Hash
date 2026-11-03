@@ -1,12 +1,8 @@
 package com.hash.common.base.fragment
 
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.lifecycleScope
-import com.gyf.immersionbar.ImmersionBar
-import com.hash.common.R
-import com.hash.common.base.activity.BaseActivity
 import com.hash.common.base.activity.BaseAppActivity
 import com.hash.common.ui.loading.LoadingConfig
 import com.hash.common.ui.loading.LoadingStateOwner
@@ -57,42 +53,4 @@ abstract class BaseAppFragment : BaseFragment() {
         }
     }
 
-    override fun onResume() {
-        initStatusBar()
-        super.onResume()
-    }
-
-
-    private fun initStatusBar() {
-        if (isStatusBarEnable()) {
-            ImmersionBar
-                .with(this)
-                .statusBarColor(statusBarColor())
-                .fitsSystemWindows(fitsSystemWindows())
-                .statusBarDarkFont(isStatusDarkFont())
-                .init()
-            getTitleBar()?.let {
-                ImmersionBar.setTitleBar(this, it)
-            } ?: kotlin.run {
-                view?.findViewById<View>(R.id.toolbar)?.let {
-                    ImmersionBar.setTitleBar(this, it)
-                }
-            }
-        }
-    }
-
-    /** 是否启用沉浸式状态栏 */
-    open fun isStatusBarEnable(): Boolean = true
-
-    /** 状态栏图标颜色随系统深色模式自动切换，确保与页面背景保持对比度。 */
-    open fun isStatusDarkFont(): Boolean =
-        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK !=
-            Configuration.UI_MODE_NIGHT_YES
-
-    open fun getTitleBar(): View? = null
-
-    open fun fitsSystemWindows(): Boolean = false
-
-    /** 状态栏颜色 */
-    open fun statusBarColor(): Int = R.color.transparent
 }

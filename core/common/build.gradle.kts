@@ -38,9 +38,6 @@ dependencies {
 
     api(libs.androidx.startup.runtime)//启动库
 
-    implementation(libs.immersionbar) // 沉浸式状态栏基础依赖包，必须要依赖
-    implementation(libs.immersionbar.ktx) //kotlin扩展（可选)
-    implementation(libs.immersionbar.components) //fragment快速实现（可选)
     api(libs.lottie) //lottie动画库
 
     api(libs.timber)

@@ -73,7 +73,6 @@ class HashToolbar @JvmOverloads constructor(
         background = selectableItemBackground()
     }
     private val titleView = AppCompatTextView(context).apply {
-        id = R.id.hash_toolbar_title
         ellipsize = android.text.TextUtils.TruncateAt.END
         maxLines = 1
         setTextColor(ContextCompat.getColor(context, R.color.textTitle))

@@ -1,12 +1,12 @@
 package com.hash.home
 
-import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.hash.common.base.fragment.BaseBindingFragment
 import com.hash.common.ui.helper.ViewPager2Helper
 import com.hash.common.ui.indicator.IndicatorNavAdapter
+import com.hash.common.ui.insets.applyTopBarInsets
 import com.hash.home.databinding.FragmentHomeBinding
 import com.hash.home.ui.featured.FeaturedFragment
 import com.hash.home.ui.wan.WanFragment
@@ -30,9 +30,8 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
 
     override fun layoutId(): Int = R.layout.fragment_home
 
-    override fun getTitleBar(): View = binding.indicator
-
     override fun initView() {
+        binding.indicator.applyTopBarInsets()
         initTabIndicator()
     }
 

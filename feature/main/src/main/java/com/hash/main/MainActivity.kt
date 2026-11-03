@@ -4,6 +4,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
 import com.hash.common.base.activity.BaseBindingActivity
+import com.hash.common.ui.insets.applyBottomBarInsets
 import com.hash.main.adapter.MainNavigationAdapter
 import com.hash.main.adapter.MainPageAdapter
 import com.hash.main.databinding.ActivityMainBinding
@@ -22,6 +23,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>(),
     override fun layoutId(): Int = R.layout.activity_main
 
     override fun initView() {
+        binding.mainNavigationContainer.applyBottomBarInsets()
         navigationAdapter.onTabClickPosition = this
         binding.mainNavigation.layoutManager = GridLayoutManager(this, 5)
     }
