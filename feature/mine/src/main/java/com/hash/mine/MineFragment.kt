@@ -62,7 +62,7 @@ class MineFragment : BaseBindingFragment<FragmentMineBinding>() {
     override fun layoutId(): Int = R.layout.fragment_mine
 
     override fun initView() {
-        binding.toolbar.applyTopBarInsets()
+        binding.toolbar.applyTopBarInsets(binding.swipeRefreshLayout)
         setAppBar()
         initTabIndicator()
         initSwipeRefreshLayout()

@@ -64,24 +64,52 @@ private const val imeInsetsTagKey = 0x7f0f1004
  * 固定高度 View 会在原高度基础上增加顶部安全区，因此原本的 56dp Toolbar 内容区不会被
  * 状态栏压缩；`match_parent` 或 `wrap_content` View 仅增加顶部 padding。
  */
-fun View.applyTopBarInsets() {
+fun View.applyTopBarInsets() = applyTopBarInsets(this)
+
+/**
+ * 让顶部固定栏使用 [insetsSource] 提供的 Insets 避开状态栏和显示缺口。
+ *
+ * 当当前 Toolbar 位于某个会截断 Insets 分发的容器内部时使用。例如可传入页面根容器、父容器
+ * 或其他能直接收到窗口 Insets 的 View。Insets 仍应用到当前 View，不会修改 [insetsSource]
+ * 的 padding 或高度。
+ *
+ * 示例：
+ * ```kotlin
+ * binding.toolbar.applyTopBarInsets(binding.root)
+ * ```
+ *
+ * 注意：[insetsSource] 会注册 Insets 监听器。一个来源 View 若还需处理其他 Insets 逻辑，应将
+ * 它们合并在同一个监听器中，避免后注册的监听器覆盖前一个。
+ */
+fun View.applyTopBarInsets(insetsSource: View) {
+    // 记录调用扩展前的尺寸。之后无论 Insets 回调多少次，始终从这份基准重新计算，
+    // 而不是在当前 padding / height 上继续累加。
     val initialMetrics = initialMetrics(topBarInsetsTagKey)
-    ViewCompat.setOnApplyWindowInsetsListener(this) { view, windowInsets ->
-        val topInset = windowInsets.systemBarAndCutoutInsets().top
-        view.updatePadding(
-            left = initialMetrics.paddingLeft,
-            top = initialMetrics.paddingTop + topInset,
-            right = initialMetrics.paddingRight,
-            bottom = initialMetrics.paddingBottom,
-        )
-        if (initialMetrics.height > 0) {
-            view.layoutParams = view.layoutParams.apply {
-                height = initialMetrics.height + topInset
-            }
-        }
+    ViewCompat.setOnApplyWindowInsetsListener(insetsSource) { _, windowInsets ->
+        applyTopInset(initialMetrics, windowInsets.systemBarAndCutoutInsets().top)
         windowInsets
     }
-    requestInsetsWhenAttached()
+    requestInsetsWhenAttached(insetsSource)
+}
+
+/**
+ * 将顶部安全区加到初始布局数据上，确保重复分发 Insets 时不累计 padding 或高度。
+ */
+private fun View.applyTopInset(initialMetrics: InitialViewMetrics, topInset: Int) {
+    // 例如原 Toolbar 高度为 40dp、状态栏为 24dp：
+    // - paddingTop = 原 paddingTop + 24dp，子控件会整体落到状态栏下方；
+    // - height = 40dp + 24dp，仍保留 40dp 的原始内容区域。
+    updatePadding(
+        left = initialMetrics.paddingLeft,
+        top = initialMetrics.paddingTop + topInset,
+        right = initialMetrics.paddingRight,
+        bottom = initialMetrics.paddingBottom,
+    )
+    if (initialMetrics.height > 0) {
+        layoutParams = layoutParams.apply {
+            height = initialMetrics.height + topInset
+        }
+    }
 }
 
 /**
@@ -100,7 +128,7 @@ fun View.applyTopBarInsets() {
 fun View.applyBottomBarInsets() {
     val initialMetrics = initialMetrics(bottomBarInsetsTagKey)
     ViewCompat.setOnApplyWindowInsetsListener(this) { view, windowInsets ->
-        val bottomInset = windowInsets.systemBarAndCutoutInsets().bottom
+        val bottomInset = view.rootOrDispatchedInsets(windowInsets).systemBarAndCutoutInsets().bottom
         view.updatePadding(
             left = initialMetrics.paddingLeft,
             top = initialMetrics.paddingTop,
@@ -130,7 +158,7 @@ fun View.applyScrollContentInsets() {
         clipToPadding = false
     }
     ViewCompat.setOnApplyWindowInsetsListener(this) { view, windowInsets ->
-        val bottomInset = windowInsets.systemBarAndCutoutInsets().bottom
+        val bottomInset = view.rootOrDispatchedInsets(windowInsets).systemBarAndCutoutInsets().bottom
         view.updatePadding(
             left = initialMetrics.paddingLeft,
             top = initialMetrics.paddingTop,
@@ -156,8 +184,9 @@ fun View.applyScrollContentInsets() {
 fun View.applyImeInsets() {
     val initialMetrics = initialMetrics(imeInsetsTagKey)
     ViewCompat.setOnApplyWindowInsetsListener(this) { view, windowInsets ->
-        val imeBottom = windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-        val navigationBottom = windowInsets.systemBarAndCutoutInsets().bottom
+        val insets = view.rootOrDispatchedInsets(windowInsets)
+        val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+        val navigationBottom = insets.systemBarAndCutoutInsets().bottom
         view.updatePadding(
             left = initialMetrics.paddingLeft,
             top = initialMetrics.paddingTop,
@@ -193,18 +222,33 @@ private fun WindowInsetsCompat.systemBarAndCutoutInsets(): Insets = getInsets(
 )
 
 /**
+ * 尝试从根窗口读取 Insets，避免中间容器消费后子 View 只能收到剩余的 0 Insets。
+ *
+ * 读取顺序：Android 原始根窗口 Insets → AndroidX 根 View Insets → 当前回调参数。
+ * 前两者不可用时才退回回调参数。用于底栏、滚动内容和输入栏等需要兼容中间容器消费
+ * Insets 的场景。
+ */
+private fun View.rootOrDispatchedInsets(dispatchedInsets: WindowInsetsCompat): WindowInsetsCompat =
+    rootWindowInsets?.let { WindowInsetsCompat.toWindowInsetsCompat(it, this) }
+        ?: ViewCompat.getRootWindowInsets(this)
+        ?: dispatchedInsets
+
+/**
  * 在 View 已附着时立即请求 Insets；尚未附着时等待首次附着后请求一次。
  *
  * 这样扩展既可以在 `onCreate` / `initView` 中调用，也可以在 View 已显示后调用。
  */
-private fun View.requestInsetsWhenAttached() {
+private fun View.requestInsetsWhenAttached(insetsTarget: View = this) {
+    fun requestInsets() {
+        ViewCompat.requestApplyInsets(insetsTarget)
+    }
     if (isAttachedToWindow) {
-        ViewCompat.requestApplyInsets(this)
+        requestInsets()
     } else {
         addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(view: View) {
                 view.removeOnAttachStateChangeListener(this)
-                ViewCompat.requestApplyInsets(view)
+                requestInsets()
             }
 
             override fun onViewDetachedFromWindow(view: View) = Unit
