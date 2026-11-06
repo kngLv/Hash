@@ -72,4 +72,18 @@ class VideoPlayActionTest {
         assertEquals(null, stoppedState.errorMessage)
         assertEquals(VideoPlayAction.REPLACE, stoppedState.resolvePlayAction(media))
     }
+
+    @Test
+    fun `移除当前媒体后不应保留可恢复的播放状态`() {
+        val releasedState = VideoPlaybackState(
+            media = media,
+            status = VideoPlaybackStatus.PLAYING,
+            errorMessage = "之前的错误",
+        ).resetAfterCurrentMediaRemoved()
+
+        assertEquals(null, releasedState.media)
+        assertEquals(VideoPlaybackStatus.IDLE, releasedState.status)
+        assertEquals(null, releasedState.errorMessage)
+        assertEquals(VideoPlayAction.REPLACE, releasedState.resolvePlayAction(media))
+    }
 }

@@ -46,6 +46,13 @@ internal fun VideoPlaybackState.resetAfterStop(): VideoPlaybackState = copy(
     errorMessage = null,
 )
 
+/**
+ * 清除已从播放列表移除媒体的会话状态。
+ *
+ * 语义上与 [resetAfterStop] 一致，但单独命名用于表达“当前媒体已不可恢复”。
+ */
+internal fun VideoPlaybackState.resetAfterCurrentMediaRemoved(): VideoPlaybackState = resetAfterStop()
+
 /** 标题和封面仅影响展示，不应导致同一播放源重新加载。 */
 private fun VideoMedia.isSameSourceAs(other: VideoMedia): Boolean =
     id == other.id && url == other.url && headers == other.headers

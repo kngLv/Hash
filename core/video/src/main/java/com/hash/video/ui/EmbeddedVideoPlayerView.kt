@@ -38,14 +38,24 @@ class EmbeddedVideoPlayerView @JvmOverloads constructor(
         tag = FLOAT_ACTION_TAG
     }
 
-    /** 宿主负责将当前画面迁移到横屏全屏容器。 */
+    /** 宿主负责将当前画面迁移到横屏全屏容器；未设置时不展示全屏入口。 */
     var onFullscreenRequested: (() -> Unit)? = null
+        set(value) {
+            field = value
+            fullscreenAction.visibility = if (value == null) GONE else VISIBLE
+        }
 
-    /** 宿主负责将当前画面迁移到悬浮容器。 */
+    /** 宿主负责将当前画面迁移到悬浮容器；未设置时不展示悬浮入口。 */
     var onFloatRequested: (() -> Unit)? = null
+        set(value) {
+            field = value
+            floatAction.visibility = if (value == null) GONE else VISIBLE
+        }
 
     init {
         setBackgroundColor(Color.BLACK)
+        fullscreenAction.visibility = GONE
+        floatAction.visibility = GONE
         addView(loadingView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         addView(
             playAction,

@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter4.BaseMultiItemAdapter
 import com.hash.common.utils.image.ImageLoader
 import com.hash.common.utils.image.LoadOptions
+import com.hash.video.api.VideoMedia
 import com.hash.home.databinding.ItemNewsDetailEmptyBinding
 import com.hash.home.databinding.ItemNewsDetailHeaderBinding
 import com.hash.home.databinding.ItemNewsDetailImageBinding
@@ -24,12 +25,6 @@ class NewsDetailAdapter : BaseMultiItemAdapter<NewsDetailPageItem>() {
             .addItemType(TYPE_VIDEO, VideoItemListener())
             .addItemType(TYPE_EMPTY, EmptyItemListener())
             .onItemViewType { position, list -> itemTypeOf(list[position]) }
-    }
-
-    override fun bindViewClickListener(viewHolder: RecyclerView.ViewHolder, viewType: Int) {
-        if (viewType == TYPE_VIDEO) {
-            super.bindViewClickListener(viewHolder, viewType)
-        }
     }
 
     private fun itemTypeOf(item: NewsDetailPageItem): Int = when (item) {
@@ -122,15 +117,13 @@ class NewsDetailAdapter : BaseMultiItemAdapter<NewsDetailPageItem>() {
         private val binding: ItemNewsDetailVideoBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: NewsDetailPageItem.Video) = with(binding) {
-            if (item.coverUrl.isBlank()) {
-                coverView.setImageDrawable(null)
-            } else {
-                ImageLoader.load(
-                    coverView,
-                    item.coverUrl,
-                    LoadOptions.Builder().roundedRadiusDp(12).centerCrop().build(),
-                )
-            }
+            videoPlayer.setMedia(
+                VideoMedia(
+                    id = item.videoUrl,
+                    url = item.videoUrl,
+                    coverUrl = item.coverUrl.ifBlank { null },
+                ),
+            )
         }
     }
 

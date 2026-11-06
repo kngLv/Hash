@@ -1,10 +1,8 @@
 package com.hash.home.ui.featured.detail
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -32,6 +30,7 @@ import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItemFactory
 import com.hash.home.ui.featured.detail.vm.NewsDetailViewModel
 import com.hash.common.ui.toolbar.HashToolbar.TitleGravity
 import com.hash.router.RouterActivityPath
+import com.hash.video.player.HashVideo
 import java.util.Locale
 
 @Route(path = RouterActivityPath.Home.NEWS_DETAIL)
@@ -40,18 +39,13 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private val viewModel by viewModels<NewsDetailViewModel>()
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
-    private val detailAdapter by lazy {
-        NewsDetailAdapter().apply {
-            setOnItemClickListener { adapter, _, position ->
-                (adapter.getItem(position) as? NewsDetailPageItem.Video)?.let { openVideo(it.videoUrl) }
-            }
-        }
-    }
+    private val detailAdapter by lazy(::NewsDetailAdapter)
     private var narrationText = ""
     private var textToSpeech: TextToSpeech? = null
     private var isTextToSpeechReady = false
     private var isReading = false
     private var isSourceVisible = false
+    private var hasVideoContent = false
     private lateinit var listenAction: AppCompatTextView
 
     override val loadingStateOwner: LoadingStateOwner
@@ -112,6 +106,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
                 postTime = intent.getStringExtra(EXTRA_POST_TIME).orEmpty(),
                 detailItems = detail.items,
             )
+        hasVideoContent = pageItems.any { it is NewsDetailPageItem.Video }
         narrationText = pageItems
             .filterIsInstance<NewsDetailPageItem.Text>()
             .joinToString("\n") { NewsDetailContentFormatter.toPlainText(it.content) }
@@ -214,17 +209,10 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         )
     }
 
-    private fun openVideo(videoUrl: String) {
-        val uri = Uri.parse(videoUrl)
-        val intent = Intent(Intent.ACTION_VIEW, uri).setDataAndType(uri, "video/*")
-        try {
-            startActivity(Intent.createChooser(intent, getString(R.string.news_detail_play_video)))
-        } catch (_: ActivityNotFoundException) {
-            getString(R.string.news_detail_video_unavailable).showToast()
-        }
-    }
-
     override fun onDestroy() {
+        if (isFinishing && hasVideoContent) {
+            HashVideo.controller(this).removeCurrentMedia()
+        }
         releaseTextToSpeech()
         super.onDestroy()
     }

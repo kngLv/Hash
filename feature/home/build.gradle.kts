@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:router"))
     implementation(project(":core:net"))
+    implementation(project(":core:video"))
     testImplementation(libs.junit)
     kapt(libs.arouter.compiler)
 }

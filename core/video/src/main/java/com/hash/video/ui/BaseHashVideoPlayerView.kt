@@ -81,8 +81,11 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 暂停当前视频；界面状态以真实播放器回调为准。 */
     fun pause() = controller.pause()
 
-    /** 停止当前视频的播放与加载，适用于退出详情页等不再需要保留媒体会话的场景。 */
+    /** 停止当前视频的播放与加载，但保留播放列表，后续仍可重新准备并播放。 */
     fun stop() = controller.stop()
+
+    /** 停止并移除当前视频，使其不能再由系统媒体控制恢复。 */
+    fun removeCurrentMedia() = controller.removeCurrentMedia()
 
     /**
      * 请求当前 View 接管视频画面。

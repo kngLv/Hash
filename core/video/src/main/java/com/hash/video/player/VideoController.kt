@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
@@ -137,6 +138,27 @@ class VideoController internal constructor(private val context: Context) {
             // 后续新的播放请求优先，不能让较早的异步 stop 误停新媒体。
             if (requestId == latestRequestId) {
                 player.stop()
+            }
+        }
+    }
+
+    /**
+     * 停止并从播放列表移除当前媒体，但保留其他待播放的媒体和全局播放器实例。
+     *
+     * 适用于退出详情页等当前视频不应再由系统媒体控制恢复的场景。与 [stop] 不同，此操作会使
+     * 当前媒体不再存在于播放列表中；若列表中还有其他媒体，它们不会被清空。
+     */
+    fun removeCurrentMedia() {
+        val requestId = ++latestRequestId
+        _playbackState.value = _playbackState.value.resetAfterCurrentMediaRemoved()
+        withPlayer { player ->
+            // 后续新的播放请求优先，不能让较早的异步移除误操作新媒体。
+            if (requestId != latestRequestId) return@withPlayer
+
+            val currentIndex = player.currentMediaItemIndex
+            player.stop()
+            if (currentIndex != C.INDEX_UNSET && currentIndex < player.mediaItemCount) {
+                player.removeMediaItem(currentIndex)
             }
         }
     }

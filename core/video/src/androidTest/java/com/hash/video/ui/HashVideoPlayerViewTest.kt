@@ -71,4 +71,16 @@ class EmbeddedVideoPlayerViewTest {
 
         assertTrue(invoked.get())
     }
+
+    @Test
+    fun 未配置展示迁移回调时隐藏对应操作() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        instrumentation.runOnMainSync {
+            val view = EmbeddedVideoPlayerView(context)
+
+            assertEquals(View.GONE, view.findViewWithTag<View>("video_fullscreen_action").visibility)
+            assertEquals(View.GONE, view.findViewWithTag<View>("video_float_action").visibility)
+        }
+    }
 }
