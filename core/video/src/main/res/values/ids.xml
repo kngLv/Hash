@@ -1,0 +1,4 @@
+<resources>
+    <item name="video_loading" type="id" />
+    <item name="video_play_action" type="id" />
+</resources>
