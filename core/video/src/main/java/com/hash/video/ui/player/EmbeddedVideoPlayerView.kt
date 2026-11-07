@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
 
 /** 详情页等普通页面使用的嵌入式播放器，承载播放、Loading、全屏和悬浮操作 UI。 */
 @OptIn(UnstableApi::class)
-class EmbeddedVideoPlayerView @JvmOverloads constructor(
+open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -73,7 +73,9 @@ class EmbeddedVideoPlayerView @JvmOverloads constructor(
         )
         centerPlayAction.setOnClickListener { play() }
         controls.onPlaybackToggle = ::togglePlayback
-        controls.onSeekTo = ::seekTo
+        controls.onSeekRequested = { positionMs ->
+            handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
+        }
     }
 
     override fun onPlaybackStateChanged(state: VideoPlaybackState) {
@@ -86,7 +88,7 @@ class EmbeddedVideoPlayerView @JvmOverloads constructor(
         centerPlayAction.contentDescription = context.getString(
             if (status.isPlaying) R.string.video_pause else R.string.video_play,
         )
-        controls.render(state)
+        controls.render(state, hasMedia = media != null)
         renderContentSize(state.contentSize)
     }
 
@@ -107,16 +109,35 @@ class EmbeddedVideoPlayerView @JvmOverloads constructor(
 
     override fun onVideoGesture(event: VideoGestureEvent) {
         when (event) {
-            VideoGestureEvent.ToggleControls -> controls.visibility =
+            VideoGestureEvent.Click -> controls.visibility =
                 if (controls.visibility == VISIBLE) GONE else VISIBLE
 
             is VideoGestureEvent.SeekPreview -> {
                 controls.visibility = VISIBLE
-                controls.renderSeekPreview(event.positionMs, event.durationMs)
+                controls.updateSeekPreview(event.positionMs, event.durationMs)
             }
+
+            is VideoGestureEvent.SeekPreviewEnd -> controls.endSeekPreview()
+
+            VideoGestureEvent.SeekPreviewCancel -> controls.cancelSeekPreview()
 
             else -> Unit
         }
+    }
+
+    /**
+     * 处理控制栏和画面手势发起的跳转。
+     *
+     * 详情页默认避免直接落到末尾；播放列表或短视频子类可重写以切换下一条或循环播放。
+     */
+    protected open override fun handleUserSeek(positionMs: Long, durationMs: Long) {
+        if (durationMs <= 0L) return
+        val targetPositionMs = if (durationMs > END_SEEK_GUARD_MS) {
+            positionMs.coerceAtMost(durationMs - END_SEEK_GUARD_MS)
+        } else {
+            positionMs
+        }
+        seekTo(targetPositionMs)
     }
 
     private fun renderContentSize(contentSize: VideoContentSize?) {
@@ -169,5 +190,6 @@ class EmbeddedVideoPlayerView @JvmOverloads constructor(
         const val CENTER_ACTION_SIZE_DP = 64
         const val CONTROL_HEIGHT_DP = 56
         const val ACTION_BACKGROUND_COLOR = 0x66000000
+        const val END_SEEK_GUARD_MS = 2_000L
     }
 }

@@ -8,7 +8,6 @@ import com.hash.video.api.VideoPlaybackState
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -16,48 +15,41 @@ import org.junit.runner.RunWith
 class BaseHashVideoPlayerViewTest {
 
     @Test
-    fun 子类拦截双击后不应进入默认处理后的通知() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        instrumentation.runOnMainSync {
-            val view = TestVideoPlayerView(instrumentation.targetContext).apply {
-                interceptedEvent = VideoGestureEvent.TogglePlayback
-            }
-
-            view.doubleTap()
-
-            assertEquals(listOf(VideoGestureEvent.TogglePlayback), view.interceptedEvents)
-            assertTrue(view.handledEvents.isEmpty())
-        }
-    }
-
-    @Test
-    fun 子类未拦截双击时应在默认处理后收到通知() {
+    fun 双击应通知子类更新界面() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val view = TestVideoPlayerView(instrumentation.targetContext)
 
             view.doubleTap()
 
-            assertEquals(listOf(VideoGestureEvent.TogglePlayback), view.interceptedEvents)
-            assertEquals(listOf(VideoGestureEvent.TogglePlayback), view.handledEvents)
+            assertEquals(listOf(VideoGestureEvent.DoubleClick), view.handledEvents)
         }
     }
 
     @Test
-    fun 标准点击应交给子类决定是否处理控制栏事件() {
+    fun 预览结束应由统一的用户跳转处理入口接收() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
-            val view = TestVideoPlayerView(instrumentation.targetContext).apply {
-                interceptedEvent = VideoGestureEvent.ToggleControls
-            }
+            val view = TestVideoPlayerView(instrumentation.targetContext)
+
+            view.dispatchUserSeek(positionMs = 4_500L, durationMs = 10_000L)
+
+            assertEquals(4_500L to 10_000L, view.userSeek)
+        }
+    }
+
+    @Test
+    fun 标准点击应通知子类处理控制栏事件() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val view = TestVideoPlayerView(instrumentation.targetContext)
             var clickCount = 0
             view.setOnClickListener { clickCount++ }
 
             view.performClick()
 
             assertEquals(1, clickCount)
-            assertEquals(listOf(VideoGestureEvent.ToggleControls), view.interceptedEvents)
-            assertTrue(view.handledEvents.isEmpty())
+            assertEquals(listOf(VideoGestureEvent.Click), view.handledEvents)
         }
     }
 
@@ -75,9 +67,8 @@ class BaseHashVideoPlayerViewTest {
     }
 
     private class TestVideoPlayerView(context: Context) : BaseHashVideoPlayerView(context) {
-        val interceptedEvents = mutableListOf<VideoGestureEvent>()
         val handledEvents = mutableListOf<VideoGestureEvent>()
-        var interceptedEvent: VideoGestureEvent? = null
+        var userSeek: Pair<Long, Long>? = null
 
         override val gestureConfig = VideoGestureConfig(
             singleTapEnabled = true,
@@ -86,13 +77,16 @@ class BaseHashVideoPlayerViewTest {
 
         override fun onPlaybackStateChanged(state: VideoPlaybackState) = Unit
 
-        override fun onInterceptVideoGesture(event: VideoGestureEvent): Boolean {
-            interceptedEvents += event
-            return event == interceptedEvent
-        }
-
         override fun onVideoGesture(event: VideoGestureEvent) {
             handledEvents += event
+        }
+
+        override fun handleUserSeek(positionMs: Long, durationMs: Long) {
+            userSeek = positionMs to durationMs
+        }
+
+        fun dispatchUserSeek(positionMs: Long, durationMs: Long) {
+            handleUserSeek(positionMs, durationMs)
         }
     }
 }

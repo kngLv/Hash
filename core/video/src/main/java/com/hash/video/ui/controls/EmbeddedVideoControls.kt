@@ -6,17 +6,17 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
-import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.hash.video.R
+import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isFinished
-import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
+import com.hash.video.ui.progress.DefaultVideoProgressView
 import kotlin.math.roundToInt
 
 /**
@@ -28,28 +28,21 @@ import kotlin.math.roundToInt
 class EmbeddedVideoControls @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-) : LinearLayout(context, attrs), SeekBar.OnSeekBarChangeListener {
+) : LinearLayout(context, attrs) {
 
     private val playbackAction = createIconAction(R.drawable.ic_video_play).apply {
         id = R.id.video_play_toggle
     }
-    private val progressView = SeekBar(context).apply {
-        id = R.id.video_progress
-        max = PROGRESS_SCALE
-        visibility = GONE
-        setOnSeekBarChangeListener(this@EmbeddedVideoControls)
-    }
+    private val progressView = DefaultVideoProgressView(context)
     private val floatAction = createTextAction(R.string.video_float).apply {
         id = R.id.video_float_action
     }
     private val fullscreenAction = createTextAction(R.string.video_fullscreen).apply {
         id = R.id.video_fullscreen_action
     }
-    private var durationMs = 0L
-
     var onPlaybackToggle: (() -> Unit)? = null
-    var onSeekTo: ((Long) -> Unit)? = null
-    var onSeekPreview: ((Long) -> Unit)? = null
+    var onSeekRequested: ((Long) -> Unit)? = null
+    var onSeekPreviewChanged: ((Long) -> Unit)? = null
 
     var onFullscreenRequested: (() -> Unit)? = null
         set(value) {
@@ -79,52 +72,33 @@ class EmbeddedVideoControls @JvmOverloads constructor(
         addView(fullscreenAction, textActionLayoutParams())
 
         playbackAction.setOnClickListener { onPlaybackToggle?.invoke() }
+        progressView.onSeekRequested = { onSeekRequested?.invoke(it) }
+        progressView.onSeekPreviewChanged = { onSeekPreviewChanged?.invoke(it) }
         floatAction.setOnClickListener { onFloatRequested?.invoke() }
         fullscreenAction.setOnClickListener { onFullscreenRequested?.invoke() }
     }
 
-    /** 将真实播放状态渲染为按钮与播放/缓冲进度。 */
-    fun render(state: VideoPlaybackState) {
-        val hasMedia = state.media != null
+    fun render(state: VideoPlaybackState, hasMedia: Boolean = state.media != null) {
         val status = state.status
-        durationMs = state.progress.durationMs
-
-        playbackAction.visibility = if (hasMedia && !status.isLoading) VISIBLE else GONE
+        playbackAction.visibility = if (hasMedia) VISIBLE else GONE
         playbackAction.setImageResource(if (status.isPlaying) R.drawable.ic_video_pause else R.drawable.ic_video_play)
         playbackAction.contentDescription = context.getString(status.playbackActionDescription())
-
-        progressView.visibility = if (state.progress.isAvailable) VISIBLE else GONE
-        if (state.progress.isAvailable && !progressView.isPressed) {
-            progressView.progress = (state.progress.fraction * PROGRESS_SCALE).roundToInt()
-            progressView.secondaryProgress = (state.progress.bufferedFraction * PROGRESS_SCALE).roundToInt()
-        }
+        updateSeek(state.progress)
     }
 
-    /** 横向画面手势拖动时临时展示目标位置，等待真实播放器状态追上。 */
-    fun renderSeekPreview(positionMs: Long, durationMs: Long) {
-        if (durationMs <= 0L) return
-        this.durationMs = durationMs
-        progressView.visibility = VISIBLE
-        progressView.progress = ((positionMs.toFloat() / durationMs) * PROGRESS_SCALE)
-            .roundToInt()
-            .coerceIn(0, PROGRESS_SCALE)
-    }
+    /** 将真实播放状态渲染为按钮与播放/缓冲进度。 */
+    fun updateSeek(progress: VideoPlaybackProgress) =
+        progressView.updateSeek(progress)
 
-    override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-        if (fromUser && durationMs > 0L) {
-            onSeekPreview?.invoke(progress.toPositionMs())
-        }
-    }
+    /** 更新滑动预览 */
+    fun updateSeekPreview(positionMs: Long, durationMs: Long) =
+        progressView.updateSeekPreview(positionMs, durationMs)
 
-    override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+    /** 结束滑动预览 */
+    fun endSeekPreview() = progressView.endSeekPreview()
 
-    override fun onStopTrackingTouch(seekBar: SeekBar) {
-        if (durationMs > 0L) {
-            onSeekTo?.invoke(seekBar.progress.toPositionMs())
-        }
-    }
-
-    private fun Int.toPositionMs(): Long = (toLong() * durationMs / PROGRESS_SCALE)
+    /** 取消滑动预览。 */
+    fun cancelSeekPreview() = progressView.cancelSeekPreview()
 
     private fun VideoPlaybackStatus.playbackActionDescription(): Int = when {
         isPlaying -> R.string.video_pause
@@ -155,16 +129,18 @@ class EmbeddedVideoControls @JvmOverloads constructor(
         isFocusable = true
     }
 
-    private fun actionLayoutParams() = LayoutParams(context.dp(ACTION_SIZE_DP), context.dp(ACTION_SIZE_DP))
+    private fun actionLayoutParams() =
+        LayoutParams(context.dp(ACTION_SIZE_DP), context.dp(ACTION_SIZE_DP))
 
-    private fun textActionLayoutParams() = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
+    private fun textActionLayoutParams() =
+        LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
 
-    private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
+    private fun Context.dp(value: Int): Int =
+        (value * resources.displayMetrics.density).roundToInt()
 
     companion object {
         private const val CONTROL_HEIGHT_DP = 56
         private const val ACTION_SIZE_DP = 40
-        private const val PROGRESS_SCALE = 1_000
         private const val CONTROL_BACKGROUND_COLOR = 0x55000000
         private const val ACTION_BACKGROUND_COLOR = 0x33000000
     }

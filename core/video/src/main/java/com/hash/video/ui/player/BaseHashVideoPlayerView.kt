@@ -19,6 +19,7 @@ import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.player.HashVideo
 import com.hash.video.ui.gesture.VideoGestureConfig
+import com.hash.video.ui.gesture.VideoGestureDirection
 import com.hash.video.ui.gesture.VideoGestureEvent
 import com.hash.video.ui.gesture.VideoTouchHandler
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         useController = false
         setShutterBackgroundColor(Color.BLACK)
     }
+
     /** 当前 View 要展示的媒体；设置媒体不会自动播放。 */
     protected var media: VideoMedia? = null
         private set
@@ -91,13 +93,29 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     @SuppressLint("ClickableViewAccessibility")
     private fun bindVideoTouchHandler() {
         playerView.setOnTouchListener { _, event ->
-            touchHandler.handle(
+            val direction = touchHandler.handle(
                 event = event.toVideoTouchEvent(),
                 config = gestureConfig,
                 progress = currentPlaybackState.progress,
             )
+            coordinateParentTouchInterception(event.actionMasked, direction)
             true
         }
+    }
+
+    /**
+     * 播放器嵌在可纵向滚动的列表中：按下时先保留事件，方向明确后才把纵向滑动交回父列表。
+     * 横向拖动因此不会因轻微上下偏移被 `RecyclerView` 提前拦截并触发取消。
+     */
+    private fun coordinateParentTouchInterception(action: Int, direction: VideoGestureDirection) {
+        val shouldDisallowIntercept = when (action) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_MOVE,
+                -> direction != VideoGestureDirection.VERTICAL
+
+            else -> false
+        }
+        parent?.requestDisallowInterceptTouchEvent(shouldDisallowIntercept)
     }
 
     /** 绑定当前 View 要展示的视频，不会自动开始播放。 */
@@ -160,22 +178,8 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 子类只负责把已筛选的当前媒体播放状态渲染为自己的 UI。 */
     protected abstract fun onPlaybackStateChanged(state: VideoPlaybackState)
 
-    /**
-     * 子类优先处理手势；返回 `true` 时，基类不会再执行默认的播放、暂停或跳转操作。
-     *
-     * 单击仍会先保留标准 [performClick] 调用，以保证普通点击和无障碍语义一致。
-     */
-    protected open fun onInterceptVideoGesture(event: VideoGestureEvent): Boolean = false
-
     /** 基类默认手势处理完成后通知子类，用于更新控件、动画等附加 UI。 */
     protected open fun onVideoGesture(event: VideoGestureEvent) = Unit
-
-    /** 普通单击通过标准点击语义分发控制栏显隐，同时保留无障碍点击事件。 */
-    override fun performClick(): Boolean {
-        super.performClick()
-        dispatchVideoGesture(VideoGestureEvent.ToggleControls)
-        return true
-    }
 
     /** 供同模块界面测试直接验证状态到 UI 的映射。 */
     internal fun renderPlaybackState(state: VideoPlaybackState) {
@@ -195,31 +199,48 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         }
     }
 
-    /** 单击统一走 [performClick]；其余手势交由子类拦截或采用基类默认行为。 */
+
+    /** 单击统一走 [performClick]；其余手势先通知子类更新 UI，再执行基类的默认播放命令。 */
     private fun handleVideoGesture(event: VideoGestureEvent) {
-        if (event == VideoGestureEvent.ToggleControls) {
+        if (event == VideoGestureEvent.Click) {
             performClick()
             return
         }
         dispatchVideoGesture(event)
     }
 
-    /** 按“子类拦截 → 基类默认命令 → 子类 UI 通知”的顺序处理手势。 */
+    /** 普通单击通过标准点击语义分发控制栏显隐，同时保留无障碍点击事件。 */
+    override fun performClick(): Boolean {
+        super.performClick()
+        dispatchVideoGesture(VideoGestureEvent.Click)
+        return true
+    }
+
+    /** UI 通知与默认播放命令分离：子类处理展示，基类统一处理播放意图。 */
     private fun dispatchVideoGesture(event: VideoGestureEvent) {
-        if (onInterceptVideoGesture(event)) return
+        onVideoGesture(event)
 
         when (event) {
-            VideoGestureEvent.TogglePlayback -> {
+            VideoGestureEvent.DoubleClick -> {
                 if (currentPlaybackState.status.isPlaying) pause() else play()
             }
 
-            is VideoGestureEvent.SeekCommitted -> {
-                seekTo(event.positionMs)
+            is VideoGestureEvent.SeekPreviewEnd -> {
+                handleUserSeek(event.positionMs, currentPlaybackState.progress.durationMs)
             }
 
             else -> Unit
         }
-        onVideoGesture(event)
+    }
+
+    /**
+     * 处理用户正常结束进度预览后的跳转请求。
+     *
+     * 默认直接跳转；内嵌、列表等场景可重写以保护结尾位置、切换下一条或循环播放。UI 层的预览结束
+     * 通知仍由 [onVideoGesture] 统一接收，因此子类无需拦截完整手势事件。
+     */
+    protected open fun handleUserSeek(positionMs: Long, durationMs: Long) {
+        seekTo(positionMs)
     }
 
     private fun MotionEvent.toVideoTouchEvent() = VideoTouchHandler.TouchEvent(

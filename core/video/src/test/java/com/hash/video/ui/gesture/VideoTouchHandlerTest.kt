@@ -30,7 +30,7 @@ class VideoTouchHandlerTest {
         handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 120L), config, progress)
 
         assertTrue(scheduledActions.isEmpty())
-        assertEquals(listOf(VideoGestureEvent.TogglePlayback), events)
+        assertEquals(listOf(VideoGestureEvent.DoubleClick), events)
     }
 
     @Test
@@ -47,7 +47,24 @@ class VideoTouchHandlerTest {
         handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, VideoPlaybackProgress())
         handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, VideoPlaybackProgress())
 
-        assertEquals(listOf(VideoGestureEvent.ToggleControls), events)
+        assertEquals(listOf(VideoGestureEvent.Click), events)
+    }
+
+    @Test
+    fun `启用双击时单击应在两百毫秒后确认`() {
+        var delayMs = -1L
+        val handler = VideoTouchHandler(
+            touchSlopPx = 8f,
+            postDelayed = { _, delay -> delayMs = delay },
+            removeCallbacks = {},
+            onGesture = {},
+        )
+        val config = VideoGestureConfig(singleTapEnabled = true, doubleTapEnabled = true)
+
+        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, VideoPlaybackProgress())
+        handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, VideoPlaybackProgress())
+
+        assertEquals(200L, delayMs)
     }
 
     @Test
@@ -70,17 +87,57 @@ class VideoTouchHandlerTest {
         )
         handler.handle(touchEvent(VideoTouchHandler.Action.CANCEL, eventTimeMs = 30L), config, progress)
 
-        assertEquals(VideoGestureEvent.SeekCancelled, events.last())
+        assertEquals(VideoGestureEvent.SeekPreviewCancel, events.last())
     }
+
+    @Test
+    fun `横向拖动应输出横向仲裁方向`() {
+        val handler = newHandler()
+        val config = VideoGestureConfig(seekEnabled = true)
+
+        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress())
+        val direction = handler.handle(
+            touchEvent(VideoTouchHandler.Action.MOVE, eventTimeMs = 20L, x = 180f),
+            config,
+            progress(),
+        )
+
+        assertEquals(VideoGestureDirection.HORIZONTAL, direction)
+    }
+
+    @Test
+    fun `纵向拖动应输出纵向仲裁方向`() {
+        val handler = newHandler()
+        val config = VideoGestureConfig(seekEnabled = true)
+
+        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress())
+        val direction = handler.handle(
+            touchEvent(VideoTouchHandler.Action.MOVE, eventTimeMs = 20L, y = 180f),
+            config,
+            progress(),
+        )
+
+        assertEquals(VideoGestureDirection.VERTICAL, direction)
+    }
+
+    private fun newHandler() = VideoTouchHandler(
+        touchSlopPx = 8f,
+        postDelayed = { _, _ -> Unit },
+        removeCallbacks = {},
+        onGesture = {},
+    )
+
+    private fun progress() = VideoPlaybackProgress(positionMs = 0L, durationMs = 1_000L)
 
     private fun touchEvent(
         action: VideoTouchHandler.Action,
         eventTimeMs: Long,
         x: Float = 100f,
+        y: Float = 100f,
     ) = VideoTouchHandler.TouchEvent(
         action = action,
         x = x,
-        y = 100f,
+        y = y,
         pointerCount = 1,
         eventTimeMs = eventTimeMs,
         viewWidth = 300,

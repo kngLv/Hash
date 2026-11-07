@@ -37,6 +37,23 @@ internal fun VideoPlaybackState.resolvePlayAction(media: VideoMedia): VideoPlayA
 }
 
 /**
+ * 为替换媒体或重播创建准备状态。
+ *
+ * 重播仍使用同一条媒体流，已解析的视频尺寸有效，不能清空；只有替换媒体时才丢弃上一条的尺寸，
+ * 避免旧比例影响新视频的布局。
+ */
+internal fun VideoPlaybackState.prepareForPlay(
+    media: VideoMedia,
+    action: VideoPlayAction,
+): VideoPlaybackState = copy(
+    media = media,
+    status = VideoPlaybackStatus.PREPARING,
+    progress = VideoPlaybackProgress(),
+    contentSize = if (action == VideoPlayAction.REPLACE) null else contentSize,
+    errorMessage = null,
+)
+
+/**
  * 清除已停止或已移除媒体的会话状态。
  *
  * `Player.stop()` 会保留播放列表，因此 UI 状态必须同步清空当前媒体；否则下一次播放同一视频时会

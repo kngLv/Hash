@@ -56,6 +56,21 @@ class VideoPlayActionTest {
     }
 
     @Test
+    fun `同一结束视频重播时应保留已解析的视频尺寸`() {
+        val contentSize = VideoContentSize(width = 1_080, height = 1_920)
+        val state = VideoPlaybackState(
+            media = media,
+            status = VideoPlaybackStatus.ENDED,
+            contentSize = contentSize,
+        )
+
+        val preparingState = state.prepareForPlay(media, VideoPlayAction.REPLAY)
+
+        assertEquals(contentSize, preparingState.contentSize)
+        assertEquals(VideoPlaybackStatus.PREPARING, preparingState.status)
+    }
+
+    @Test
     fun `不同视频应替换当前媒体`() {
         val state = VideoPlaybackState(media = media, status = VideoPlaybackStatus.PLAYING)
         val nextMedia = VideoMedia("video-2", "https://example.com/2.mp4")

@@ -134,13 +134,7 @@ class VideoController internal constructor(private val context: Context) {
         // 快照只属于本次 play；后续操作递增 latestRequestId 后，本次异步回调将自动失效。
         val requestId = ++latestRequestId
         if (action == VideoPlayAction.REPLACE || action == VideoPlayAction.REPLAY) {
-            _playbackState.value = _playbackState.value.copy(
-                media = media,
-                status = VideoPlaybackStatus.PREPARING,
-                progress = VideoPlaybackProgress(),
-                contentSize = null,
-                errorMessage = null,
-            )
+            _playbackState.value = _playbackState.value.prepareForPlay(media, action)
         }
 
         withPlayer { player ->
@@ -186,10 +180,10 @@ class VideoController internal constructor(private val context: Context) {
         val currentMedia = state.media ?: return
         if (durationMs <= 0L) return
 
-        val targetPositionMs = positionMs.coerceIn(0L, durationMs)
+        val seekPositionMs = positionMs.coerceIn(0L, durationMs)
         withPlayer { player ->
             if (_playbackState.value.media?.id == currentMedia.id) {
-                player.seekTo(targetPositionMs)
+                player.seekTo(seekPositionMs)
             }
         }
     }

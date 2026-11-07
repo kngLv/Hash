@@ -15,7 +15,7 @@ class VideoGestureDetectorTest {
         assertNull(detector.onUp(x = 100f, y = 100f, eventTimeMs = 20L, config = config))
         detector.onDown(x = 100f, y = 100f, viewWidth = 300, viewHeight = 200, currentPositionMs = 0L, durationMs = 1_000L)
 
-        assertEquals(VideoGestureEvent.TogglePlayback, detector.onUp(100f, 100f, 120L, config))
+        assertEquals(VideoGestureEvent.DoubleClick, detector.onUp(100f, 100f, 120L, config))
     }
 
     @Test
@@ -24,10 +24,10 @@ class VideoGestureDetectorTest {
         val config = VideoGestureConfig(singleTapEnabled = true, doubleTapEnabled = true)
 
         detector.onDown(x = 20f, y = 100f, viewWidth = 300, viewHeight = 200, currentPositionMs = 0L, durationMs = 1_000L)
-        assertEquals(VideoGestureEvent.ToggleControls, detector.onUp(20f, 100f, 20L, config))
+        assertEquals(VideoGestureEvent.Click, detector.onUp(20f, 100f, 20L, config))
         detector.onDown(x = 280f, y = 100f, viewWidth = 300, viewHeight = 200, currentPositionMs = 0L, durationMs = 1_000L)
 
-        assertEquals(VideoGestureEvent.ToggleControls, detector.onUp(280f, 100f, 120L, config))
+        assertEquals(VideoGestureEvent.Click, detector.onUp(280f, 100f, 120L, config))
     }
 
     @Test
@@ -37,7 +37,7 @@ class VideoGestureDetectorTest {
         detector.onDown(x = 100f, y = 100f, viewWidth = 400, viewHeight = 200, currentPositionMs = 2_000L, durationMs = 10_000L)
 
         assertEquals(VideoGestureEvent.SeekPreview(4_500L, 10_000L), detector.onMove(200f, 105f, 1, config))
-        assertEquals(VideoGestureEvent.SeekCommitted(4_500L), detector.onUp(200f, 105f, 100L, config))
+        assertEquals(VideoGestureEvent.SeekPreviewEnd(4_500L), detector.onUp(200f, 105f, 100L, config))
     }
 
     @Test
@@ -78,7 +78,7 @@ class VideoGestureDetectorTest {
         detector.onDown(x = 100f, y = 100f, viewWidth = 400, viewHeight = 200, currentPositionMs = 0L, durationMs = 10_000L)
         detector.onMove(200f, 100f, 1, config)
 
-        assertEquals(VideoGestureEvent.SeekCancelled, detector.cancel(config))
+        assertEquals(VideoGestureEvent.SeekPreviewCancel, detector.cancel(config))
     }
 
     @Test

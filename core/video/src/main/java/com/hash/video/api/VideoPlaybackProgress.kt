@@ -1,5 +1,7 @@
 package com.hash.video.api
 
+import kotlin.math.abs
+
 /** 当前媒体的播放与缓冲进度，单位均为毫秒。 */
 data class VideoPlaybackProgress(
     val positionMs: Long = 0L,
@@ -17,6 +19,10 @@ data class VideoPlaybackProgress(
     /** 已缓冲比例，始终限制在 0 到 1。 */
     val bufferedFraction: Float
         get() = bufferedPositionMs.toFraction()
+
+    /** 是否已进入指定位置附近的允许误差范围。 */
+    fun isNear(positionMs: Long, toleranceMs: Long): Boolean =
+        toleranceMs >= 0L && abs(this.positionMs - positionMs) <= toleranceMs
 
     private fun Long.toFraction(): Float = if (isAvailable) {
         (toFloat() / durationMs).coerceIn(0f, 1f)

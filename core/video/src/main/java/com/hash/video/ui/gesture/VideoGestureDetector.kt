@@ -18,7 +18,7 @@ internal class VideoGestureDetector(
     private var viewHeight = 0
     private var initialPositionMs = 0L
     private var durationMs = 0L
-    private var direction = Direction.NONE
+    private var direction = VideoGestureDirection.NONE
     private var cancelled = false
     private var lastTapTimeMs: Long? = null
     private var lastTapX = 0f
@@ -43,7 +43,7 @@ internal class VideoGestureDetector(
         this.viewHeight = viewHeight
         initialPositionMs = currentPositionMs
         this.durationMs = durationMs
-        direction = Direction.NONE
+        direction = VideoGestureDirection.NONE
         cancelled = false
     }
 
@@ -64,12 +64,12 @@ internal class VideoGestureDetector(
         latestY = y
         lockDirectionIfNeeded(x, y)
         return when (direction) {
-            Direction.HORIZONTAL -> if (config.seekEnabled && durationMs > 0L) {
+            VideoGestureDirection.HORIZONTAL -> if (config.seekEnabled && durationMs > 0L) {
                 VideoGestureEvent.SeekPreview(targetPositionMs(x), durationMs)
             } else null
 
-            Direction.VERTICAL -> verticalGesture(x, y, config, VideoGesturePhase.UPDATE)
-            Direction.NONE -> null
+            VideoGestureDirection.VERTICAL -> verticalGesture(x, y, config, VideoGesturePhase.UPDATE)
+            VideoGestureDirection.NONE -> null
         }
     }
 
@@ -83,14 +83,14 @@ internal class VideoGestureDetector(
         if (cancelled) return null
 
         lockDirectionIfNeeded(x, y)
-        if (direction == Direction.HORIZONTAL) {
+        if (direction == VideoGestureDirection.HORIZONTAL) {
             return if (config.seekEnabled && durationMs > 0L) {
-                VideoGestureEvent.SeekCommitted(targetPositionMs(x))
+                VideoGestureEvent.SeekPreviewEnd(targetPositionMs(x))
             } else {
                 null
             }
         }
-        if (direction == Direction.VERTICAL) {
+        if (direction == VideoGestureDirection.VERTICAL) {
             return verticalGesture(x, y, config, VideoGesturePhase.END)
         }
 
@@ -108,37 +108,44 @@ internal class VideoGestureDetector(
             isWithinDoubleTapArea
         ) {
             lastTapTimeMs = null
-            return VideoGestureEvent.TogglePlayback
+            return VideoGestureEvent.DoubleClick
         }
-        return VideoGestureEvent.ToggleControls.takeIf { config.singleTapEnabled }
+        return VideoGestureEvent.Click.takeIf { config.singleTapEnabled }
     }
 
     /** 取消当前手势，并返回界面需要收尾的取消事件。 */
     fun cancel(config: VideoGestureConfig): VideoGestureEvent? {
         val cancelEvent = when (direction) {
-            Direction.HORIZONTAL -> VideoGestureEvent.SeekCancelled.takeIf { config.seekEnabled }
-            Direction.VERTICAL -> verticalGesture(
+            VideoGestureDirection.HORIZONTAL -> VideoGestureEvent.SeekPreviewCancel.takeIf { config.seekEnabled }
+            VideoGestureDirection.VERTICAL -> verticalGesture(
                 latestX,
                 latestY,
                 config,
                 VideoGesturePhase.CANCEL
             )
 
-            Direction.NONE -> null
+            VideoGestureDirection.NONE -> null
         }
         cancelled = true
-        direction = Direction.NONE
+        direction = VideoGestureDirection.NONE
         lastTapTimeMs = null
         return cancelEvent
     }
 
+    /** 当前已锁定的移动方向；尚未超过触摸阈值时为 [VideoGestureDirection.NONE]。 */
+    fun currentDirection(): VideoGestureDirection = direction
+
     /** 首次超过触摸阈值时锁定横向或纵向手势方向。 */
     private fun lockDirectionIfNeeded(x: Float, y: Float) {
-        if (direction != Direction.NONE) return
+        if (direction != VideoGestureDirection.NONE) return
         val deltaX = x - downX
         val deltaY = y - downY
         if (maxOf(abs(deltaX), abs(deltaY)) < touchSlopPx) return
-        direction = if (abs(deltaX) >= abs(deltaY)) Direction.HORIZONTAL else Direction.VERTICAL
+        direction = if (abs(deltaX) >= abs(deltaY)) {
+            VideoGestureDirection.HORIZONTAL
+        } else {
+            VideoGestureDirection.VERTICAL
+        }
     }
 
     /** 将横向滑动距离换算为限定范围内的目标播放进度。 */
@@ -164,11 +171,16 @@ internal class VideoGestureDetector(
         }
     }
 
-    private enum class Direction { NONE, HORIZONTAL, VERTICAL }
-
     companion object {
         /** 第一次点击在此时间内等到第二击时，两个点击会被识别为一次双击。 */
-        const val DOUBLE_TAP_TIMEOUT_MS = 300L
+        const val DOUBLE_TAP_TIMEOUT_MS = 200L
         private const val DEFAULT_DOUBLE_TAP_SLOP_MULTIPLIER = 4f
     }
+}
+
+/** 已超过触摸阈值时的手势方向，供 View 与可滚动父容器协商事件归属。 */
+internal enum class VideoGestureDirection {
+    NONE,
+    HORIZONTAL,
+    VERTICAL,
 }

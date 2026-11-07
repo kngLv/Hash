@@ -24,14 +24,14 @@ internal class VideoTouchHandler(
 ) {
     private val gestureDetector = VideoGestureDetector(touchSlopPx, doubleTapSlopPx)
     private val pendingSingleTap = Runnable {
-        onGesture(VideoGestureEvent.ToggleControls)
+        onGesture(VideoGestureEvent.Click)
     }
 
     fun handle(
         event: TouchEvent,
         config: VideoGestureConfig,
         progress: VideoPlaybackProgress,
-    ) {
+    ): VideoGestureDirection {
         when (event.action) {
             Action.DOWN -> gestureDetector.onDown(
                 x = event.x,
@@ -54,6 +54,7 @@ internal class VideoTouchHandler(
 
             Action.CANCEL, Action.POINTER_DOWN -> cancel(config)
         }
+        return gestureDetector.currentDirection()
     }
 
     /** 取消当前手势及尚未确认的单击，供多指触摸和 View 生命周期结束时调用。 */
@@ -65,9 +66,9 @@ internal class VideoTouchHandler(
     private fun dispatch(event: VideoGestureEvent?, config: VideoGestureConfig) {
         when (event) {
             null -> Unit
-            VideoGestureEvent.ToggleControls -> dispatchSingleTap(config)
+            VideoGestureEvent.Click -> dispatchSingleTap(config)
 
-            VideoGestureEvent.TogglePlayback -> {
+            VideoGestureEvent.DoubleClick -> {
                 //取消之前的单击，直接回调双击事件
                 cancelPendingSingleTap()
                 onGesture(event)
@@ -81,7 +82,7 @@ internal class VideoTouchHandler(
     private fun dispatchSingleTap(config: VideoGestureConfig) {
         //没有启用双击，直接回调单击事件
         if (!config.doubleTapEnabled) {
-            onGesture(VideoGestureEvent.ToggleControls)
+            onGesture(VideoGestureEvent.Click)
             return
         }
         //取消尚未确认的单击，延时执行单击，后续收到双击时会取消该单击

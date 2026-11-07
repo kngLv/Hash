@@ -67,7 +67,9 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
         addView(controls, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
 
         controls.onPlaybackToggle = ::togglePlayback
-        controls.onSeekTo = ::seekTo
+        controls.onSeekRequested = { positionMs ->
+            handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -86,17 +88,17 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
 
     override fun onVideoGesture(event: VideoGestureEvent) {
         when (event) {
-            VideoGestureEvent.ToggleControls -> controls.visibility =
+            VideoGestureEvent.Click -> controls.visibility =
                 if (controls.visibility == VISIBLE) GONE else VISIBLE
 
             is VideoGestureEvent.SeekPreview -> {
                 controls.visibility = VISIBLE
-                controls.renderSeekPreview(event.positionMs, event.durationMs)
+                controls.updateSeekPreview(event.positionMs, event.durationMs)
             }
 
-            is VideoGestureEvent.SeekCommitted,
-            VideoGestureEvent.SeekCancelled,
-                -> controls.finishSeekPreview()
+            is VideoGestureEvent.SeekPreviewEnd,
+            VideoGestureEvent.SeekPreviewCancel,
+                -> controls.endSeekPreview()
 
             is VideoGestureEvent.BrightnessAdjustment ->
                 onBrightnessGesture?.invoke(event.delta, event.phase)

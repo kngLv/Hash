@@ -50,11 +50,11 @@ class FullscreenVideoControls @JvmOverloads constructor(
         id = R.id.video_exit_fullscreen_action
     }
     private var durationMs = 0L
-    private var previewPositionMs: Long? = null
+    private var seekPreviewPositionMs: Long? = null
 
     var onPlaybackToggle: (() -> Unit)? = null
-    var onSeekTo: ((Long) -> Unit)? = null
-    var onSeekPreview: ((Long) -> Unit)? = null
+    var onSeekRequested: ((Long) -> Unit)? = null
+    var onSeekPreviewChanged: ((Long) -> Unit)? = null
     var onFloatRequested: (() -> Unit)? = null
         set(value) {
             field = value
@@ -103,37 +103,37 @@ class FullscreenVideoControls @JvmOverloads constructor(
 
         progressView.isEnabled = progress.isAvailable
         if (!progress.isAvailable) {
-            previewPositionMs = null
+            seekPreviewPositionMs = null
             progressView.progress = 0
             progressView.secondaryProgress = 0
-        } else if (!progressView.isPressed && previewPositionMs == null) {
+        } else if (!progressView.isPressed && seekPreviewPositionMs == null) {
             progressView.progress = (progress.fraction * PROGRESS_SCALE).roundToInt()
             progressView.secondaryProgress = (progress.bufferedFraction * PROGRESS_SCALE).roundToInt()
         }
-        val displayedPosition = previewPositionMs ?: progress.positionMs
+        val displayedPosition = seekPreviewPositionMs ?: progress.positionMs
         timeView.text = formatTimeLine(displayedPosition, progress.durationMs)
     }
 
-    fun renderSeekPreview(positionMs: Long, durationMs: Long) {
+    fun updateSeekPreview(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
         this.durationMs = durationMs
-        previewPositionMs = positionMs.coerceIn(0L, durationMs)
-        progressView.progress = ((previewPositionMs!!.toFloat() / durationMs) * PROGRESS_SCALE)
+        seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
+        progressView.progress = ((seekPreviewPositionMs!!.toFloat() / durationMs) * PROGRESS_SCALE)
             .roundToInt()
             .coerceIn(0, PROGRESS_SCALE)
-        timeView.text = formatTimeLine(previewPositionMs!!, durationMs)
+        timeView.text = formatTimeLine(seekPreviewPositionMs!!, durationMs)
     }
 
-    fun finishSeekPreview() {
-        previewPositionMs = null
+    fun endSeekPreview() {
+        seekPreviewPositionMs = null
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
         if (fromUser && durationMs > 0L) {
             val positionMs = progress.toPositionMs()
-            previewPositionMs = positionMs
+            seekPreviewPositionMs = positionMs
             timeView.text = formatTimeLine(positionMs, durationMs)
-            onSeekPreview?.invoke(positionMs)
+            onSeekPreviewChanged?.invoke(positionMs)
         }
     }
 
@@ -142,9 +142,9 @@ class FullscreenVideoControls @JvmOverloads constructor(
     override fun onStopTrackingTouch(seekBar: SeekBar) {
         if (durationMs > 0L) {
             val positionMs = seekBar.progress.toPositionMs()
-            onSeekTo?.invoke(positionMs)
+            onSeekRequested?.invoke(positionMs)
         }
-        previewPositionMs = null
+        seekPreviewPositionMs = null
     }
 
     private fun createActionRow() = LinearLayout(context).apply {
