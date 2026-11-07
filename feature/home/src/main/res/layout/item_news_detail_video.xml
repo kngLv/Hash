@@ -2,7 +2,7 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     >
 
-    <com.hash.video.ui.EmbeddedVideoPlayerView
+    <com.hash.video.ui.player.EmbeddedVideoPlayerView
         android:id="@+id/video_player"
         android:layout_width="match_parent"
         android:layout_height="208dp"

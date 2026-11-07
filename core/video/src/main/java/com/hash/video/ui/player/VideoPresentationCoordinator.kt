@@ -1,4 +1,4 @@
-package com.hash.video.ui
+package com.hash.video.ui.player
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi

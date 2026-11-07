@@ -20,6 +20,7 @@ class HashVideoPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER)
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(
                 DefaultMediaSourceFactory(VideoCacheProvider.getDataSourceFactory(this)),

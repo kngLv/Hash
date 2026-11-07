@@ -1,7 +1,7 @@
 package com.hash.video.player
 
 import android.content.Context
-import com.hash.video.ui.VideoPresentationCoordinator
+import com.hash.video.ui.player.VideoPresentationCoordinator
 
 /** 视频模块的唯一入口，保证整个 App 复用同一个播放控制器。 */
 object HashVideo {
