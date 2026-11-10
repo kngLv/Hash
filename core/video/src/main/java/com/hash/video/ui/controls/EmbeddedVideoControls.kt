@@ -33,7 +33,7 @@ class EmbeddedVideoControls @JvmOverloads constructor(
     private val playbackAction = createIconAction(R.drawable.ic_video_play).apply {
         id = R.id.video_play_toggle
     }
-    private val progressView = DefaultVideoProgressView(context)
+    private val progressControl = DefaultVideoProgressView(context)
     private val floatAction = createTextAction(R.string.video_float).apply {
         id = R.id.video_float_action
     }
@@ -67,13 +67,13 @@ class EmbeddedVideoControls @JvmOverloads constructor(
         floatAction.visibility = GONE
         fullscreenAction.visibility = GONE
         addView(playbackAction, actionLayoutParams())
-        addView(progressView, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(progressControl, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(floatAction, textActionLayoutParams())
         addView(fullscreenAction, textActionLayoutParams())
 
         playbackAction.setOnClickListener { onPlaybackToggle?.invoke() }
-        progressView.onSeekRequested = { onSeekRequested?.invoke(it) }
-        progressView.onSeekPreviewChanged = { onSeekPreviewChanged?.invoke(it) }
+        progressControl.onSeekRequested = { onSeekRequested?.invoke(it) }
+        progressControl.onSeekPreviewChanged = { onSeekPreviewChanged?.invoke(it) }
         floatAction.setOnClickListener { onFloatRequested?.invoke() }
         fullscreenAction.setOnClickListener { onFullscreenRequested?.invoke() }
     }
@@ -83,22 +83,22 @@ class EmbeddedVideoControls @JvmOverloads constructor(
         playbackAction.visibility = if (hasMedia) VISIBLE else GONE
         playbackAction.setImageResource(if (status.isPlaying) R.drawable.ic_video_pause else R.drawable.ic_video_play)
         playbackAction.contentDescription = context.getString(status.playbackActionDescription())
-        updateSeek(state.progress)
+        renderProgress(state.progress)
     }
 
     /** 将真实播放状态渲染为按钮与播放/缓冲进度。 */
-    fun updateSeek(progress: VideoPlaybackProgress) =
-        progressView.updateSeek(progress)
+    fun renderProgress(progress: VideoPlaybackProgress) =
+        progressControl.renderProgress(progress)
 
     /** 更新滑动预览 */
-    fun updateSeekPreview(positionMs: Long, durationMs: Long) =
-        progressView.updateSeekPreview(positionMs, durationMs)
+    fun renderSeekPreview(positionMs: Long, durationMs: Long) =
+        progressControl.renderSeekPreview(positionMs, durationMs)
 
     /** 结束滑动预览 */
-    fun endSeekPreview() = progressView.endSeekPreview()
+    fun endSeekPreview() = progressControl.endSeekPreview()
 
     /** 取消滑动预览。 */
-    fun cancelSeekPreview() = progressView.cancelSeekPreview()
+    fun cancelSeekPreview() = progressControl.cancelSeekPreview()
 
     private fun VideoPlaybackStatus.playbackActionDescription(): Int = when {
         isPlaying -> R.string.video_pause

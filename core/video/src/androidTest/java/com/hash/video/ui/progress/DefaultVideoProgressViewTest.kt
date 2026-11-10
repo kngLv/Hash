@@ -20,7 +20,7 @@ class DefaultVideoProgressViewTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val view = DefaultVideoProgressView(context)
 
-            view.updateSeek(
+            view.renderProgress(
                 VideoPlaybackProgress(
                     positionMs = 2_500L,
                     bufferedPositionMs = 7_500L,
@@ -45,9 +45,9 @@ class DefaultVideoProgressViewTest {
                 durationMs = 10_000L,
             )
 
-            view.updateSeek(oldProgress)
-            view.updateSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
-            view.updateSeek(oldProgress)
+            view.renderProgress(oldProgress)
+            view.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            view.renderProgress(oldProgress)
 
             assertEquals(800, view.findViewById<SeekBar>(R.id.video_progress).progress)
             assertEquals("00:08 / 00:10", view.findViewById<TextView>(R.id.video_time).text.toString())
@@ -65,11 +65,11 @@ class DefaultVideoProgressViewTest {
                 durationMs = 10_000L,
             )
 
-            view.updateSeek(oldProgress)
-            view.updateSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            view.renderProgress(oldProgress)
+            view.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
             view.endSeekPreview()
-            view.updateSeek(oldProgress.copy(positionMs = 8_000L))
-            view.updateSeek(oldProgress.copy(positionMs = 8_500L))
+            view.renderProgress(oldProgress.copy(positionMs = 8_000L))
+            view.renderProgress(oldProgress.copy(positionMs = 8_500L))
 
             assertEquals(850, view.findViewById<SeekBar>(R.id.video_progress).progress)
             assertEquals("00:08 / 00:10", view.findViewById<TextView>(R.id.video_time).text.toString())
@@ -87,11 +87,11 @@ class DefaultVideoProgressViewTest {
                 durationMs = 10_000L,
             )
 
-            view.updateSeek(oldProgress)
-            view.updateSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            view.renderProgress(oldProgress)
+            view.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
             view.endSeekPreview()
-            view.updateSeek(oldProgress.copy(positionMs = 8_300L))
-            view.updateSeek(oldProgress.copy(positionMs = 8_500L))
+            view.renderProgress(oldProgress.copy(positionMs = 8_300L))
+            view.renderProgress(oldProgress.copy(positionMs = 8_500L))
 
             assertEquals(850, view.findViewById<SeekBar>(R.id.video_progress).progress)
         }
@@ -102,14 +102,14 @@ class DefaultVideoProgressViewTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val view = DefaultVideoProgressView(context)
-            view.updateSeek(
+            view.renderProgress(
                 VideoPlaybackProgress(
                     positionMs = 2_500L,
                     bufferedPositionMs = 7_500L,
                     durationMs = 10_000L,
                 ),
             )
-            view.updateSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            view.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
 
             view.cancelSeekPreview()
 
@@ -126,7 +126,7 @@ class DefaultVideoProgressViewTest {
             val view = DefaultVideoProgressView(context).apply {
                 onSeekRequested = positionMs::set
             }
-            view.updateSeek(VideoPlaybackProgress(durationMs = 10_000L))
+            view.renderProgress(VideoPlaybackProgress(durationMs = 10_000L))
             val seekBar = view.findViewById<SeekBar>(R.id.video_progress).apply { progress = 600 }
 
             view.onStopTrackingTouch(seekBar)

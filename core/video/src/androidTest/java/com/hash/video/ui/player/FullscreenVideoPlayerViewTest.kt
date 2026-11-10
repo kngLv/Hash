@@ -85,4 +85,25 @@ class FullscreenVideoPlayerViewTest {
             assertEquals("00:00 / 00:00", view.findViewById<TextView>(R.id.video_time).text.toString())
         }
     }
+
+    @Test
+    fun 播放失败时显示具体错误文案() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        instrumentation.runOnMainSync {
+            val view = FullscreenVideoPlayerView(context).apply { setMedia(media) }
+
+            view.renderPlaybackState(
+                VideoPlaybackState(
+                    media = media,
+                    status = VideoPlaybackStatus.ERROR,
+                    errorMessage = "视频地址无访问权限或已失效",
+                ),
+            )
+
+            val errorMessage = view.findViewById<TextView>(R.id.video_error_message)
+            assertEquals(View.VISIBLE, errorMessage.visibility)
+            assertEquals("视频地址无访问权限或已失效", errorMessage.text.toString())
+        }
+    }
 }

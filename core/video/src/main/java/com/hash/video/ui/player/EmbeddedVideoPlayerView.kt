@@ -8,11 +8,13 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.widget.ImageButton
 import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.hash.video.R
 import com.hash.video.api.VideoContentSize
 import com.hash.video.api.VideoPlaybackState
+import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
 import com.hash.video.ui.controls.EmbeddedVideoControls
@@ -39,6 +41,9 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         visibility = GONE
         isIndeterminate = true
     }
+    private val errorMessageView = createErrorMessageView().apply {
+        id = R.id.video_error_message
+    }
     private val centerPlayAction = createIconAction(R.drawable.ic_video_play, CENTER_ACTION_SIZE_DP).apply {
         id = R.id.video_play_action
     }
@@ -64,6 +69,10 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         setBackgroundColor(Color.BLACK)
         addView(loadingView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         addView(
+            errorMessageView,
+            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        )
+        addView(
             centerPlayAction,
             LayoutParams(context.dp(CENTER_ACTION_SIZE_DP), context.dp(CENTER_ACTION_SIZE_DP), Gravity.CENTER),
         )
@@ -72,6 +81,7 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
             LayoutParams(LayoutParams.MATCH_PARENT, context.dp(CONTROL_HEIGHT_DP), Gravity.BOTTOM),
         )
         centerPlayAction.setOnClickListener { play() }
+        errorMessageView.setOnClickListener { play() }
         controls.onPlaybackToggle = ::togglePlayback
         controls.onSeekRequested = { positionMs ->
             handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
@@ -83,8 +93,12 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         val hasMedia = media != null
         val isLoading = status.isLoading
         val isPlaying = status.isPlaying
+        val errorMessage = state.errorMessage.takeIf { status == VideoPlaybackStatus.ERROR }
         loadingView.visibility = if (isLoading) VISIBLE else GONE
-        centerPlayAction.visibility = if (hasMedia && !isLoading && !isPlaying) VISIBLE else GONE
+        errorMessageView.visibility = if (errorMessage != null) VISIBLE else GONE
+        errorMessageView.text = errorMessage.orEmpty()
+        errorMessageView.contentDescription = errorMessage?.let { "$it，点击重试" }
+        centerPlayAction.visibility = if (hasMedia && !isLoading && !isPlaying && errorMessage == null) VISIBLE else GONE
         centerPlayAction.contentDescription = context.getString(
             if (status.isPlaying) R.string.video_pause else R.string.video_play,
         )
@@ -114,7 +128,7 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
 
             is VideoGestureEvent.SeekPreview -> {
                 controls.visibility = VISIBLE
-                controls.updateSeekPreview(event.positionMs, event.durationMs)
+                controls.renderSeekPreview(event.positionMs, event.durationMs)
             }
 
             is VideoGestureEvent.SeekPreviewEnd -> controls.endSeekPreview()
@@ -125,20 +139,20 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         }
     }
 
-    /**
-     * 处理控制栏和画面手势发起的跳转。
-     *
-     * 详情页默认避免直接落到末尾；播放列表或短视频子类可重写以切换下一条或循环播放。
-     */
-    protected open override fun handleUserSeek(positionMs: Long, durationMs: Long) {
-        if (durationMs <= 0L) return
-        val targetPositionMs = if (durationMs > END_SEEK_GUARD_MS) {
-            positionMs.coerceAtMost(durationMs - END_SEEK_GUARD_MS)
-        } else {
-            positionMs
-        }
-        seekTo(targetPositionMs)
-    }
+//    /**
+//     * 处理控制栏和画面手势发起的跳转。
+//     *
+//     * 详情页默认避免直接落到末尾；播放列表或短视频子类可重写以切换下一条或循环播放。
+//     */
+//    protected open override fun handleUserSeek(positionMs: Long, durationMs: Long) {
+//        if (durationMs <= 0L) return
+//        val targetPositionMs = if (durationMs > END_SEEK_GUARD_MS) {
+//            positionMs.coerceAtMost(durationMs - END_SEEK_GUARD_MS)
+//        } else {
+//            positionMs
+//        }
+//        seekTo(targetPositionMs)
+//    }
 
     private fun renderContentSize(contentSize: VideoContentSize?) {
         if (renderedContentSize == contentSize) return
@@ -184,12 +198,36 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         isFocusable = true
     }
 
+    /** 播放失败时展示具体原因；点击后由当前播放器重新发起播放。 */
+    private fun createErrorMessageView(): TextView = TextView(context).apply {
+        visibility = GONE
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        gravity = Gravity.CENTER
+        background = GradientDrawable().apply {
+            cornerRadius = context.dp(ERROR_CORNER_RADIUS_DP).toFloat()
+            setColor(ERROR_BACKGROUND_COLOR)
+        }
+        setPadding(
+            context.dp(ERROR_HORIZONTAL_PADDING_DP),
+            context.dp(ERROR_VERTICAL_PADDING_DP),
+            context.dp(ERROR_HORIZONTAL_PADDING_DP),
+            context.dp(ERROR_VERTICAL_PADDING_DP),
+        )
+        isClickable = true
+        isFocusable = true
+    }
+
     private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private companion object {
         const val CENTER_ACTION_SIZE_DP = 64
         const val CONTROL_HEIGHT_DP = 56
         const val ACTION_BACKGROUND_COLOR = 0x66000000
+        const val ERROR_BACKGROUND_COLOR = 0xAA000000.toInt()
+        const val ERROR_CORNER_RADIUS_DP = 8
+        const val ERROR_HORIZONTAL_PADDING_DP = 16
+        const val ERROR_VERTICAL_PADDING_DP = 10
         const val END_SEEK_GUARD_MS = 2_000L
     }
 }

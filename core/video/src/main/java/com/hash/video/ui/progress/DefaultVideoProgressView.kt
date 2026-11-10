@@ -17,9 +17,9 @@ class DefaultVideoProgressView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : BaseVideoProgressView(context, attrs, defStyleAttr), SeekBar.OnSeekBarChangeListener {
-    private var displayedDurationMs = 0L
+    private var currentDurationMs = 0L
 
-    private val progressView = SeekBar(context).apply {
+    private val seekBar = SeekBar(context).apply {
         id = R.id.video_progress
         max = PROGRESS_SCALE
         visibility = GONE
@@ -36,35 +36,35 @@ class DefaultVideoProgressView @JvmOverloads constructor(
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(progressView, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(seekBar, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(timeView, LayoutParams(context.dp(TIME_WIDTH_DP), LayoutParams.MATCH_PARENT))
     }
 
-    override fun renderProgress(state: ProgressUiState) {
-        displayedDurationMs = state.durationMs
-        progressView.visibility = if (state.isAvailable) VISIBLE else GONE
-        progressView.isEnabled = state.isAvailable
+    override fun renderProgress(state: ProgressDisplayState) {
+        currentDurationMs = state.durationMs
+        seekBar.visibility = if (state.isAvailable) VISIBLE else GONE
+        seekBar.isEnabled = state.isAvailable
         if (state.isAvailable) {
-            progressView.progress = state.positionMs.toProgress(state.durationMs)
-            progressView.secondaryProgress = state.bufferedPositionMs.toProgress(state.durationMs)
+            seekBar.progress = state.positionMs.toProgress(state.durationMs)
+            seekBar.secondaryProgress = state.bufferedPositionMs.toProgress(state.durationMs)
         } else {
-            progressView.progress = 0
-            progressView.secondaryProgress = 0
+            seekBar.progress = 0
+            seekBar.secondaryProgress = 0
         }
         timeView.text = formatTimeLine(state.positionMs, state.durationMs)
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
         if (fromUser) {
-            dispatchUserSeekPreview(progress.toPositionMs(), displayedDurationMs)
-            timeView.text = formatTimeLine(progress.toPositionMs(), displayedDurationMs)
+            dispatchUserSeekPreview(progress.toPositionMs(), currentDurationMs)
+            timeView.text = formatTimeLine(progress.toPositionMs(), currentDurationMs)
         }
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
 
     override fun onStopTrackingTouch(seekBar: SeekBar) {
-        dispatchUserSeek(seekBar.progress.toPositionMs(), displayedDurationMs)
+        dispatchUserSeek(seekBar.progress.toPositionMs(), currentDurationMs)
     }
 
     private fun Long.toProgress(durationMs: Long): Int = if (durationMs > 0L) {
@@ -73,7 +73,7 @@ class DefaultVideoProgressView @JvmOverloads constructor(
         0
     }
 
-    private fun Int.toPositionMs(): Long = toLong() * displayedDurationMs / PROGRESS_SCALE
+    private fun Int.toPositionMs(): Long = toLong() * currentDurationMs / PROGRESS_SCALE
 
     private fun formatTimeLine(positionMs: Long, durationMs: Long): String {
         return "${formatDuration(positionMs)} / ${formatDuration(durationMs)}"

@@ -93,7 +93,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     @SuppressLint("ClickableViewAccessibility")
     private fun bindVideoTouchHandler() {
         playerView.setOnTouchListener { _, event ->
-            val direction = touchHandler.handle(
+            val direction = touchHandler.handleTouchEvent(
                 event = event.toVideoTouchEvent(),
                 config = gestureConfig,
                 progress = currentPlaybackState.progress,
@@ -122,7 +122,6 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     fun setMedia(media: VideoMedia) {
         if (this.media == media) return
         this.media = media
-        // RecyclerView 复用播放器 View 时立即清除上一媒体的状态，不等待 StateFlow 再次发射。
         renderPlaybackState(currentPlaybackState)
     }
 

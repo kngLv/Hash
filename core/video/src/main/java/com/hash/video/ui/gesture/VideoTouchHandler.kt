@@ -23,11 +23,11 @@ internal class VideoTouchHandler(
     private val onGesture: (VideoGestureEvent) -> Unit,
 ) {
     private val gestureDetector = VideoGestureDetector(touchSlopPx, doubleTapSlopPx)
-    private val pendingSingleTap = Runnable {
+    private val singleTapRunnable = Runnable {
         onGesture(VideoGestureEvent.Click)
     }
 
-    fun handle(
+    fun handleTouchEvent(
         event: TouchEvent,
         config: VideoGestureConfig,
         progress: VideoPlaybackProgress,
@@ -42,12 +42,12 @@ internal class VideoTouchHandler(
                 durationMs = progress.durationMs,
             )
 
-            Action.MOVE -> dispatch(
+            Action.MOVE -> dispatchGesture(
                 gestureDetector.onMove(event.x, event.y, event.pointerCount, config),
                 config,
             )
 
-            Action.UP -> dispatch(
+            Action.UP -> dispatchGesture(
                 gestureDetector.onUp(event.x, event.y, event.eventTimeMs, config),
                 config,
             )
@@ -60,10 +60,11 @@ internal class VideoTouchHandler(
     /** 取消当前手势及尚未确认的单击，供多指触摸和 View 生命周期结束时调用。 */
     fun cancel(config: VideoGestureConfig) {
         cancelPendingSingleTap()
-        dispatch(gestureDetector.cancel(config), config)
+        dispatchGesture(gestureDetector.cancel(config), config)
     }
 
-    private fun dispatch(event: VideoGestureEvent?, config: VideoGestureConfig) {
+    /** 根据事件类型处理单击延迟，并将已确认的手势分发给宿主。 */
+    private fun dispatchGesture(event: VideoGestureEvent?, config: VideoGestureConfig) {
         when (event) {
             null -> Unit
             VideoGestureEvent.Click -> dispatchSingleTap(config)
@@ -87,12 +88,12 @@ internal class VideoTouchHandler(
         }
         //取消尚未确认的单击，延时执行单击，后续收到双击时会取消该单击
         cancelPendingSingleTap()
-        postDelayed(pendingSingleTap, VideoGestureDetector.DOUBLE_TAP_TIMEOUT_MS)
+        postDelayed(singleTapRunnable, VideoGestureDetector.DOUBLE_TAP_TIMEOUT_MS)
     }
 
     /** 取消尚未确认的单击，避免与双击或手势取消同时生效。 */
     private fun cancelPendingSingleTap() {
-        removeCallbacks(pendingSingleTap)
+        removeCallbacks(singleTapRunnable)
     }
 
     /** 与 Android MotionEvent 解耦的触摸快照，便于独立验证手势时序。 */

@@ -1,5 +1,6 @@
 <resources>
     <item name="video_loading" type="id" />
+    <item name="video_error_message" type="id" />
     <item name="video_play_action" type="id" />
     <item name="video_play_toggle" type="id" />
     <item name="video_progress" type="id" />

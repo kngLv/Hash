@@ -22,7 +22,8 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
 
     /** 拖动进度条时，播放器尚未返回真实位置前的占位状态。 */
     private var isAwaitingSeekCompletion = false
-    private var latestProgress = VideoPlaybackProgress()
+    /** 最近一次由播放器发布的真实进度，用于取消预览后立即恢复画面。 */
+    private var lastPlaybackProgress = VideoPlaybackProgress()
 
     /** 用户拖动时的预览通知，可用于展示额外的时间气泡。 */
     var onSeekPreviewChanged: ((Long) -> Unit)? = null
@@ -31,11 +32,11 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     var onSeekRequested: ((Long) -> Unit)? = null
 
     /** 输入播放器的真实进度，基类计算当前 UI 应显示的进度。 */
-    fun updateSeek(progress: VideoPlaybackProgress) {
-        latestProgress = progress
+    fun renderProgress(progress: VideoPlaybackProgress) {
+        lastPlaybackProgress = progress
         if (!progress.isAvailable) {
             clearPreview()
-            renderProgress(ProgressUiState())
+            renderProgress(ProgressDisplayState())
             return
         }
 
@@ -49,7 +50,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
 
         val displayedPositionMs = seekPreviewPositionMs ?: progress.positionMs
         renderProgress(
-            ProgressUiState(
+            ProgressDisplayState(
                 positionMs = displayedPositionMs,
                 bufferedPositionMs = progress.bufferedPositionMs,
                 durationMs = progress.durationMs,
@@ -58,10 +59,10 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     }
 
     /** 画面横滑等外部手势拖动时，立即渲染目标位置但不触发真实跳转。 */
-    fun updateSeekPreview(positionMs: Long, durationMs: Long) {
+    fun renderSeekPreview(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
         seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
-        renderProgress(ProgressUiState(positionMs = seekPreviewPositionMs!!, durationMs = durationMs))
+        renderProgress(ProgressDisplayState(positionMs = seekPreviewPositionMs!!, durationMs = durationMs))
     }
 
     /** 外部手势已结束并将要执行 seek，等待播放器返回真实位置前继续保留预览。 */
@@ -72,7 +73,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     /** 外部手势被取消时丢弃预览并等待下一次真实进度刷新。 */
     fun cancelSeekPreview() {
         clearPreview()
-        renderLatestProgress()
+        renderLastPlaybackProgress()
     }
 
     /** 具体 UI 将用户拖动过程的位置交给基类统一记录。 */
@@ -91,7 +92,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     }
 
     /** 子类只根据计算完成的展示状态渲染，不应维护额外进度状态。 */
-    protected abstract fun renderProgress(state: ProgressUiState)
+    protected abstract fun renderProgress(state: ProgressDisplayState)
 
     /**
      * 基础进度状态机计算出的展示数据。
@@ -99,7 +100,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
      * [positionMs] 已优先合并用户预览和播放器进度；具体 UI 只需渲染该状态，
      * 不需要自行判断真实播放进度与预览进度的优先级。
      */
-    protected data class ProgressUiState(
+    protected data class ProgressDisplayState(
         /** 当前应展示的播放位置，单位为毫秒。 */
         val positionMs: Long = 0L,
         /** 已缓冲到的位置，单位为毫秒。 */
@@ -118,14 +119,14 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     }
 
     /** 取消预览后立即恢复最近一次播放器进度，避免等待下一轮轮询造成画面停留。 */
-    private fun renderLatestProgress() {
-        val progress = latestProgress
+    private fun renderLastPlaybackProgress() {
+        val progress = lastPlaybackProgress
         if (!progress.isAvailable) {
-            renderProgress(ProgressUiState())
+            renderProgress(ProgressDisplayState())
             return
         }
         renderProgress(
-            ProgressUiState(
+            ProgressDisplayState(
                 positionMs = progress.positionMs,
                 bufferedPositionMs = progress.bufferedPositionMs,
                 durationMs = progress.durationMs,

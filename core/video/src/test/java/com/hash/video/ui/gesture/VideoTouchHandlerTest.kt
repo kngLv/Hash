@@ -20,14 +20,14 @@ class VideoTouchHandlerTest {
         val config = VideoGestureConfig(singleTapEnabled = true, doubleTapEnabled = true)
         val progress = VideoPlaybackProgress(positionMs = 0L, durationMs = 1_000L)
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress)
-        handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, progress)
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress)
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, progress)
 
         assertEquals(1, scheduledActions.size)
         assertTrue(events.isEmpty())
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 100L), config, progress)
-        handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 120L), config, progress)
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 100L), config, progress)
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 120L), config, progress)
 
         assertTrue(scheduledActions.isEmpty())
         assertEquals(listOf(VideoGestureEvent.DoubleClick), events)
@@ -44,8 +44,8 @@ class VideoTouchHandlerTest {
         )
         val config = VideoGestureConfig(singleTapEnabled = true)
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, VideoPlaybackProgress())
-        handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, VideoPlaybackProgress())
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, VideoPlaybackProgress())
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, VideoPlaybackProgress())
 
         assertEquals(listOf(VideoGestureEvent.Click), events)
     }
@@ -61,8 +61,8 @@ class VideoTouchHandlerTest {
         )
         val config = VideoGestureConfig(singleTapEnabled = true, doubleTapEnabled = true)
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, VideoPlaybackProgress())
-        handler.handle(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, VideoPlaybackProgress())
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, VideoPlaybackProgress())
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.UP, eventTimeMs = 20L), config, VideoPlaybackProgress())
 
         assertEquals(200L, delayMs)
     }
@@ -79,13 +79,13 @@ class VideoTouchHandlerTest {
         val config = VideoGestureConfig(seekEnabled = true)
         val progress = VideoPlaybackProgress(positionMs = 0L, durationMs = 1_000L)
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress)
-        handler.handle(
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress)
+        handler.handleTouchEvent(
             touchEvent(VideoTouchHandler.Action.MOVE, eventTimeMs = 20L, x = 200f),
             config,
             progress,
         )
-        handler.handle(touchEvent(VideoTouchHandler.Action.CANCEL, eventTimeMs = 30L), config, progress)
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.CANCEL, eventTimeMs = 30L), config, progress)
 
         assertEquals(VideoGestureEvent.SeekPreviewCancel, events.last())
     }
@@ -95,8 +95,8 @@ class VideoTouchHandlerTest {
         val handler = newHandler()
         val config = VideoGestureConfig(seekEnabled = true)
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress())
-        val direction = handler.handle(
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress())
+        val direction = handler.handleTouchEvent(
             touchEvent(VideoTouchHandler.Action.MOVE, eventTimeMs = 20L, x = 180f),
             config,
             progress(),
@@ -110,8 +110,8 @@ class VideoTouchHandlerTest {
         val handler = newHandler()
         val config = VideoGestureConfig(seekEnabled = true)
 
-        handler.handle(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress())
-        val direction = handler.handle(
+        handler.handleTouchEvent(touchEvent(VideoTouchHandler.Action.DOWN, eventTimeMs = 0L), config, progress())
+        val direction = handler.handleTouchEvent(
             touchEvent(VideoTouchHandler.Action.MOVE, eventTimeMs = 20L, y = 180f),
             config,
             progress(),

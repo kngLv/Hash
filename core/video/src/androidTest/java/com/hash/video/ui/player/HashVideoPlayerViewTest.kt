@@ -66,7 +66,7 @@ class EmbeddedVideoPlayerViewTest {
             )
 
             controls.render(oldState)
-            controls.updateSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            controls.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
             controls.render(oldState)
 
             assertEquals(800, controls.findViewById<android.widget.SeekBar>(R.id.video_progress).progress)
@@ -154,6 +154,28 @@ class EmbeddedVideoPlayerViewTest {
                 context.getString(R.string.video_play),
                 view.findViewById<View>(R.id.video_play_toggle).contentDescription,
             )
+        }
+    }
+
+    @Test
+    fun 播放失败时显示具体错误文案() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        instrumentation.runOnMainSync {
+            val view = EmbeddedVideoPlayerView(context).apply { setMedia(media) }
+
+            view.renderPlaybackState(
+                VideoPlaybackState(
+                    media = media,
+                    status = VideoPlaybackStatus.ERROR,
+                    errorMessage = "视频地址无访问权限或已失效",
+                ),
+            )
+
+            val errorMessage = view.findViewById<TextView>(R.id.video_error_message)
+            assertEquals(View.VISIBLE, errorMessage.visibility)
+            assertEquals("视频地址无访问权限或已失效", errorMessage.text.toString())
+            assertEquals(View.GONE, view.findViewById<View>(R.id.video_play_action).visibility)
         }
     }
 

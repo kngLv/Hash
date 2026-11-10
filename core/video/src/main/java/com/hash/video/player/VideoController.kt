@@ -275,7 +275,7 @@ class VideoController internal constructor(private val context: Context) {
                 stopProgressTracking()
                 updateState(
                     status = VideoPlaybackStatus.ERROR,
-                    errorMessage = error.message ?: "视频播放失败",
+                    errorMessage = VideoPlaybackErrorMessageMapper.from(error),
                 )
             }
         })
