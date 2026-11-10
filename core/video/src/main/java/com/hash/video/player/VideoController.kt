@@ -2,6 +2,7 @@ package com.hash.video.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.OptIn
@@ -18,6 +19,7 @@ import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.service.HashVideoPlaybackService
+import com.hash.video.service.VideoSessionCommands
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -265,10 +267,25 @@ class VideoController internal constructor(private val context: Context) {
             controllerFuture.cancel(true)
             return
         }
-        runCatching { controllerFuture.get() }.getOrNull()?.run {
-            stop()
-            clearMediaItems()
-            release()
+        runCatching { controllerFuture.get() }
+            .getOrNull()
+            ?.let(::requestPlaybackSessionRelease)
+    }
+
+    /** 请求服务端结束播放会话；无论命令结果如何，最终都会在主线程解绑控制器。 */
+    private fun requestPlaybackSessionRelease(mediaController: MediaController) {
+        val mainExecutor = ContextCompat.getMainExecutor(context)
+        mainExecutor.execute {
+            runCatching {
+                mediaController.sendCustomCommand(
+                    VideoSessionCommands.releasePlaybackSession,
+                    Bundle.EMPTY,
+                )
+            }.onSuccess { resultFuture ->
+                resultFuture.addListener(mediaController::release, mainExecutor)
+            }.onFailure {
+                mediaController.release()
+            }
         }
     }
 

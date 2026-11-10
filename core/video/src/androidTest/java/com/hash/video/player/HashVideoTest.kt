@@ -2,7 +2,13 @@ package com.hash.video.player
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -20,5 +26,26 @@ class HashVideoTest {
         assertNotSame(previousController, newController)
 
         HashVideo.release()
+    }
+
+    @Test
+    fun `后台线程也可以安全释放播放会话`() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val controller = HashVideo.controller(instrumentation.targetContext)
+        val connected = CountDownLatch(1)
+        controller.withPlayer { connected.countDown() }
+        assertTrue(connected.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
+        val error = AtomicReference<Throwable?>()
+
+        thread {
+            runCatching(HashVideo::release).onFailure(error::set)
+        }.join()
+
+        assertNull(error.get())
+        instrumentation.runOnMainSync(HashVideo::release)
+    }
+
+    private companion object {
+        const val TIMEOUT_SECONDS = 5L
     }
 }
