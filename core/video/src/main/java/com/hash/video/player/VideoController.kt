@@ -55,6 +55,9 @@ class VideoController internal constructor(private val context: Context) {
      */
     private val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
 
+    /** 控制器已彻底关闭后不再接受旧 View 的播放或画面解绑请求。 */
+    private var isReleased = false
+
     /**
      * 用于丢弃媒体服务尚未连接时已过期的播放控制请求。
      *
@@ -87,9 +90,11 @@ class VideoController internal constructor(private val context: Context) {
         // Future 完成表示已成功连接到媒体服务，或连接过程已经失败。连接成功后只注册一次监听器。
         controllerFuture.addListener(
             {
+                if (isReleased) return@addListener
                 runCatching { controllerFuture.get() }
                     .onSuccess(::attachPlayerListener)
                     .onFailure {
+                        if (isReleased) return@onFailure
                         // 服务不可用时也向状态流报告，页面无需单独感知 Future 异常。
                         updateState(
                             status = VideoPlaybackStatus.ERROR,
@@ -112,7 +117,10 @@ class VideoController internal constructor(private val context: Context) {
     internal fun withPlayer(onReady: (Player) -> Unit) {
         controllerFuture.addListener(
             {
-                runCatching { controllerFuture.get() }.onSuccess(onReady)
+                if (isReleased) return@addListener
+                runCatching { controllerFuture.get() }.onSuccess { player ->
+                    if (!isReleased) onReady(player)
+                }
             },
             ContextCompat.getMainExecutor(context),
         )
@@ -128,6 +136,7 @@ class VideoController internal constructor(private val context: Context) {
      * [playbackState] 为准。
      */
     fun play(media: VideoMedia) {
+        if (isReleased) return
         val action = _playbackState.value.resolvePlayAction(media)
         if (action == VideoPlayAction.IGNORE) return
 
@@ -164,6 +173,7 @@ class VideoController internal constructor(private val context: Context) {
      * 最终状态以 Media3 的监听回调为准，而不是在这里预先修改状态流。
      */
     fun pause() {
+        if (isReleased) return
         // 连接尚未完成时，暂停操作应排在已请求的播放操作之后执行，不能取消该播放请求。
         withPlayer(Player::pause)
     }
@@ -175,6 +185,7 @@ class VideoController internal constructor(private val context: Context) {
      * 解析出时长的媒体收到无意义的跳转请求。
      */
     fun seekTo(positionMs: Long) {
+        if (isReleased) return
         val state = _playbackState.value
         val durationMs = state.progress.durationMs
         val currentMedia = state.media ?: return
@@ -196,6 +207,7 @@ class VideoController internal constructor(private val context: Context) {
      * [removeCurrentMedia]。
      */
     fun stop() {
+        if (isReleased) return
         val requestId = ++latestRequestId
         stopProgressTracking()
         _playbackState.value = _playbackState.value.resetPlaybackSession()
@@ -207,13 +219,9 @@ class VideoController internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * 停止并从播放列表移除当前媒体，但保留其他待播放的媒体和全局播放器实例。
-     *
-     * 适用于退出详情页等当前视频不应再由系统媒体控制恢复的场景。与 [stop] 不同，此操作会使
-     * 当前媒体不再存在于播放列表中；若列表中还有其他媒体，它们不会被清空。
-     */
+    /** 停止并移除当前媒体，保留其余播放列表和播放器实例。 */
     fun removeCurrentMedia() {
+        if (isReleased) return
         val requestId = ++latestRequestId
         stopProgressTracking()
         _playbackState.value = _playbackState.value.resetPlaybackSession()
@@ -226,6 +234,41 @@ class VideoController internal constructor(private val context: Context) {
             if (currentIndex != C.INDEX_UNSET && currentIndex < player.mediaItemCount) {
                 player.removeMediaItem(currentIndex)
             }
+        }
+    }
+
+    /** 停止并清空全部媒体，结束当前播放会话并立即移除系统媒体通知。 */
+    fun clearPlaybackSession() {
+        if (isReleased) return
+        val requestId = ++latestRequestId
+        stopProgressTracking()
+        _playbackState.value = _playbackState.value.resetPlaybackSession()
+        withPlayer { player ->
+            // 后续新的播放请求优先，不能让较早的清理操作误清空新媒体。
+            if (requestId != latestRequestId) return@withPlayer
+
+            player.stop()
+            player.clearMediaItems()
+        }
+    }
+
+    /** 释放媒体控制器，使空闲媒体服务销毁其 ExoPlayer。释放后不可继续使用该实例。 */
+    internal fun release() {
+        if (isReleased) return
+
+        isReleased = true
+        latestRequestId++
+        stopProgressTracking()
+        _playbackState.value = _playbackState.value.resetPlaybackSession()
+
+        if (!controllerFuture.isDone) {
+            controllerFuture.cancel(true)
+            return
+        }
+        runCatching { controllerFuture.get() }.getOrNull()?.run {
+            stop()
+            clearMediaItems()
+            release()
         }
     }
 
@@ -287,6 +330,7 @@ class VideoController internal constructor(private val context: Context) {
      * 未知总时长（直播等）统一写为 0，UI 可据此隐藏确定进度条。
      */
     private fun updateProgress(player: Player) {
+        if (isReleased) return
         if (_playbackState.value.media == null) return
 
         val durationMs = player.duration.takeIf { it != C.TIME_UNSET && it > 0L } ?: 0L
@@ -331,6 +375,7 @@ class VideoController internal constructor(private val context: Context) {
         status: VideoPlaybackStatus,
         errorMessage: String? = null,
     ) {
+        if (isReleased) return
         _playbackState.value = _playbackState.value.copy(
             status = status,
             errorMessage = errorMessage,
