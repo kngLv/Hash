@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
@@ -94,9 +95,13 @@ class VideoController internal constructor(private val context: Context) {
             {
                 if (isReleased) return@addListener
                 runCatching { controllerFuture.get() }
-                    .onSuccess(::attachPlayerListener)
+                    .onSuccess {
+                        Log.d(LOG_TAG, "MediaController 连接成功")
+                        attachPlayerListener(it)
+                    }
                     .onFailure {
                         if (isReleased) return@onFailure
+                        Log.e(LOG_TAG, "MediaController 连接失败", it)
                         // 服务不可用时也向状态流报告，页面无需单独感知 Future 异常。
                         updateState(
                             status = VideoPlaybackStatus.ERROR,
@@ -256,8 +261,12 @@ class VideoController internal constructor(private val context: Context) {
 
     /** 释放媒体控制器，使空闲媒体服务销毁其 ExoPlayer。释放后不可继续使用该实例。 */
     internal fun release() {
-        if (isReleased) return
+        if (isReleased) {
+            Log.d(LOG_TAG, "VideoController 忽略重复释放：已经释放")
+            return
+        }
 
+        Log.d(LOG_TAG, "VideoController 开始释放：futureDone=${controllerFuture.isDone}")
         isReleased = true
         latestRequestId++
         stopProgressTracking()
@@ -265,26 +274,49 @@ class VideoController internal constructor(private val context: Context) {
 
         if (!controllerFuture.isDone) {
             controllerFuture.cancel(true)
+            Log.d(LOG_TAG, "MediaController 连接完成前已取消")
             return
         }
         runCatching { controllerFuture.get() }
-            .getOrNull()
-            ?.let(::requestPlaybackSessionRelease)
+            .onSuccess(::requestPlaybackSessionRelease)
+            .onFailure {
+                Log.e(LOG_TAG, "释放时无法获取 MediaController", it)
+            }
     }
 
     /** 请求服务端结束播放会话；无论命令结果如何，最终都会在主线程解绑控制器。 */
     private fun requestPlaybackSessionRelease(mediaController: MediaController) {
         val mainExecutor = ContextCompat.getMainExecutor(context)
         mainExecutor.execute {
+            Log.d(
+                LOG_TAG,
+                "正在发送释放命令：mediaItemCount=${mediaController.mediaItemCount}, " +
+                    "playbackState=${mediaController.playbackState}",
+            )
             runCatching {
                 mediaController.sendCustomCommand(
                     VideoSessionCommands.releasePlaybackSession,
                     Bundle.EMPTY,
                 )
             }.onSuccess { resultFuture ->
-                resultFuture.addListener(mediaController::release, mainExecutor)
+                resultFuture.addListener(
+                    {
+                        runCatching { resultFuture.get() }
+                            .onSuccess {
+                                Log.d(LOG_TAG, "释放命令执行完成：resultCode=${it.resultCode}")
+                            }
+                            .onFailure {
+                                Log.e(LOG_TAG, "释放命令执行失败", it)
+                            }
+                        mediaController.release()
+                        Log.d(LOG_TAG, "MediaController 已释放")
+                    },
+                    mainExecutor,
+                )
             }.onFailure {
+                Log.e(LOG_TAG, "无法发送释放命令", it)
                 mediaController.release()
+                Log.d(LOG_TAG, "释放命令发送失败后，MediaController 已释放")
             }
         }
     }
@@ -400,6 +432,7 @@ class VideoController internal constructor(private val context: Context) {
     }
 
     private companion object {
+        const val LOG_TAG = "HashVideoLifecycle"
         const val PROGRESS_UPDATE_INTERVAL_MS = 500L
     }
 }

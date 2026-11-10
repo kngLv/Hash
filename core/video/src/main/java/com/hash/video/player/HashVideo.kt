@@ -1,6 +1,7 @@
 package com.hash.video.player
 
 import android.content.Context
+import android.util.Log
 import com.hash.video.ui.player.VideoPresentationCoordinator
 
 /** 视频模块的唯一入口，保证整个 App 复用同一个播放控制器。 */
@@ -14,7 +15,10 @@ object HashVideo {
 
     fun controller(context: Context): VideoController {
         return synchronized(this) {
-            controller ?: VideoController(context.applicationContext).also { controller = it }
+            controller ?: VideoController(context.applicationContext).also {
+                controller = it
+                Log.d(LOG_TAG, "HashVideo 已创建 VideoController")
+            }
         }
     }
 
@@ -33,6 +37,12 @@ object HashVideo {
             presentationCoordinator = null
             controller.also { controller = null }
         }
+        Log.d(
+            LOG_TAG,
+            "HashVideo 已请求释放：controllerExists=${releasedController != null}",
+        )
         releasedController?.release()
     }
+
+    private const val LOG_TAG = "HashVideoLifecycle"
 }
