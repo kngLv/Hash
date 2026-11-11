@@ -11,6 +11,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.VideoPlaybackState
+import com.hash.video.api.VideoPresentation
 import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
 import com.hash.video.ui.controls.FullscreenVideoControls
@@ -26,6 +27,8 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : BaseHashVideoPlayerView(context, attrs, defStyleAttr) {
+
+    override val presentation: VideoPresentation = VideoPresentation.FULLSCREEN
 
     override val gestureConfig = VideoGestureConfig(
         singleTapEnabled = true,
@@ -43,6 +46,7 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
         id = com.hash.video.R.id.video_error_message
     }
     private val controls = FullscreenVideoControls(context)
+    private var exitFullscreenHandler: (() -> Unit)? = null
 
     /** 左侧纵向手势的亮度变化量，范围 -1 到 1；由 Activity 等宿主修改 Window 亮度。 */
     var onBrightnessGesture: ((Float, VideoGesturePhase) -> Unit)? = null
@@ -63,10 +67,15 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
         }
 
     var onExitFullscreenRequested: (() -> Unit)?
-        get() = controls.onExitFullscreenRequested
+        get() = exitFullscreenHandler
         set(value) {
-            controls.onExitFullscreenRequested = value
+            exitFullscreenHandler = value
         }
+
+    /** 请求退出当前全屏宿主；具体返回栈由承载页面处理。 */
+    fun exitFullscreen() {
+        onExitFullscreenRequested?.invoke()
+    }
 
     init {
         setBackgroundColor(Color.BLACK)
@@ -82,11 +91,12 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
         controls.onSeekRequested = { positionMs ->
             handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
         }
+        controls.onExitFullscreenRequested = ::exitFullscreen
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        takeOverPresentation()
+        activatePresentation()
     }
 
     override fun onPlaybackStateChanged(state: VideoPlaybackState) {

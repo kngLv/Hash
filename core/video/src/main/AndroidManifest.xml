@@ -19,6 +19,7 @@
             android:name=".presentation.VideoFullscreenActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.HashVideo.Fullscreen" />
     </application>
 </manifest>

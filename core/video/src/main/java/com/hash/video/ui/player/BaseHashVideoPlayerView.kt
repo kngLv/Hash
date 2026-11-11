@@ -15,6 +15,7 @@ import androidx.media3.ui.PlayerView
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.api.VideoPresentation
 import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.player.HashVideo
@@ -72,6 +73,9 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 当前视频画面启用的手势；默认关闭，由具体播放器按场景重写。 */
     protected open val gestureConfig: VideoGestureConfig = VideoGestureConfig()
 
+    /** 当前 View 代表的画面承载形态，协调器据此同步全局播放状态。 */
+    internal open val presentation: VideoPresentation = VideoPresentation.EMBEDDED
+
     /** 供协调器迁移视频画面使用，业务和子类均不应直接为它绑定 Player。 */
     internal val presentationPlayerView: PlayerView
         get() = playerView
@@ -123,12 +127,13 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         if (this.media == media) return
         this.media = media
         renderPlaybackState(currentPlaybackState)
+        restorePresentationIfCurrentMedia()
     }
 
     /** 请求播放已绑定的视频；控制器会自行决定切换、恢复、重播或忽略重复请求。 */
     fun play() {
         media?.let {
-            takeOverPresentation()
+            activatePresentation()
             controller.play(it)
         }
     }
@@ -156,21 +161,22 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      *
      * 全屏页、小窗或列表项成为当前播放项时调用；该操作不会重新播放视频。
      */
-    fun takeOverPresentation() {
-        presentationCoordinator.takeOver(this)
+    fun activatePresentation() {
+        presentationCoordinator.activate(this)
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         observePlaybackState()
-        presentationCoordinator.register(this)
+        presentationCoordinator.attach(this)
+        restorePresentationIfCurrentMedia()
     }
 
     override fun onDetachedFromWindow() {
         touchHandler.cancel(gestureConfig)
         stateCollectionScope?.cancel()
         stateCollectionScope = null
-        presentationCoordinator.unregister(this)
+        presentationCoordinator.detach(this)
         super.onDetachedFromWindow()
     }
 
@@ -188,6 +194,24 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
             VideoPlaybackState(status = VideoPlaybackStatus.IDLE)
         }
         onPlaybackStateChanged(displayedState)
+    }
+
+    /**
+     * View 因重建或列表复用重新绑定到当前播放媒体时，恢复它原本的画面输出。
+     *
+     * 首次绑定不会满足条件，仍必须由 [play] 主动激活；只有已附着、媒体相同且承载形态相同，
+     * 才会迁移 PlayerView。
+     */
+    private fun restorePresentationIfCurrentMedia() {
+        val state = currentPlaybackState
+        if (
+            !isPresentationAvailable ||
+            state.presentation != presentation ||
+            media?.isSameSourceAs(state.media) != true
+        ) {
+            return
+        }
+        activatePresentation()
     }
 
     private fun observePlaybackState() {

@@ -9,6 +9,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.hash.video.cache.VideoCacheProvider
 import com.google.common.util.concurrent.Futures
@@ -77,7 +78,7 @@ class HashVideoPlaybackService : MediaSessionService() {
             ) {
                 Log.w(LOG_TAG, "已拒绝自定义命令")
                 return Futures.immediateFuture(
-                    SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED),
+                    SessionResult(SessionError.ERROR_NOT_SUPPORTED),
                 )
             }
 

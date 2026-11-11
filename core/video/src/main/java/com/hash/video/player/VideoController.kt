@@ -19,6 +19,7 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.api.VideoPresentation
 import com.hash.video.service.HashVideoPlaybackService
 import com.hash.video.service.VideoSessionCommands
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -257,6 +258,12 @@ class VideoController internal constructor(private val context: Context) {
             player.stop()
             player.clearMediaItems()
         }
+    }
+
+    /** 同步当前视频画面的承载形态，不改变媒体、进度或播放状态。 */
+    internal fun updatePresentation(presentation: VideoPresentation) {
+        if (isReleased || _playbackState.value.presentation == presentation) return
+        _playbackState.value = _playbackState.value.copy(presentation = presentation)
     }
 
     /** 释放媒体控制器，使空闲媒体服务销毁其 ExoPlayer。释放后不可继续使用该实例。 */

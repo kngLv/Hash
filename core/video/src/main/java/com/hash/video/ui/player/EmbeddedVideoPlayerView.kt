@@ -17,6 +17,7 @@ import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
+import com.hash.video.presentation.VideoFullscreenActivity
 import com.hash.video.ui.controls.EmbeddedVideoControls
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
@@ -51,12 +52,8 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     private var defaultHeight: Int? = null
     private var renderedContentSize: VideoContentSize? = null
 
-    /** 宿主负责将当前画面迁移到横屏全屏容器；未设置时不展示全屏入口。 */
+    /** 宿主可覆盖默认的横屏全屏跳转；未设置时使用模块内置全屏页。 */
     var onFullscreenRequested: (() -> Unit)? = null
-        set(value) {
-            field = value
-            controls.onFullscreenRequested = value
-        }
 
     /** 宿主负责将当前画面迁移到悬浮容器；未设置时不展示悬浮入口。 */
     var onFloatRequested: (() -> Unit)? = null
@@ -83,9 +80,16 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         centerPlayAction.setOnClickListener { play() }
         errorMessageView.setOnClickListener { play() }
         controls.onPlaybackToggle = ::togglePlayback
+        controls.onFullscreenRequested = ::enterFullscreen
         controls.onSeekRequested = { positionMs ->
             handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
         }
+    }
+
+    /** 进入模块内置的横屏全屏页；宿主设置回调后可覆盖默认跳转行为。 */
+    fun enterFullscreen() {
+        if (media == null) return
+        onFullscreenRequested?.invoke() ?: VideoFullscreenActivity.start(context)
     }
 
     override fun onPlaybackStateChanged(state: VideoPlaybackState) {

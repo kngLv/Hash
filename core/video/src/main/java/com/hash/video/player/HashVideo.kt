@@ -2,6 +2,7 @@ package com.hash.video.player
 
 import android.content.Context
 import android.util.Log
+import com.hash.video.api.VideoPresentation
 import com.hash.video.ui.player.VideoPresentationCoordinator
 
 /** 视频模块的唯一入口，保证整个 App 复用同一个播放控制器。 */
@@ -29,6 +30,12 @@ object HashVideo {
                 presentationCoordinator = it
             }
         }
+    }
+
+    /** 当前画面是否已由全屏或小窗宿主接管。 */
+    fun isPresentationTransferred(): Boolean {
+        val presentation = controller?.playbackState?.value?.presentation ?: return false
+        return presentation != VideoPresentation.EMBEDDED
     }
 
     /** 结束当前会话并释放全局播放器；下次调用 [controller] 时会按需创建新实例。 */
