@@ -37,6 +37,7 @@ import java.util.Locale
 class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
 
     private val viewModel by viewModels<NewsDetailViewModel>()
+    private val newsId get() = intent.getStringExtra(EXTRA_NEWS_ID).orEmpty()
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
     private val detailAdapter by lazy(::NewsDetailAdapter)
@@ -82,8 +83,14 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         })
     }
 
-    override fun initParam() {
-        viewModel.load(intent.getStringExtra(EXTRA_NEWS_ID).orEmpty())
+    override fun loadData() {
+        viewModel.load(newsId)
+    }
+
+    override fun onRestoreData(savedInstanceState: Bundle) {
+        if (viewModel.detail.value == null) {
+            loadData()
+        }
     }
 
     override fun observer() {

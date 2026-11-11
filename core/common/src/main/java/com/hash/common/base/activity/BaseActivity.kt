@@ -43,8 +43,19 @@ abstract class BaseActivity : AppCompatActivity(), InitAction, ActivityAction, H
         super.onCreate(savedInstanceState)
         initContentView()
         initActivity()
-        loadData()
+        if (savedInstanceState == null) {
+            loadData()
+        } else {
+            onRestoreData(savedInstanceState)
+        }
     }
+
+    /**
+     * Activity 因配置变化等原因重建后的数据恢复入口。
+     *
+     * 默认仍执行 [loadData]，保持既有页面行为不变。需要复用 ViewModel 已有数据的页面可按需重写。
+     */
+    protected open fun onRestoreData(savedInstanceState: Bundle){}
 
     private fun initActivity() {
         initLayout()

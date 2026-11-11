@@ -8,28 +8,36 @@ import com.hash.home.data.model.NewsDetailBean
 import com.hash.home.data.repository.NewsDetailRepository
 import kotlinx.coroutines.launch
 
-class NewsDetailViewModel : BaseViewModel() {
+class NewsDetailViewModel(
+    private val loadDetail: suspend (String) -> NewsDetailBean? = NewsDetailRepository()::load,
+) : BaseViewModel() {
 
-    private val repository = NewsDetailRepository()
     private val _detail = MutableLiveData<NewsDetailBean>()
     val detail: LiveData<NewsDetailBean> = _detail
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
+    private var requestedNewsId: String? = null
 
     fun load(newsId: String) {
         if (newsId.isBlank()) {
             _errorMessage.value = "新闻参数无效"
             return
         }
+        if (requestedNewsId == newsId) return
+
+        requestedNewsId = newsId
         showLoading()
         viewModelScope.launch {
-            val detail = repository.load(newsId)
-            if (detail == null) {
-                _errorMessage.value = "加载失败，请稍后重试"
-            } else {
-                _detail.value = detail
+            try {
+                val detail = loadDetail(newsId)
+                if (detail == null) {
+                    _errorMessage.value = "加载失败，请稍后重试"
+                } else {
+                    _detail.value = detail
+                }
+            } finally {
+                dismissLoading()
             }
-            dismissLoading()
         }
     }
 }
