@@ -1,6 +1,7 @@
 package com.hash.video.ui.player
 
 import android.view.View
+import androidx.media3.ui.PlayerView
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -122,6 +123,19 @@ class FullscreenVideoPlayerViewTest {
 
             org.junit.Assert.assertTrue(view.currentGestureConfig.brightnessEnabled)
             org.junit.Assert.assertTrue(view.currentGestureConfig.volumeEnabled)
+        }
+    }
+
+    @Test
+    fun 直接挂载画面时播放器应位于控制层之下() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val view = FullscreenVideoPlayerView(instrumentation.targetContext)
+
+            com.hash.video.player.HashVideo.attachRenderTo(view)
+
+            org.junit.Assert.assertTrue(view.getChildAt(0) is PlayerView)
+            com.hash.video.player.HashVideo.release()
         }
     }
 

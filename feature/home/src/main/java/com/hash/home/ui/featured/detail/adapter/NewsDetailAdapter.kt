@@ -9,6 +9,7 @@ import com.chad.library.adapter4.BaseMultiItemAdapter
 import com.hash.common.utils.image.ImageLoader
 import com.hash.common.utils.image.LoadOptions
 import com.hash.video.api.VideoMedia
+import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.home.databinding.ItemNewsDetailEmptyBinding
 import com.hash.home.databinding.ItemNewsDetailHeaderBinding
 import com.hash.home.databinding.ItemNewsDetailImageBinding
@@ -16,13 +17,16 @@ import com.hash.home.databinding.ItemNewsDetailTextBinding
 import com.hash.home.databinding.ItemNewsDetailVideoBinding
 
 /** 展示新闻详情的头部、文字、图片、视频与空内容条目。 */
-class NewsDetailAdapter : BaseMultiItemAdapter<NewsDetailPageItem>() {
+class NewsDetailAdapter(
+    private val onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
+    private val onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
+) : BaseMultiItemAdapter<NewsDetailPageItem>() {
 
     init {
         addItemType(TYPE_HEADER, HeaderItemListener())
             .addItemType(TYPE_TEXT, TextItemListener())
             .addItemType(TYPE_IMAGE, ImageItemListener())
-            .addItemType(TYPE_VIDEO, VideoItemListener())
+            .addItemType(TYPE_VIDEO, VideoItemListener(onFullscreenRequested, onPortraitRequested))
             .addItemType(TYPE_EMPTY, EmptyItemListener())
             .onItemViewType { position, list -> itemTypeOf(list[position]) }
     }
@@ -35,7 +39,8 @@ class NewsDetailAdapter : BaseMultiItemAdapter<NewsDetailPageItem>() {
         NewsDetailPageItem.Empty -> TYPE_EMPTY
     }
 
-    private class HeaderItemListener : OnMultiItemAdapterListener<NewsDetailPageItem, HeaderHolder> {
+    private class HeaderItemListener :
+        OnMultiItemAdapterListener<NewsDetailPageItem, HeaderHolder> {
         override fun onCreate(context: Context, parent: ViewGroup, viewType: Int) = HeaderHolder(
             ItemNewsDetailHeaderBinding.inflate(LayoutInflater.from(context), parent, false),
         )
@@ -65,13 +70,18 @@ class NewsDetailAdapter : BaseMultiItemAdapter<NewsDetailPageItem>() {
         }
     }
 
-    private class VideoItemListener : OnMultiItemAdapterListener<NewsDetailPageItem, VideoHolder> {
+    private class VideoItemListener(
+        private val onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+        private val onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+    ) : OnMultiItemAdapterListener<NewsDetailPageItem, VideoHolder> {
         override fun onCreate(context: Context, parent: ViewGroup, viewType: Int) = VideoHolder(
             ItemNewsDetailVideoBinding.inflate(LayoutInflater.from(context), parent, false),
         )
 
         override fun onBind(holder: VideoHolder, position: Int, item: NewsDetailPageItem?) {
-            (item as? NewsDetailPageItem.Video)?.let(holder::bind)
+            (item as? NewsDetailPageItem.Video)?.let {
+                holder.bind(it, onFullscreenRequested, onPortraitRequested)
+            }
         }
     }
 
@@ -116,18 +126,24 @@ class NewsDetailAdapter : BaseMultiItemAdapter<NewsDetailPageItem>() {
     private class VideoHolder(
         private val binding: ItemNewsDetailVideoBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: NewsDetailPageItem.Video) = with(binding) {
-            videoPlayer.setMedia(
-                VideoMedia(
-                    id = item.videoUrl,
-                    url = item.videoUrl,
-                    coverUrl = item.coverUrl.ifBlank { null },
-                ),
+        fun bind(
+            item: NewsDetailPageItem.Video,
+            onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+            onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+        ) = with(binding) {
+            val media = VideoMedia(
+                id = item.videoUrl,
+                url = item.videoUrl,
+                coverUrl = item.coverUrl.ifBlank { null },
             )
+            videoPlayer.setMedia(media)
+            videoPlayer.onFullscreenRequested = { onFullscreenRequested(videoPlayer, media) }
+            videoPlayer.onPortraitRequested = { onPortraitRequested(videoPlayer, media) }
         }
     }
 
-    private class EmptyHolder(binding: ItemNewsDetailEmptyBinding) : RecyclerView.ViewHolder(binding.root)
+    private class EmptyHolder(binding: ItemNewsDetailEmptyBinding) :
+        RecyclerView.ViewHolder(binding.root)
 
     private companion object {
         const val TYPE_HEADER = 0

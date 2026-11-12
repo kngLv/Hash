@@ -40,6 +40,7 @@ internal class VideoRenderCoordinator(
         (renderView.parent as? ViewGroup)?.removeView(renderView)
         container.addView(
             renderView,
+            0,
             ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,

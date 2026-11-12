@@ -1,6 +1,7 @@
 package com.hash.home.ui.featured.detail
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.os.Bundle
@@ -8,6 +9,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.TypedValue
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
@@ -31,6 +33,9 @@ import com.hash.home.ui.featured.detail.vm.NewsDetailViewModel
 import com.hash.common.ui.toolbar.HashToolbar.TitleGravity
 import com.hash.router.RouterActivityPath
 import com.hash.video.player.HashVideo
+import com.hash.video.api.VideoMedia
+import com.hash.video.ui.player.EmbeddedVideoPlayerView
+import com.hash.video.ui.player.BaseHashVideoPlayerView
 import java.util.Locale
 
 @Route(path = RouterActivityPath.Home.NEWS_DETAIL)
@@ -40,13 +45,22 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private val newsId get() = intent.getStringExtra(EXTRA_NEWS_ID).orEmpty()
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
-    private val detailAdapter by lazy(::NewsDetailAdapter)
+    private val detailAdapter by lazy {
+        NewsDetailAdapter(::showLandscapeVideo, ::showPortraitVideo)
+    }
     private var narrationText = ""
     private var textToSpeech: TextToSpeech? = null
     private var isTextToSpeechReady = false
     private var isReading = false
     private var isSourceVisible = false
     private var hasVideoContent = false
+    private var sourceVideoPlayer: EmbeddedVideoPlayerView? = null
+    private var activePresentationPlayer: BaseHashVideoPlayerView? = null
+    private var presentationMode: VideoPresentationMode? = null
+    private var originalRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private val videoPresentationBackCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = closeVideoPresentation()
+    }
     private lateinit var listenAction: AppCompatTextView
 
     override val loadingStateOwner: LoadingStateOwner
@@ -76,11 +90,14 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             )
         }
         toolbar.addAction(listenAction)
+        fullscreenVideoPlayer.onExitFullscreenRequested = ::closeVideoPresentation
+        portraitVideoPlayer.onExitPortraitRequested = ::closeVideoPresentation
         contentRecycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 updateToolbarSource()
             }
         })
+        onBackPressedDispatcher.addCallback(this@NewsDetailActivity, videoPresentationBackCallback)
     }
 
     override fun loadData() {
@@ -216,7 +233,60 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         )
     }
 
+    /** 详情页负责横屏覆盖层和方向；video 模块只迁移唯一画面。 */
+    private fun showLandscapeVideo(source: EmbeddedVideoPlayerView, media: VideoMedia) {
+        showVideoPresentation(source, media, VideoPresentationMode.LANDSCAPE)
+    }
+
+    /** 详情页负责竖屏沉浸覆盖层；本次仅播放发起请求的当前视频。 */
+    private fun showPortraitVideo(source: EmbeddedVideoPlayerView, media: VideoMedia) {
+        showVideoPresentation(source, media, VideoPresentationMode.PORTRAIT)
+    }
+
+    private fun showVideoPresentation(
+        source: EmbeddedVideoPlayerView,
+        media: VideoMedia,
+        mode: VideoPresentationMode,
+    ) {
+        if (presentationMode != null) return
+
+        sourceVideoPlayer = source
+        presentationMode = mode
+        originalRequestedOrientation = requestedOrientation
+        val player = when (mode) {
+            VideoPresentationMode.LANDSCAPE -> binding.fullscreenVideoPlayer
+            VideoPresentationMode.PORTRAIT -> binding.portraitVideoPlayer
+        }
+        activePresentationPlayer = player
+        player.setMedia(media)
+        player.visibility = View.VISIBLE
+        videoPresentationBackCallback.isEnabled = true
+        HashVideo.attachRenderTo(player)
+        requestedOrientation = when (mode) {
+            VideoPresentationMode.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            VideoPresentationMode.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    /** 将画面迁回仍在窗口内的内嵌播放器，再清理详情页自己的覆盖层。 */
+    private fun closeVideoPresentation() {
+        if (presentationMode == null) return
+        if (sourceVideoPlayer?.isAttachedToWindow == true) {
+            sourceVideoPlayer?.attachRender()
+        } else {
+            activePresentationPlayer?.let(HashVideo::detachRenderFrom)
+        }
+        binding.fullscreenVideoPlayer.visibility = View.GONE
+        binding.portraitVideoPlayer.visibility = View.GONE
+        sourceVideoPlayer = null
+        activePresentationPlayer = null
+        presentationMode = null
+        videoPresentationBackCallback.isEnabled = false
+        requestedOrientation = originalRequestedOrientation
+    }
+
     override fun onDestroy() {
+        closeVideoPresentation()
         if (isFinishing && hasVideoContent) {
             HashVideo.release()
         }
@@ -238,5 +308,10 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         const val EXTRA_SOURCE = "source"
         const val EXTRA_POST_TIME = "postTime"
         const val TTS_UTTERANCE_ID = "news_detail"
+    }
+
+    private enum class VideoPresentationMode {
+        LANDSCAPE,
+        PORTRAIT,
     }
 }

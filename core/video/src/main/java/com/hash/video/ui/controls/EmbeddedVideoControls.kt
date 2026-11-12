@@ -40,6 +40,9 @@ class EmbeddedVideoControls @JvmOverloads constructor(
     private val fullscreenAction = createTextAction(R.string.video_fullscreen).apply {
         id = R.id.video_fullscreen_action
     }
+    private val portraitAction = createTextAction(R.string.video_portrait).apply {
+        id = R.id.video_portrait_action
+    }
     var onPlaybackToggle: (() -> Unit)? = null
     var onSeekRequested: ((Long) -> Unit)? = null
 
@@ -47,6 +50,12 @@ class EmbeddedVideoControls @JvmOverloads constructor(
         set(value) {
             field = value
             fullscreenAction.visibility = if (value == null) GONE else VISIBLE
+        }
+
+    var onPortraitRequested: (() -> Unit)? = null
+        set(value) {
+            field = value
+            portraitAction.visibility = if (value == null) GONE else VISIBLE
         }
 
     var onFloatRequested: (() -> Unit)? = null
@@ -65,14 +74,17 @@ class EmbeddedVideoControls @JvmOverloads constructor(
 
         floatAction.visibility = GONE
         fullscreenAction.visibility = GONE
+        portraitAction.visibility = GONE
         addView(playbackAction, actionLayoutParams())
         addView(progressControl, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(floatAction, textActionLayoutParams())
+        addView(portraitAction, textActionLayoutParams())
         addView(fullscreenAction, textActionLayoutParams())
 
         playbackAction.setOnClickListener { onPlaybackToggle?.invoke() }
         progressControl.onSeekRequested = { onSeekRequested?.invoke(it) }
         floatAction.setOnClickListener { onFloatRequested?.invoke() }
+        portraitAction.setOnClickListener { onPortraitRequested?.invoke() }
         fullscreenAction.setOnClickListener { onFullscreenRequested?.invoke() }
     }
 

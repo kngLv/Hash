@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
  * 视频播放界面的抽象基类。
  *
  * 基类提供媒体绑定、播放控制、生命周期登记与播放状态分发；具体的播放、Loading、全屏或悬浮
- * 控件由子类自行实现。视频画面仅通过控制器挂载到内部容器，子类不得直接操作 `PlayerView`。
+ * 控件由子类自行实现。当前 View 本身就是视频画面容器；唯一 `PlayerView` 仅能由控制器挂载，
+ * 子类不得直接操作它。
  */
 @OptIn(UnstableApi::class)
 abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
@@ -53,8 +54,8 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     private var stateCollectionScope: CoroutineScope? = null
     private var gestureConfig: VideoGestureConfig? = null
 
-    /** 播放器画面容器；唯一渲染 View 仅由控制器内部挂载。 */
-    private val renderSlot = FrameLayout(context).apply { setBackgroundColor(Color.BLACK) }
+    /** 覆盖在视频画面之上的透明手势层，位于控制栏和 Loading 等业务 UI 之下。 */
+    private val gestureOverlay = FrameLayout(context)
 
     /** 当前 View 要展示的媒体；设置媒体不会自动播放。 */
     protected var media: VideoMedia? = null
@@ -73,7 +74,8 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     }
 
     init {
-        addView(renderSlot, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        setBackgroundColor(Color.BLACK)
+        addView(gestureOverlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         isClickable = true
         bindVideoTouchHandler()
     }
@@ -84,7 +86,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      */
     @SuppressLint("ClickableViewAccessibility")
     private fun bindVideoTouchHandler() {
-        renderSlot.setOnTouchListener { _, event ->
+        gestureOverlay.setOnTouchListener { _, event ->
             val direction = touchHandler.handleTouchEvent(
                 event = event.toVideoTouchEvent(),
                 config = currentGestureConfig(),
@@ -143,7 +145,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      *
      * 从业务侧的全屏或小窗容器返回内嵌页面时调用即可，无需通过 [play] 间接恢复画面。
      */
-    fun attachRender() = controller.attachRenderTo(renderSlot)
+    fun attachRender() = controller.attachRenderTo(this)
 
     /** 暂停当前视频；界面状态以真实播放器回调为准。 */
     fun pause() = controller.pause()
@@ -172,7 +174,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         gestureConfig?.let(touchHandler::cancel)
         stateCollectionScope?.cancel()
         stateCollectionScope = null
-        controller.detachRenderFrom(renderSlot)
+        controller.detachRenderFrom(this)
         super.onDetachedFromWindow()
     }
 
@@ -274,8 +276,8 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         y = y,
         pointerCount = pointerCount,
         eventTimeMs = eventTime,
-        viewWidth = renderSlot.width,
-        viewHeight = renderSlot.height,
+        viewWidth = width,
+        viewHeight = height,
     )
 
 }

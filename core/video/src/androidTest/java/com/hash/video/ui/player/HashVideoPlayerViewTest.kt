@@ -199,6 +199,23 @@ class EmbeddedVideoPlayerViewTest {
     }
 
     @Test
+    fun 点击竖屏操作会通知宿主处理展示迁移() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val invoked = AtomicBoolean(false)
+        instrumentation.runOnMainSync {
+            val view = EmbeddedVideoPlayerView(context).apply {
+                setMedia(media)
+                onPortraitRequested = { invoked.set(true) }
+            }
+
+            view.findViewById<View>(R.id.video_portrait_action).performClick()
+        }
+
+        assertTrue(invoked.get())
+    }
+
+    @Test
     fun 未配置回调时隐藏全屏操作() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
@@ -248,25 +265,40 @@ class EmbeddedVideoPlayerViewTest {
     }
 
     @Test
-    fun 竖屏视频按播放器宽度保持比例() {
+    fun 竖屏视频应在布局稳定后按最终宽度更新高度() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        instrumentation.runOnMainSync {
-            val view = EmbeddedVideoPlayerView(context).apply {
-                layoutParams = android.widget.FrameLayout.LayoutParams(360, 208)
-                setMedia(media)
-                layout(0, 0, 360, 208)
+        val scenario = androidx.test.core.app.ActivityScenario.launch(
+            VideoPlayerViewTestActivity::class.java,
+        )
+        try {
+            lateinit var view: EmbeddedVideoPlayerView
+            scenario.onActivity { activity ->
+                view = EmbeddedVideoPlayerView(activity).apply {
+                    layoutParams = android.widget.FrameLayout.LayoutParams(360, 208)
+                }
+                activity.findViewById<android.view.ViewGroup>(android.R.id.content).addView(view)
+                view.apply {
+                    setMedia(media)
+                    layout(0, 0, 360, 208)
+                }
+
+                view.renderPlaybackState(
+                    VideoPlaybackState(
+                        media = media,
+                        status = VideoPlaybackStatus.PLAYING,
+                        contentSize = VideoContentSize(width = 9, height = 16),
+                    ),
+                )
+
+                assertEquals(208, view.layoutParams.height)
             }
 
-            view.renderPlaybackState(
-                VideoPlaybackState(
-                    media = media,
-                    status = VideoPlaybackStatus.PLAYING,
-                    contentSize = VideoContentSize(width = 9, height = 16),
-                ),
-            )
-
-            assertEquals(640, view.layoutParams.height)
+            instrumentation.waitForIdleSync()
+            scenario.onActivity {
+                assertEquals(640, view.layoutParams.height)
+            }
+        } finally {
+            scenario.close()
         }
     }
 

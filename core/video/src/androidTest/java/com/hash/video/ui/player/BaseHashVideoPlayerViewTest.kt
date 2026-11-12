@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.media3.ui.PlayerView
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -13,6 +14,7 @@ import com.hash.video.player.HashVideo
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -74,8 +76,8 @@ class BaseHashVideoPlayerViewTest {
 
                 activity.findViewById<ViewGroup>(android.R.id.content).addView(second)
 
-                assertEquals(1, first.renderSlot().childCount)
-                assertEquals(0, second.renderSlot().childCount)
+                assertTrue(first.getChildAt(0) is PlayerView)
+                assertTrue(second.getChildAt(0) !is PlayerView)
             }
         } finally {
             scenario.onActivity { HashVideo.release() }
@@ -96,7 +98,7 @@ class BaseHashVideoPlayerViewTest {
 
                 view.attachRender()
 
-                assertEquals(1, view.renderSlot().childCount)
+                assertTrue(view.getChildAt(0) is PlayerView)
             }
         } finally {
             scenario.onActivity { HashVideo.release() }
@@ -113,11 +115,11 @@ class BaseHashVideoPlayerViewTest {
 
     private fun TestVideoPlayerView.dispatchTouch(action: Int, eventTime: Long) {
         val event = MotionEvent.obtain(0L, eventTime, action, 100f, 100f, 0)
-        renderSlot().dispatchTouchEvent(event)
+        gestureOverlay().dispatchTouchEvent(event)
         event.recycle()
     }
 
-    private fun BaseHashVideoPlayerView.renderSlot(): FrameLayout =
+    private fun BaseHashVideoPlayerView.gestureOverlay(): FrameLayout =
         getChildAt(0) as FrameLayout
 
     private class TestVideoPlayerView(context: Context) : BaseHashVideoPlayerView(context) {

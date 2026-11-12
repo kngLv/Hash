@@ -50,12 +50,20 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     private val controls = EmbeddedVideoControls(context)
     private var defaultHeight: Int? = null
     private var renderedContentSize: VideoContentSize? = null
+    private var isContentHeightUpdatePosted = false
 
     /** 宿主负责横屏、竖屏、小窗等呈现策略；未设置时不展示全屏入口。 */
     var onFullscreenRequested: (() -> Unit)? = null
         set(value) {
             field = value
             controls.onFullscreenRequested = value
+        }
+
+    /** 宿主负责展示竖屏沉浸播放；未设置时不展示竖屏入口。 */
+    var onPortraitRequested: (() -> Unit)? = null
+        set(value) {
+            field = value
+            controls.onPortraitRequested = value
         }
 
     /** 宿主负责将当前画面迁移到悬浮容器；未设置时不展示悬浮入口。 */
@@ -111,7 +119,7 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
-        renderedContentSize?.let(::applyContentHeight)
+        scheduleContentHeightUpdate()
     }
 
     private fun togglePlayback() {
@@ -149,11 +157,26 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         if (contentSize == null) {
             restoreDefaultHeight()
         } else {
-            applyContentHeight(contentSize)
+            scheduleContentHeightUpdate()
         }
     }
 
-    /** 真实尺寸到达后，按当前可用宽度计算高度，保证视频画面完整铺满横向空间而不发生形变。 */
+    /**
+     * 合并同一轮布局中的尺寸与宽度变化，待 View 使用最终宽度完成布局后再写入 item 高度。
+     *
+     * 这只依赖内嵌播放器自身的布局状态，不感知横竖屏或全屏展示策略。
+     */
+    private fun scheduleContentHeightUpdate() {
+        if (renderedContentSize == null || isContentHeightUpdatePosted) return
+
+        isContentHeightUpdatePosted = true
+        post {
+            isContentHeightUpdatePosted = false
+            renderedContentSize?.let(::applyContentHeight)
+        }
+    }
+
+    /** 真实尺寸到达后，按最终可用宽度计算高度，保证视频画面完整铺满横向空间而不发生形变。 */
     private fun applyContentHeight(contentSize: VideoContentSize) {
         if (width <= 0 || contentSize.aspectRatio <= 0f) return
 
