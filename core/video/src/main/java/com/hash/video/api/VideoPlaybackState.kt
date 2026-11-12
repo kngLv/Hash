@@ -6,8 +6,6 @@ data class VideoPlaybackState(
     val media: VideoMedia? = null,
     /** 播放器的稳定播放阶段。 */
     val status: VideoPlaybackStatus = VideoPlaybackStatus.IDLE,
-    /** 当前画面的承载形态。 */
-    val presentation: VideoPresentation = VideoPresentation.EMBEDDED,
     /** 当前媒体的播放位置、缓冲位置与总时长。 */
     val progress: VideoPlaybackProgress = VideoPlaybackProgress(),
     /** 从媒体流解析出的真实视频尺寸，未知时为空。 */

@@ -1,47 +1,40 @@
 package com.hash.video.player
 
 import android.content.Context
+import android.annotation.SuppressLint
 import android.util.Log
-import com.hash.video.api.VideoPresentation
-import com.hash.video.ui.player.VideoPresentationCoordinator
+import android.view.ViewGroup
 
 /** 视频模块的唯一入口，保证整个 App 复用同一个播放控制器。 */
 object HashVideo {
 
+    /**
+     * 控制器仅在进程内复用；其内部强制持有 applicationContext，不会引用 Activity 或 View。
+     * Lint 无法跨构造函数追踪该约束，因此在唯一的单例字段上精确抑制误报。
+     */
+    @SuppressLint("StaticFieldLeak")
     @Volatile
     private var controller: VideoController? = null
 
-    @Volatile
-    private var presentationCoordinator: VideoPresentationCoordinator? = null
-
     fun controller(context: Context): VideoController {
         return synchronized(this) {
-            controller ?: VideoController(context.applicationContext).also {
+            controller ?: VideoController(context).also {
                 controller = it
                 Log.d(LOG_TAG, "HashVideo 已创建 VideoController")
             }
         }
     }
 
-    /** 返回全局唯一的画面宿主协调器，避免多个 View 直接竞争同一个播放器输出。 */
-    internal fun presentationCoordinator(context: Context): VideoPresentationCoordinator {
-        return synchronized(this) {
-            presentationCoordinator ?: VideoPresentationCoordinator(controller(context)).also {
-                presentationCoordinator = it
-            }
-        }
-    }
+    /** 将唯一视频画面挂载到调用方提供的容器；旧容器会自动移除画面。 */
+    fun attachRenderTo(container: ViewGroup) = controller(container.context).attachRenderTo(container)
 
-    /** 当前画面是否已由全屏或小窗宿主接管。 */
-    fun isPresentationTransferred(): Boolean {
-        val presentation = controller?.playbackState?.value?.presentation ?: return false
-        return presentation != VideoPresentation.EMBEDDED
-    }
+    /** 仅当容器仍承载视频画面时解除挂载，不停止或释放播放会话。 */
+    fun detachRenderFrom(container: ViewGroup): Boolean =
+        controller(container.context).detachRenderFrom(container)
 
     /** 结束当前会话并释放全局播放器；下次调用 [controller] 时会按需创建新实例。 */
     fun release() {
         val releasedController = synchronized(this) {
-            presentationCoordinator = null
             controller.also { controller = null }
         }
         Log.d(
@@ -50,6 +43,5 @@ object HashVideo {
         )
         releasedController?.release()
     }
-
     private const val LOG_TAG = "HashVideoLifecycle"
 }

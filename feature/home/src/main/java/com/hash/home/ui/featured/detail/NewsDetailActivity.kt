@@ -217,7 +217,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     }
 
     override fun onDestroy() {
-        if (isFinishing && hasVideoContent && !HashVideo.isPresentationTransferred()) {
+        if (isFinishing && hasVideoContent) {
             HashVideo.release()
         }
         releaseTextToSpeech()

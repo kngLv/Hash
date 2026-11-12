@@ -11,4 +11,5 @@
     <item name="video_fullscreen_action" type="id" />
     <item name="video_quality_action" type="id" />
     <item name="video_exit_fullscreen_action" type="id" />
+    <item name="video_screen_host" type="id" />
 </resources>

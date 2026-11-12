@@ -16,6 +16,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.activity.ktx) // Activity 级视频覆盖层与返回键协调
     implementation(libs.androidx.core.ktx) // 全屏页面的系统栏兼容控制
     implementation(libs.androidx.media3.common) // Media3 通用媒体模型与播放器接口
     implementation(libs.androidx.media3.database) // 视频缓存索引的本地数据库实现
@@ -25,6 +26,7 @@ dependencies {
     implementation(libs.androidx.media3.ui) // PlayerView 等视频播放界面组件
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1") // 播放状态的主线程收集
     testImplementation(libs.junit)
+    androidTestImplementation("androidx.test:core:1.6.1") // ActivityScenario 驱动呈现宿主设备测试
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }

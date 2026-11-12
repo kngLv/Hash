@@ -1,9 +1,7 @@
 package com.hash.video.ui.player
 
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.Intent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -13,9 +11,9 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.player.HashVideo
 import com.hash.video.ui.controls.EmbeddedVideoControls
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -190,6 +188,7 @@ class EmbeddedVideoPlayerViewTest {
         val invoked = AtomicBoolean(false)
         instrumentation.runOnMainSync {
             val view = EmbeddedVideoPlayerView(context).apply {
+                setMedia(media)
                 onFullscreenRequested = { invoked.set(true) }
             }
 
@@ -200,28 +199,13 @@ class EmbeddedVideoPlayerViewTest {
     }
 
     @Test
-    fun 未配置回调时点击全屏操作启动模块内全屏页面() {
+    fun 未配置回调时隐藏全屏操作() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        var startedIntent: Intent? = null
-        val context = object : ContextWrapper(instrumentation.targetContext) {
-            override fun getApplicationContext(): Context = instrumentation.targetContext.applicationContext
-
-            override fun startActivity(intent: Intent) {
-                startedIntent = intent
-            }
-        }
-
         instrumentation.runOnMainSync {
-            val view = EmbeddedVideoPlayerView(context).apply { setMedia(media) }
-            assertEquals(View.VISIBLE, view.findViewById<View>(R.id.video_fullscreen_action).visibility)
-            view.enterFullscreen()
-        }
+            val view = EmbeddedVideoPlayerView(instrumentation.targetContext).apply { setMedia(media) }
 
-        assertNotNull(startedIntent)
-        assertEquals(
-            "com.hash.video.presentation.VideoFullscreenActivity",
-            startedIntent?.component?.className,
-        )
+            assertEquals(View.GONE, view.findViewById<View>(R.id.video_fullscreen_action).visibility)
+        }
     }
 
     @Test
@@ -231,7 +215,7 @@ class EmbeddedVideoPlayerViewTest {
         instrumentation.runOnMainSync {
             val view = EmbeddedVideoPlayerView(context)
 
-            assertEquals(View.VISIBLE, view.findViewById<View>(R.id.video_fullscreen_action).visibility)
+            assertEquals(View.GONE, view.findViewById<View>(R.id.video_fullscreen_action).visibility)
             assertEquals(View.GONE, view.findViewById<View>(R.id.video_float_action).visibility)
         }
     }

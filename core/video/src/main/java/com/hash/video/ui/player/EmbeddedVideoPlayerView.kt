@@ -17,7 +17,6 @@ import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
-import com.hash.video.presentation.VideoFullscreenActivity
 import com.hash.video.ui.controls.EmbeddedVideoControls
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
@@ -31,7 +30,7 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : BaseHashVideoPlayerView(context, attrs, defStyleAttr) {
 
-    override val gestureConfig = VideoGestureConfig(
+    override fun createGestureConfig() = VideoGestureConfig(
         singleTapEnabled = true,
         doubleTapEnabled = true,
         seekEnabled = true,
@@ -52,8 +51,12 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     private var defaultHeight: Int? = null
     private var renderedContentSize: VideoContentSize? = null
 
-    /** 宿主可覆盖默认的横屏全屏跳转；未设置时使用模块内置全屏页。 */
+    /** 宿主负责横屏、竖屏、小窗等呈现策略；未设置时不展示全屏入口。 */
     var onFullscreenRequested: (() -> Unit)? = null
+        set(value) {
+            field = value
+            controls.onFullscreenRequested = value
+        }
 
     /** 宿主负责将当前画面迁移到悬浮容器；未设置时不展示悬浮入口。 */
     var onFloatRequested: (() -> Unit)? = null
@@ -80,17 +83,13 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         centerPlayAction.setOnClickListener { play() }
         errorMessageView.setOnClickListener { play() }
         controls.onPlaybackToggle = ::togglePlayback
-        controls.onFullscreenRequested = ::enterFullscreen
         controls.onSeekRequested = { positionMs ->
             handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
         }
     }
 
-    /** 进入模块内置的横屏全屏页；宿主设置回调后可覆盖默认跳转行为。 */
-    fun enterFullscreen() {
-        if (media == null) return
-        onFullscreenRequested?.invoke() ?: VideoFullscreenActivity.start(context)
-    }
+    /** 请求宿主展示当前媒体；具体横竖屏和转场策略完全由宿主决定。 */
+    fun enterFullscreen() = onFullscreenRequested?.invoke()
 
     override fun onPlaybackStateChanged(state: VideoPlaybackState) {
         val status = state.status
@@ -142,21 +141,6 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
             else -> Unit
         }
     }
-
-//    /**
-//     * 处理控制栏和画面手势发起的跳转。
-//     *
-//     * 详情页默认避免直接落到末尾；播放列表或短视频子类可重写以切换下一条或循环播放。
-//     */
-//    protected open override fun handleUserSeek(positionMs: Long, durationMs: Long) {
-//        if (durationMs <= 0L) return
-//        val targetPositionMs = if (durationMs > END_SEEK_GUARD_MS) {
-//            positionMs.coerceAtMost(durationMs - END_SEEK_GUARD_MS)
-//        } else {
-//            positionMs
-//        }
-//        seekTo(targetPositionMs)
-//    }
 
     private fun renderContentSize(contentSize: VideoContentSize?) {
         if (renderedContentSize == contentSize) return
@@ -232,6 +216,5 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         const val ERROR_CORNER_RADIUS_DP = 8
         const val ERROR_HORIZONTAL_PADDING_DP = 16
         const val ERROR_VERTICAL_PADDING_DP = 10
-        const val END_SEEK_GUARD_MS = 2_000L
     }
 }

@@ -11,7 +11,6 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.VideoPlaybackState
-import com.hash.video.api.VideoPresentation
 import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
 import com.hash.video.ui.controls.FullscreenVideoControls
@@ -22,21 +21,23 @@ import kotlin.math.roundToInt
 
 /** 应用内横屏全屏播放宿主，组合完整画面手势与三层控制栏。 */
 @OptIn(UnstableApi::class)
-class FullscreenVideoPlayerView @JvmOverloads constructor(
+open class FullscreenVideoPlayerView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : BaseHashVideoPlayerView(context, attrs, defStyleAttr) {
 
-    override val presentation: VideoPresentation = VideoPresentation.FULLSCREEN
-
-    override val gestureConfig = VideoGestureConfig(
-        singleTapEnabled = true,
-        doubleTapEnabled = true,
-        seekEnabled = true,
-        brightnessEnabled = true,
-        volumeEnabled = true,
-    )
+    /**
+     * 亮度、音量需要宿主实际提供系统级处理器才启用，避免手势已被消费却没有任何效果。
+     * 其余播放手势由全屏播放器默认支持。
+     */
+    override fun createGestureConfig() = VideoGestureConfig(
+            singleTapEnabled = true,
+            doubleTapEnabled = true,
+            seekEnabled = true,
+            brightnessEnabled = onBrightnessGesture != null,
+            volumeEnabled = onVolumeGesture != null,
+        )
 
     private val loadingView = ProgressBar(context).apply {
         visibility = GONE
@@ -50,9 +51,17 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
 
     /** 左侧纵向手势的亮度变化量，范围 -1 到 1；由 Activity 等宿主修改 Window 亮度。 */
     var onBrightnessGesture: ((Float, VideoGesturePhase) -> Unit)? = null
+        set(value) {
+            field = value
+            invalidateGestureConfig()
+        }
 
     /** 右侧纵向手势的媒体音量变化量，范围 -1 到 1；由宿主修改系统媒体音量。 */
     var onVolumeGesture: ((Float, VideoGesturePhase) -> Unit)? = null
+        set(value) {
+            field = value
+            invalidateGestureConfig()
+        }
 
     var onFloatRequested: (() -> Unit)?
         get() = controls.onFloatRequested
@@ -94,11 +103,6 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
         controls.onExitFullscreenRequested = ::exitFullscreen
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        activatePresentation()
-    }
-
     override fun onPlaybackStateChanged(state: VideoPlaybackState) {
         loadingView.visibility = if (state.status.isLoading) VISIBLE else GONE
         val errorMessage = state.errorMessage.takeIf { state.status == VideoPlaybackStatus.ERROR }
@@ -122,9 +126,9 @@ class FullscreenVideoPlayerView @JvmOverloads constructor(
                 controls.renderSeekPreview(event.positionMs, event.durationMs)
             }
 
-            is VideoGestureEvent.SeekPreviewEnd,
-            VideoGestureEvent.SeekPreviewCancel,
-                -> controls.endSeekPreview()
+            is VideoGestureEvent.SeekPreviewEnd -> controls.endSeekPreview()
+
+            VideoGestureEvent.SeekPreviewCancel -> controls.cancelSeekPreview()
 
             is VideoGestureEvent.BrightnessAdjustment ->
                 onBrightnessGesture?.invoke(event.delta, event.phase)

@@ -42,7 +42,6 @@ class EmbeddedVideoControls @JvmOverloads constructor(
     }
     var onPlaybackToggle: (() -> Unit)? = null
     var onSeekRequested: ((Long) -> Unit)? = null
-    var onSeekPreviewChanged: ((Long) -> Unit)? = null
 
     var onFullscreenRequested: (() -> Unit)? = null
         set(value) {
@@ -73,7 +72,6 @@ class EmbeddedVideoControls @JvmOverloads constructor(
 
         playbackAction.setOnClickListener { onPlaybackToggle?.invoke() }
         progressControl.onSeekRequested = { onSeekRequested?.invoke(it) }
-        progressControl.onSeekPreviewChanged = { onSeekPreviewChanged?.invoke(it) }
         floatAction.setOnClickListener { onFloatRequested?.invoke() }
         fullscreenAction.setOnClickListener { onFullscreenRequested?.invoke() }
     }

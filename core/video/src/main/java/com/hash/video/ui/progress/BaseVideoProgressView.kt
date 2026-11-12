@@ -25,9 +25,6 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     /** 最近一次由播放器发布的真实进度，用于取消预览后立即恢复画面。 */
     private var lastPlaybackProgress = VideoPlaybackProgress()
 
-    /** 用户拖动时的预览通知，可用于展示额外的时间气泡。 */
-    var onSeekPreviewChanged: ((Long) -> Unit)? = null
-
     /** 用户确认拖动后的跳转请求，由外层控制栏或播放器执行。 */
     var onSeekRequested: ((Long) -> Unit)? = null
 
@@ -61,6 +58,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     /** 画面横滑等外部手势拖动时，立即渲染目标位置但不触发真实跳转。 */
     fun renderSeekPreview(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
+        isAwaitingSeekCompletion = false
         seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
         renderProgress(ProgressDisplayState(positionMs = seekPreviewPositionMs!!, durationMs = durationMs))
     }
@@ -79,8 +77,8 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     /** 具体 UI 将用户拖动过程的位置交给基类统一记录。 */
     protected fun dispatchUserSeekPreview(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
+        isAwaitingSeekCompletion = false
         seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
-        onSeekPreviewChanged?.invoke(seekPreviewPositionMs!!)
     }
 
     /** 具体 UI 在用户松开进度条后调用，基类保留预览并分发跳转。 */

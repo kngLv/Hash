@@ -119,6 +119,23 @@ class DefaultVideoProgressViewTest {
     }
 
     @Test
+    fun 新一轮预览不应被上一轮待确认跳转提前结束() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val view = DefaultVideoProgressView(context)
+            val oldProgress = VideoPlaybackProgress(positionMs = 2_500L, durationMs = 10_000L)
+            view.renderProgress(oldProgress)
+            view.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            view.endSeekPreview()
+
+            view.renderSeekPreview(positionMs = 3_000L, durationMs = 10_000L)
+            view.renderProgress(oldProgress)
+
+            assertEquals(300, view.findViewById<SeekBar>(R.id.video_progress).progress)
+        }
+    }
+
+    @Test
     fun 用户结束拖动时应提交目标位置() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val positionMs = AtomicLong(-1L)

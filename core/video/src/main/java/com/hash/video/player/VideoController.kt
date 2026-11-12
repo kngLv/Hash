@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
@@ -19,9 +20,9 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
-import com.hash.video.api.VideoPresentation
 import com.hash.video.service.HashVideoPlaybackService
 import com.hash.video.service.VideoSessionCommands
+import com.hash.video.ui.render.VideoRenderCoordinator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,10 +37,18 @@ import kotlinx.coroutines.flow.asStateFlow
  * - 将 Media3 的播放器回调转换为业务层可观察的 [VideoPlaybackState]；
  * - 处理播放、暂停、停止和移除当前媒体等播放意图；
  * - 定时同步进度，并接收媒体流解析出的真实视频尺寸；
- * - 不持有任何页面或 PlayerView，画面绑定由 `VideoPresentationCoordinator` 负责。
+ * - 不持有任何页面或 PlayerView，画面绑定由 `VideoRenderCoordinator` 负责。
  */
 @OptIn(UnstableApi::class)
-class VideoController internal constructor(private val context: Context) {
+class VideoController internal constructor(context: Context) {
+
+    /** 播放服务与播放器只能使用进程级 Context，禁止由全局控制器持有页面 Context。 */
+    private val context = context.applicationContext
+
+    /** 唯一画面渲染器仅服务于当前播放会话，不向业务层暴露。 */
+    private val renderCoordinator = lazy(LazyThreadSafetyMode.NONE) {
+        VideoRenderCoordinator(context, this)
+    }
 
     private val _playbackState = MutableStateFlow(VideoPlaybackState())
 
@@ -133,6 +142,25 @@ class VideoController internal constructor(private val context: Context) {
             ContextCompat.getMainExecutor(context),
         )
     }
+
+    /** 将唯一 PlayerView 挂载到目标容器，不改变媒体或播放状态。 */
+    internal fun attachRenderTo(container: ViewGroup) {
+        if (isReleased) return
+        renderCoordinator.value.attachTo(container)
+    }
+
+    /** 清空当前画面承载位置，不停止播放器。 */
+    internal fun clearRender() {
+        if (renderCoordinator.isInitialized()) renderCoordinator.value.clear()
+    }
+
+    /** 仅当指定容器仍承载画面时解除挂载。 */
+    internal fun detachRenderFrom(container: ViewGroup): Boolean =
+        if (renderCoordinator.isInitialized()) renderCoordinator.value.detachFrom(container) else false
+
+    /** 当前是否已有容器承载唯一 PlayerView。 */
+    internal fun hasAttachedRender(): Boolean =
+        renderCoordinator.isInitialized() && renderCoordinator.value.currentContainer() != null
 
     /**
      * 确保指定媒体正在播放。
@@ -260,12 +288,6 @@ class VideoController internal constructor(private val context: Context) {
         }
     }
 
-    /** 同步当前视频画面的承载形态，不改变媒体、进度或播放状态。 */
-    internal fun updatePresentation(presentation: VideoPresentation) {
-        if (isReleased || _playbackState.value.presentation == presentation) return
-        _playbackState.value = _playbackState.value.copy(presentation = presentation)
-    }
-
     /** 释放媒体控制器，使空闲媒体服务销毁其 ExoPlayer。释放后不可继续使用该实例。 */
     internal fun release() {
         if (isReleased) {
@@ -277,6 +299,7 @@ class VideoController internal constructor(private val context: Context) {
         isReleased = true
         latestRequestId++
         stopProgressTracking()
+        clearRender()
         _playbackState.value = _playbackState.value.resetPlaybackSession()
 
         if (!controllerFuture.isDone) {

@@ -11,11 +11,9 @@ import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.PlayerView
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
-import com.hash.video.api.VideoPresentation
 import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.player.HashVideo
@@ -34,8 +32,7 @@ import kotlinx.coroutines.launch
  * 视频播放界面的抽象基类。
  *
  * 基类提供媒体绑定、播放控制、生命周期登记与播放状态分发；具体的播放、Loading、全屏或悬浮
- * 控件由子类自行实现。视频画面只由 [VideoPresentationCoordinator] 绑定和迁移，子类不得直接
- * 调用 `PlayerView.setPlayer`。
+ * 控件由子类自行实现。视频画面仅通过控制器挂载到内部容器，子类不得直接操作 `PlayerView`。
  */
 @OptIn(UnstableApi::class)
 abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
@@ -45,7 +42,6 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val controller = HashVideo.controller(context)
-    private val presentationCoordinator = HashVideo.presentationCoordinator(context)
     private val gestureHandler = Handler(Looper.getMainLooper())
     private val touchHandler = VideoTouchHandler(
         touchSlopPx = ViewConfiguration.get(context).scaledTouchSlop.toFloat(),
@@ -55,12 +51,10 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         onGesture = ::handleVideoGesture,
     )
     private var stateCollectionScope: CoroutineScope? = null
+    private var gestureConfig: VideoGestureConfig? = null
 
-    /** 播放器画面容器；仅协调器有权为其绑定或迁移 Player。 */
-    private val playerView = PlayerView(context).apply {
-        useController = false
-        setShutterBackgroundColor(Color.BLACK)
-    }
+    /** 播放器画面容器；唯一渲染 View 仅由控制器内部挂载。 */
+    private val renderSlot = FrameLayout(context).apply { setBackgroundColor(Color.BLACK) }
 
     /** 当前 View 要展示的媒体；设置媒体不会自动播放。 */
     protected var media: VideoMedia? = null
@@ -70,22 +64,16 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     protected val currentPlaybackState: VideoPlaybackState
         get() = controller.playbackState.value
 
-    /** 当前视频画面启用的手势；默认关闭，由具体播放器按场景重写。 */
-    protected open val gestureConfig: VideoGestureConfig = VideoGestureConfig()
+    /** 返回当前视频画面启用的手势配置；默认关闭，由具体播放器按场景重写。 */
+    protected open fun createGestureConfig(): VideoGestureConfig = VideoGestureConfig()
 
-    /** 当前 View 代表的画面承载形态，协调器据此同步全局播放状态。 */
-    internal open val presentation: VideoPresentation = VideoPresentation.EMBEDDED
-
-    /** 供协调器迁移视频画面使用，业务和子类均不应直接为它绑定 Player。 */
-    internal val presentationPlayerView: PlayerView
-        get() = playerView
-
-    /** 当前宿主仍在 Window 中时才允许成为视频画面目标。 */
-    internal val isPresentationAvailable: Boolean
-        get() = isAttachedToWindow
+    /** 使手势配置在下次触摸时重新创建，供依赖可变状态的子类刷新开关。 */
+    protected fun invalidateGestureConfig() {
+        gestureConfig = null
+    }
 
     init {
-        addView(playerView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(renderSlot, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         isClickable = true
         bindVideoTouchHandler()
     }
@@ -96,10 +84,10 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      */
     @SuppressLint("ClickableViewAccessibility")
     private fun bindVideoTouchHandler() {
-        playerView.setOnTouchListener { _, event ->
+        renderSlot.setOnTouchListener { _, event ->
             val direction = touchHandler.handleTouchEvent(
                 event = event.toVideoTouchEvent(),
-                config = gestureConfig,
+                config = currentGestureConfig(),
                 progress = currentPlaybackState.progress,
             )
             coordinateParentTouchInterception(event.actionMasked, direction)
@@ -127,13 +115,13 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         if (this.media == media) return
         this.media = media
         renderPlaybackState(currentPlaybackState)
-        restorePresentationIfCurrentMedia()
+        restoreRenderIfCurrentMedia()
     }
 
     /** 请求播放已绑定的视频；控制器会自行决定切换、恢复、重播或忽略重复请求。 */
     fun play() {
         media?.let {
-            activatePresentation()
+            attachRender()
             controller.play(it)
         }
     }
@@ -143,6 +131,19 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         setMedia(media)
         play()
     }
+
+
+    /** 触摸过程中复用配置，避免高频 MOVE 事件反复创建对象。 */
+    private fun currentGestureConfig(): VideoGestureConfig = gestureConfig ?: createGestureConfig().also {
+        gestureConfig = it
+    }
+
+    /**
+     * 让当前播放器 View 接管正在播放的视频画面，不改变媒体和播放状态。
+     *
+     * 从业务侧的全屏或小窗容器返回内嵌页面时调用即可，无需通过 [play] 间接恢复画面。
+     */
+    fun attachRender() = controller.attachRenderTo(renderSlot)
 
     /** 暂停当前视频；界面状态以真实播放器回调为准。 */
     fun pause() = controller.pause()
@@ -161,30 +162,27 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      *
      * 全屏页、小窗或列表项成为当前播放项时调用；该操作不会重新播放视频。
      */
-    fun activatePresentation() {
-        presentationCoordinator.activate(this)
-    }
-
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         observePlaybackState()
-        presentationCoordinator.attach(this)
-        restorePresentationIfCurrentMedia()
+        restoreRenderIfCurrentMedia()
     }
 
     override fun onDetachedFromWindow() {
-        touchHandler.cancel(gestureConfig)
+        gestureConfig?.let(touchHandler::cancel)
         stateCollectionScope?.cancel()
         stateCollectionScope = null
-        presentationCoordinator.detach(this)
+        controller.detachRenderFrom(renderSlot)
         super.onDetachedFromWindow()
     }
 
-    /** 子类只负责把已筛选的当前媒体播放状态渲染为自己的 UI。 */
-    protected abstract fun onPlaybackStateChanged(state: VideoPlaybackState)
-
-    /** 基类默认手势处理完成后通知子类，用于更新控件、动画等附加 UI。 */
-    protected open fun onVideoGesture(event: VideoGestureEvent) = Unit
+    private fun observePlaybackState() {
+        stateCollectionScope?.cancel()
+        stateCollectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        stateCollectionScope?.launch {
+            controller.playbackState.collect(::renderPlaybackState)
+        }
+    }
 
     /** 供同模块界面测试直接验证状态到 UI 的映射。 */
     internal fun renderPlaybackState(state: VideoPlaybackState) {
@@ -196,32 +194,27 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         onPlaybackStateChanged(displayedState)
     }
 
+
+    /** 子类只负责把已筛选的当前媒体播放状态渲染为自己的 UI。 */
+    protected abstract fun onPlaybackStateChanged(state: VideoPlaybackState)
+
+
     /**
      * View 因重建或列表复用重新绑定到当前播放媒体时，恢复它原本的画面输出。
      *
-     * 首次绑定不会满足条件，仍必须由 [play] 主动激活；只有已附着、媒体相同且承载形态相同，
-     * 才会迁移 PlayerView。
+     * 首次绑定不会满足条件，仍必须由 [play] 主动激活。若已有其他容器承载画面，不能抢占。
      */
-    private fun restorePresentationIfCurrentMedia() {
+    private fun restoreRenderIfCurrentMedia() {
         val state = currentPlaybackState
         if (
-            !isPresentationAvailable ||
-            state.presentation != presentation ||
+            !isAttachedToWindow ||
+            controller.hasAttachedRender() ||
             media?.isSameSourceAs(state.media) != true
         ) {
             return
         }
-        activatePresentation()
+        attachRender()
     }
-
-    private fun observePlaybackState() {
-        stateCollectionScope?.cancel()
-        stateCollectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-        stateCollectionScope?.launch {
-            controller.playbackState.collect(::renderPlaybackState)
-        }
-    }
-
 
     /** 单击统一走 [performClick]；其余手势先通知子类更新 UI，再执行基类的默认播放命令。 */
     private fun handleVideoGesture(event: VideoGestureEvent) {
@@ -256,6 +249,9 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         }
     }
 
+    /** 基类默认手势处理完成后通知子类，用于更新控件、动画等附加 UI。 */
+    protected open fun onVideoGesture(event: VideoGestureEvent) = Unit
+
     /**
      * 处理用户正常结束进度预览后的跳转请求。
      *
@@ -278,8 +274,8 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         y = y,
         pointerCount = pointerCount,
         eventTimeMs = eventTime,
-        viewWidth = playerView.width,
-        viewHeight = playerView.height,
+        viewWidth = renderSlot.width,
+        viewHeight = renderSlot.height,
     )
 
 }

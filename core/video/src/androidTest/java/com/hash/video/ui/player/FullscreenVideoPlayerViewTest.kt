@@ -10,6 +10,7 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.ui.gesture.VideoGestureConfig
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -105,5 +106,29 @@ class FullscreenVideoPlayerViewTest {
             assertEquals(View.VISIBLE, errorMessage.visibility)
             assertEquals("视频地址无访问权限或已失效", errorMessage.text.toString())
         }
+    }
+
+    @Test
+    fun 仅在宿主提供处理器时启用亮度和音量手势() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val view = TestFullscreenVideoPlayerView(instrumentation.targetContext)
+
+            org.junit.Assert.assertFalse(view.currentGestureConfig.brightnessEnabled)
+            org.junit.Assert.assertFalse(view.currentGestureConfig.volumeEnabled)
+
+            view.onBrightnessGesture = { _, _ -> }
+            view.onVolumeGesture = { _, _ -> }
+
+            org.junit.Assert.assertTrue(view.currentGestureConfig.brightnessEnabled)
+            org.junit.Assert.assertTrue(view.currentGestureConfig.volumeEnabled)
+        }
+    }
+
+    private class TestFullscreenVideoPlayerView(context: android.content.Context) :
+        FullscreenVideoPlayerView(context) {
+
+        val currentGestureConfig: VideoGestureConfig
+            get() = createGestureConfig()
     }
 }

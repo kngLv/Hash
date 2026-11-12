@@ -2,9 +2,14 @@ package com.hash.video.ui.player
 
 import android.content.Context
 import android.view.MotionEvent
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.api.VideoPlaybackState
+import com.hash.video.api.VideoMedia
+import com.hash.video.player.HashVideo
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
 import org.junit.Assert.assertEquals
@@ -53,6 +58,52 @@ class BaseHashVideoPlayerViewTest {
         }
     }
 
+    @Test
+    fun 相同媒体的新嵌入View不应抢占已有画面() {
+        val scenario = androidx.test.core.app.ActivityScenario.launch(
+            VideoPlayerViewTestActivity::class.java,
+        )
+        try {
+            scenario.onActivity { activity ->
+                HashVideo.release()
+                val media = VideoMedia("same-media", "https://example.com/same.mp4")
+                val first = TestVideoPlayerView(activity).apply { setMedia(media) }
+                val second = TestVideoPlayerView(activity).apply { setMedia(media) }
+                activity.findViewById<ViewGroup>(android.R.id.content).addView(first)
+                first.play()
+
+                activity.findViewById<ViewGroup>(android.R.id.content).addView(second)
+
+                assertEquals(1, first.renderSlot().childCount)
+                assertEquals(0, second.renderSlot().childCount)
+            }
+        } finally {
+            scenario.onActivity { HashVideo.release() }
+            scenario.close()
+        }
+    }
+
+    @Test
+    fun 显式接管画面不应重新发起播放请求() {
+        val scenario = androidx.test.core.app.ActivityScenario.launch(
+            VideoPlayerViewTestActivity::class.java,
+        )
+        try {
+            scenario.onActivity { activity ->
+                HashVideo.release()
+                val view = TestVideoPlayerView(activity)
+                activity.findViewById<ViewGroup>(android.R.id.content).addView(view)
+
+                view.attachRender()
+
+                assertEquals(1, view.renderSlot().childCount)
+            }
+        } finally {
+            scenario.onActivity { HashVideo.release() }
+            scenario.close()
+        }
+    }
+
     private fun TestVideoPlayerView.doubleTap() {
         dispatchTouch(MotionEvent.ACTION_DOWN, 0L)
         dispatchTouch(MotionEvent.ACTION_UP, 20L)
@@ -62,15 +113,18 @@ class BaseHashVideoPlayerViewTest {
 
     private fun TestVideoPlayerView.dispatchTouch(action: Int, eventTime: Long) {
         val event = MotionEvent.obtain(0L, eventTime, action, 100f, 100f, 0)
-        presentationPlayerView.dispatchTouchEvent(event)
+        renderSlot().dispatchTouchEvent(event)
         event.recycle()
     }
+
+    private fun BaseHashVideoPlayerView.renderSlot(): FrameLayout =
+        getChildAt(0) as FrameLayout
 
     private class TestVideoPlayerView(context: Context) : BaseHashVideoPlayerView(context) {
         val handledEvents = mutableListOf<VideoGestureEvent>()
         var userSeek: Pair<Long, Long>? = null
 
-        override val gestureConfig = VideoGestureConfig(
+        override fun createGestureConfig() = VideoGestureConfig(
             singleTapEnabled = true,
             doubleTapEnabled = true,
         )
@@ -90,3 +144,5 @@ class BaseHashVideoPlayerViewTest {
         }
     }
 }
+
+class VideoPlayerViewTestActivity : ComponentActivity()
