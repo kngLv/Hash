@@ -1,17 +1,15 @@
 package com.hash.home.ui.featured.detail
 
 import android.content.Intent
+import android.app.PendingIntent
 import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.util.TypedValue
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
-import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,7 +24,6 @@ import com.hash.home.R
 import com.hash.home.data.model.NewsDetailBean
 import com.hash.home.databinding.ActivityNewsDetailBinding
 import com.hash.home.ui.featured.detail.adapter.NewsDetailAdapter
-import com.hash.home.ui.featured.detail.adapter.NewsDetailContentFormatter
 import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItem
 import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItemFactory
 import com.hash.home.ui.featured.detail.vm.NewsDetailViewModel
@@ -36,7 +33,6 @@ import com.hash.video.player.HashVideo
 import com.hash.video.api.VideoMedia
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.video.ui.player.BaseHashVideoPlayerView
-import java.util.Locale
 
 @Route(path = RouterActivityPath.Home.NEWS_DETAIL)
 class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
@@ -46,12 +42,12 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
     private val detailAdapter by lazy {
-        NewsDetailAdapter(::showLandscapeVideo, ::showPortraitVideo)
+        NewsDetailAdapter(
+            ::showLandscapeVideo,
+            ::showPortraitVideo,
+            ::setVideoNotificationActivity,
+        )
     }
-    private var narrationText = ""
-    private var textToSpeech: TextToSpeech? = null
-    private var isTextToSpeechReady = false
-    private var isReading = false
     private var isSourceVisible = false
     private var hasVideoContent = false
     private var sourceVideoPlayer: EmbeddedVideoPlayerView? = null
@@ -61,7 +57,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private val videoPresentationBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = closeVideoPresentation()
     }
-    private lateinit var listenAction: AppCompatTextView
 
     override val loadingStateOwner: LoadingStateOwner
         get() = viewModel
@@ -74,9 +69,11 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         contentRecycler.layoutManager = LinearLayoutManager(this@NewsDetailActivity)
         contentRecycler.adapter = detailAdapter
         toolbar.setDefaultActionClickListener { shareNews() }
-        listenAction = toolbar.createTextAction(
+        val listenAction = toolbar.createTextAction(
             text = getString(R.string.news_detail_listen),
-            onClick = View.OnClickListener { toggleReading() },
+            onClick = View.OnClickListener {
+                getString(R.string.news_detail_no_readable_content).showToast()
+            },
         ).apply {
             typeface = Typeface.create("serif", Typeface.NORMAL)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
@@ -102,6 +99,14 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
 
     override fun loadData() {
         viewModel.load(newsId)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        val previousNewsId = newsId
+        super.onNewIntent(intent)
+        if (newsId != previousNewsId) {
+            viewModel.load(newsId)
+        }
     }
 
     override fun onRestoreData(savedInstanceState: Bundle) {
@@ -131,10 +136,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
                 detailItems = detail.items,
             )
         hasVideoContent = pageItems.any { it is NewsDetailPageItem.Video }
-        narrationText = pageItems
-            .filterIsInstance<NewsDetailPageItem.Text>()
-            .joinToString("\n") { NewsDetailContentFormatter.toPlainText(it.content) }
-            .trim()
         detailAdapter.submitList(pageItems)
     }
 
@@ -153,76 +154,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         }
     }
 
-    private fun toggleReading() {
-        if (isReading) {
-            textToSpeech?.stop()
-            updateReadingState(false)
-            return
-        }
-        if (narrationText.isBlank()) {
-            getString(R.string.news_detail_no_readable_content).showToast()
-            return
-        }
-        if (textToSpeech == null) {
-            initializeTextToSpeech()
-        } else if (isTextToSpeechReady) {
-            startReading()
-        }
-    }
-
-    private fun initializeTextToSpeech() {
-        textToSpeech = TextToSpeech(this) { status ->
-            val speech = textToSpeech
-            if (status != TextToSpeech.SUCCESS || speech == null || speech.setLanguage(Locale.CHINESE) in
-                setOf(TextToSpeech.LANG_MISSING_DATA, TextToSpeech.LANG_NOT_SUPPORTED)
-            ) {
-                releaseTextToSpeech()
-                getString(R.string.news_detail_tts_unavailable).showToast()
-                return@TextToSpeech
-            }
-            isTextToSpeechReady = true
-            speech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String) = Unit
-
-                override fun onDone(utteranceId: String) {
-                    runOnUiThread { updateReadingState(false) }
-                }
-
-                @Suppress("OVERRIDE_DEPRECATION")
-                override fun onError(utteranceId: String) {
-                    runOnUiThread { updateReadingState(false) }
-                }
-
-                override fun onError(utteranceId: String, errorCode: Int) {
-                    runOnUiThread { updateReadingState(false) }
-                }
-            })
-            startReading()
-        }
-    }
-
-    private fun startReading() {
-        val result = textToSpeech?.speak(
-            narrationText,
-            TextToSpeech.QUEUE_FLUSH,
-            Bundle(),
-            TTS_UTTERANCE_ID,
-        )
-        if (result == TextToSpeech.SUCCESS) {
-            updateReadingState(true)
-        } else {
-            getString(R.string.news_detail_tts_unavailable).showToast()
-        }
-    }
-
-    private fun updateReadingState(reading: Boolean) {
-        isReading = reading
-        listenAction.contentDescription = getString(
-            if (reading) R.string.news_detail_stop_listening else R.string.news_detail_listen,
-        )
-        listenAction.isSelected = reading
-    }
-
     private fun shareNews() {
         val content = listOf(newsTitle, newsSource).filter(String::isNotBlank).joinToString("\n")
         startActivity(
@@ -232,6 +163,29 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
                 .let { Intent.createChooser(it, getString(R.string.news_detail_share)) },
         )
     }
+
+    /** 仅在用户实际播放详情视频前，注册可恢复当前新闻的通知点击目标。 */
+    private fun setVideoNotificationActivity() {
+        if (newsId.isBlank()) return
+        HashVideo.setNotificationActivity(this, createNotificationPendingIntent())
+    }
+
+    private fun createNotificationPendingIntent(): PendingIntent {
+        val intent = Intent(this, NewsDetailActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(EXTRA_NEWS_ID, newsId)
+            .putExtra(EXTRA_TITLE, newsTitle)
+            .putExtra(EXTRA_SOURCE, newsSource)
+            .putExtra(EXTRA_POST_TIME, intent.getStringExtra(EXTRA_POST_TIME).orEmpty())
+        return PendingIntent.getActivity(
+            this,
+            newsId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+
 
     /** 详情页负责横屏覆盖层和方向；video 模块只迁移唯一画面。 */
     private fun showLandscapeVideo(source: EmbeddedVideoPlayerView, media: VideoMedia) {
@@ -290,16 +244,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         if (isFinishing && hasVideoContent) {
             HashVideo.release()
         }
-        releaseTextToSpeech()
         super.onDestroy()
-    }
-
-    private fun releaseTextToSpeech() {
-        textToSpeech?.stop()
-        textToSpeech?.shutdown()
-        textToSpeech = null
-        isTextToSpeechReady = false
-        isReading = false
     }
 
     companion object {
@@ -307,7 +252,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_SOURCE = "source"
         const val EXTRA_POST_TIME = "postTime"
-        const val TTS_UTTERANCE_ID = "news_detail"
     }
 
     private enum class VideoPresentationMode {

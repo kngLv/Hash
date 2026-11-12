@@ -1,8 +1,10 @@
 package com.hash.video.service
 
+import android.app.PendingIntent
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.os.BundleCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -31,8 +33,8 @@ class HashVideoPlaybackService : MediaSessionService() {
         /**
          * MediaController 连接服务时调用。
          *
-         * 保留 Media3 默认命令，并且只向本应用进程开放“释放播放会话”命令，避免外部应用
-         * 停止播放器或清空播放列表。
+         * 保留 Media3 默认命令，并且只向本应用进程开放内部会话命令，避免外部应用修改通知跳转
+         * 目标、停止播放器或清空播放列表。
          */
         override fun onConnect(
             session: MediaSession,
@@ -47,6 +49,7 @@ class HashVideoPlaybackService : MediaSessionService() {
                 val defaultCommands = resultBuilder.build().availableSessionCommands
                 resultBuilder.setAvailableSessionCommands(
                     defaultCommands.buildUpon()
+                        .add(VideoSessionCommands.setNotificationActivity)
                         .add(VideoSessionCommands.releasePlaybackSession)
                         .build(),
                 )
@@ -58,7 +61,7 @@ class HashVideoPlaybackService : MediaSessionService() {
         /**
          * 接收控制器发送的自定义会话命令。
          *
-         * 当前仅处理本应用发起的“释放播放会话”：停止播放、清空列表并请求服务退出；
+         * 仅处理本应用发起的内部命令：设置通知点击目标，或释放播放会话。
          * 其他来源或未支持的命令统一返回不支持。
          */
         override fun onCustomCommand(
@@ -72,28 +75,47 @@ class HashVideoPlaybackService : MediaSessionService() {
                 "收到自定义命令：action=${customCommand.customAction}, " +
                     "package=${controller.packageName}",
             )
-            if (
-                controller.packageName != packageName ||
-                customCommand != VideoSessionCommands.releasePlaybackSession
-            ) {
+            if (controller.packageName != packageName) {
                 Log.w(LOG_TAG, "已拒绝自定义命令")
                 return Futures.immediateFuture(
                     SessionResult(SessionError.ERROR_NOT_SUPPORTED),
                 )
             }
 
-            Log.d(
-                LOG_TAG,
-                "正在释放播放会话：mediaItemCount=${session.player.mediaItemCount}, " +
-                    "playbackState=${session.player.playbackState}",
-            )
-            session.player.stop()
-            Log.d(LOG_TAG, "ExoPlayer 已停止")
-            session.player.clearMediaItems()
-            Log.d(LOG_TAG, "播放列表已清空：mediaItemCount=${session.player.mediaItemCount}")
-            pauseAllPlayersAndStopSelf()
-            Log.d(LOG_TAG, "已请求停止 HashVideoPlaybackService")
-            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            return when (customCommand) {
+                VideoSessionCommands.setNotificationActivity -> {
+                    val pendingIntent = BundleCompat.getParcelable(
+                        args,
+                        VideoSessionCommands.ARGUMENT_NOTIFICATION_ACTIVITY,
+                        PendingIntent::class.java,
+                    )
+                    session.setSessionActivity(pendingIntent)
+                    Log.d(LOG_TAG, "已${if (pendingIntent == null) "清空" else "更新"}通知点击目标")
+                    Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+
+                VideoSessionCommands.releasePlaybackSession -> {
+                    Log.d(
+                        LOG_TAG,
+                        "正在释放播放会话：mediaItemCount=${session.player.mediaItemCount}, " +
+                            "playbackState=${session.player.playbackState}",
+                    )
+                    session.setSessionActivity(null)
+                    Log.d(LOG_TAG, "通知点击目标已清空")
+                    session.player.stop()
+                    Log.d(LOG_TAG, "ExoPlayer 已停止")
+                    session.player.clearMediaItems()
+                    Log.d(LOG_TAG, "播放列表已清空：mediaItemCount=${session.player.mediaItemCount}")
+                    pauseAllPlayersAndStopSelf()
+                    Log.d(LOG_TAG, "已请求停止 HashVideoPlaybackService")
+                    Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+
+                else -> {
+                    Log.w(LOG_TAG, "不支持的自定义命令")
+                    Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+                }
+            }
         }
     }
 

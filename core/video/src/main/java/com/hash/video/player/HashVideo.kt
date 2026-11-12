@@ -2,6 +2,7 @@ package com.hash.video.player
 
 import android.content.Context
 import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.util.Log
 import android.view.ViewGroup
 
@@ -31,6 +32,11 @@ object HashVideo {
     /** 仅当容器仍承载视频画面时解除挂载，不停止或释放播放会话。 */
     fun detachRenderFrom(container: ViewGroup): Boolean =
         controller(container.context).detachRenderFrom(container)
+
+    /** 设置系统媒体通知点击后应恢复的页面；传入 null 时清理旧目标。 */
+    fun setNotificationActivity(context: Context, pendingIntent: PendingIntent?) {
+        controller(context).setNotificationActivity(pendingIntent)
+    }
 
     /** 结束当前会话并释放全局播放器；下次调用 [controller] 时会按需创建新实例。 */
     fun release() {

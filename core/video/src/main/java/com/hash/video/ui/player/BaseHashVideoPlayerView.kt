@@ -196,7 +196,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     }
 
     /** 请求播放已绑定的视频；控制器会自行决定切换、恢复、重播或忽略重复请求。 */
-    fun play() {
+    open fun play() {
         media?.let {
             attachRender()
             controller.play(it)

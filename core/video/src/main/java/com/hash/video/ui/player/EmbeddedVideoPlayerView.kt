@@ -73,6 +73,9 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
             controls.onFloatRequested = value
         }
 
+    /** 用户请求播放前通知宿主，用于准备通知跳转目标等页面级状态。 */
+    var onPlaybackRequested: (() -> Unit)? = null
+
     init {
         setBackgroundColor(Color.BLACK)
         addView(loadingView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
@@ -96,8 +99,10 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         }
     }
 
-    /** 请求宿主展示当前媒体；具体横竖屏和转场策略完全由宿主决定。 */
-    fun enterFullscreen() = onFullscreenRequested?.invoke()
+    override fun play() {
+        onPlaybackRequested?.invoke()
+        super.play()
+    }
 
     override fun onPlaybackStateChanged(state: VideoPlaybackState) {
         val status = state.status

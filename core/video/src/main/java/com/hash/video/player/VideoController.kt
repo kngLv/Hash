@@ -2,6 +2,7 @@ package com.hash.video.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.app.PendingIntent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -136,6 +137,11 @@ class VideoController internal constructor(context: Context) {
      * 该方法仅供 video 模块内部协作使用，业务层只调用公开的播放 API，不直接接触 Media3 Player。
      */
     internal fun withPlayer(onReady: (Player) -> Unit) {
+        withMediaController(onReady)
+    }
+
+    /** 在连接完成后执行需要 MediaController 专有能力的内部操作。 */
+    private fun withMediaController(onReady: (MediaController) -> Unit) {
         controllerFuture.addListener(
             {
                 if (isReleased) return@addListener
@@ -287,12 +293,33 @@ class VideoController internal constructor(context: Context) {
         val requestId = ++latestRequestId
         stopProgressTracking()
         _playbackState.value = _playbackState.value.resetPlaybackSession()
+        setNotificationActivity(null)
         withPlayer { player ->
             // 后续新的播放请求优先，不能让较早的清理操作误清空新媒体。
             if (requestId != latestRequestId) return@withPlayer
 
             player.stop()
             player.clearMediaItems()
+        }
+    }
+
+    /** 设置通知点击后应恢复的页面；传入 null 时清理已失效的跳转目标。 */
+    fun setNotificationActivity(pendingIntent: PendingIntent?) {
+        if (isReleased) return
+        val arguments = Bundle().apply {
+            pendingIntent?.let {
+                putParcelable(VideoSessionCommands.ARGUMENT_NOTIFICATION_ACTIVITY, it)
+            }
+        }
+        withMediaController { mediaController ->
+            runCatching {
+                mediaController.sendCustomCommand(
+                    VideoSessionCommands.setNotificationActivity,
+                    arguments,
+                )
+            }.onFailure {
+                Log.e(LOG_TAG, "设置通知点击目标失败", it)
+            }
         }
     }
 

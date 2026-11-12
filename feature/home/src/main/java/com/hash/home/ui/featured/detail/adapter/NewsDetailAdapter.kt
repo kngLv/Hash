@@ -20,13 +20,17 @@ import com.hash.home.databinding.ItemNewsDetailVideoBinding
 class NewsDetailAdapter(
     private val onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
     private val onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
+    private val onPlaybackRequested: () -> Unit = {},
 ) : BaseMultiItemAdapter<NewsDetailPageItem>() {
 
     init {
         addItemType(TYPE_HEADER, HeaderItemListener())
             .addItemType(TYPE_TEXT, TextItemListener())
             .addItemType(TYPE_IMAGE, ImageItemListener())
-            .addItemType(TYPE_VIDEO, VideoItemListener(onFullscreenRequested, onPortraitRequested))
+            .addItemType(
+                TYPE_VIDEO,
+                VideoItemListener(onFullscreenRequested, onPortraitRequested, onPlaybackRequested),
+            )
             .addItemType(TYPE_EMPTY, EmptyItemListener())
             .onItemViewType { position, list -> itemTypeOf(list[position]) }
     }
@@ -73,6 +77,7 @@ class NewsDetailAdapter(
     private class VideoItemListener(
         private val onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
         private val onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+        private val onPlaybackRequested: () -> Unit,
     ) : OnMultiItemAdapterListener<NewsDetailPageItem, VideoHolder> {
         override fun onCreate(context: Context, parent: ViewGroup, viewType: Int) = VideoHolder(
             ItemNewsDetailVideoBinding.inflate(LayoutInflater.from(context), parent, false),
@@ -80,7 +85,7 @@ class NewsDetailAdapter(
 
         override fun onBind(holder: VideoHolder, position: Int, item: NewsDetailPageItem?) {
             (item as? NewsDetailPageItem.Video)?.let {
-                holder.bind(it, onFullscreenRequested, onPortraitRequested)
+                holder.bind(it, onFullscreenRequested, onPortraitRequested, onPlaybackRequested)
             }
         }
     }
@@ -130,6 +135,7 @@ class NewsDetailAdapter(
             item: NewsDetailPageItem.Video,
             onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
             onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+            onPlaybackRequested: () -> Unit,
         ) = with(binding) {
             val media = VideoMedia(
                 id = item.videoUrl,
@@ -139,6 +145,7 @@ class NewsDetailAdapter(
             videoPlayer.setMedia(media)
             videoPlayer.onFullscreenRequested = { onFullscreenRequested(videoPlayer, media) }
             videoPlayer.onPortraitRequested = { onPortraitRequested(videoPlayer, media) }
+            videoPlayer.onPlaybackRequested = onPlaybackRequested
         }
     }
 
