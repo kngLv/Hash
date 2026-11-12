@@ -42,6 +42,8 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
+    /* ----------- 基础依赖与状态 ----------- */
+
     private val controller = HashVideo.controller(context)
     private val gestureHandler = Handler(Looper.getMainLooper())
     private val touchHandler = VideoTouchHandler(
@@ -65,19 +67,23 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     protected val currentPlaybackState: VideoPlaybackState
         get() = controller.playbackState.value
 
-    /** 返回当前视频画面启用的手势配置；默认关闭，由具体播放器按场景重写。 */
-    protected open fun createGestureConfig(): VideoGestureConfig = VideoGestureConfig()
-
-    /** 使手势配置在下次触摸时重新创建，供依赖可变状态的子类刷新开关。 */
-    protected fun invalidateGestureConfig() {
-        gestureConfig = null
-    }
+    /* ----------- 初始化相关 ----------- */
 
     init {
         setBackgroundColor(Color.BLACK)
         addView(gestureOverlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         isClickable = true
         bindVideoTouchHandler()
+    }
+
+    /* ----------- 手势事件相关 ----------- */
+
+    /** 返回当前视频画面启用的手势配置；默认关闭，由具体播放器按场景重写。 */
+    protected open fun createGestureConfig(): VideoGestureConfig = VideoGestureConfig()
+
+    /** 使手势配置在下次触摸时重新创建，供依赖可变状态的子类刷新开关。 */
+    protected fun invalidateGestureConfig() {
+        gestureConfig = null
     }
 
     /**
@@ -112,110 +118,9 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         parent?.requestDisallowInterceptTouchEvent(shouldDisallowIntercept)
     }
 
-    /** 绑定当前 View 要展示的视频，不会自动开始播放。 */
-    fun setMedia(media: VideoMedia) {
-        if (this.media == media) return
-        this.media = media
-        renderPlaybackState(currentPlaybackState)
-        restoreRenderIfCurrentMedia()
-    }
-
-    /** 请求播放已绑定的视频；控制器会自行决定切换、恢复、重播或忽略重复请求。 */
-    fun play() {
-        media?.let {
-            attachRender()
-            controller.play(it)
-        }
-    }
-
-    /** 绑定并立即请求播放指定视频。 */
-    fun play(media: VideoMedia) {
-        setMedia(media)
-        play()
-    }
-
-
     /** 触摸过程中复用配置，避免高频 MOVE 事件反复创建对象。 */
     private fun currentGestureConfig(): VideoGestureConfig = gestureConfig ?: createGestureConfig().also {
         gestureConfig = it
-    }
-
-    /**
-     * 让当前播放器 View 接管正在播放的视频画面，不改变媒体和播放状态。
-     *
-     * 从业务侧的全屏或小窗容器返回内嵌页面时调用即可，无需通过 [play] 间接恢复画面。
-     */
-    fun attachRender() = controller.attachRenderTo(this)
-
-    /** 暂停当前视频；界面状态以真实播放器回调为准。 */
-    fun pause() = controller.pause()
-
-    /** 跳转当前视频到指定位置；未知时长的媒体会忽略该请求。 */
-    fun seekTo(positionMs: Long) = controller.seekTo(positionMs)
-
-    /** 停止当前视频的播放与加载，但保留播放列表，后续仍可重新准备并播放。 */
-    fun stop() = controller.stop()
-
-    /** 停止并移除当前视频，使其不能再由系统媒体控制恢复。 */
-    fun removeCurrentMedia() = controller.removeCurrentMedia()
-
-    /**
-     * 请求当前 View 接管视频画面。
-     *
-     * 全屏页、小窗或列表项成为当前播放项时调用；该操作不会重新播放视频。
-     */
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        observePlaybackState()
-        restoreRenderIfCurrentMedia()
-    }
-
-    override fun onDetachedFromWindow() {
-        gestureConfig?.let(touchHandler::cancel)
-        stateCollectionScope?.cancel()
-        stateCollectionScope = null
-        controller.detachRenderFrom(this)
-        super.onDetachedFromWindow()
-    }
-
-    private fun observePlaybackState() {
-        stateCollectionScope?.cancel()
-        stateCollectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-        stateCollectionScope?.launch {
-            controller.playbackState.collect(::renderPlaybackState)
-        }
-    }
-
-    /** 供同模块界面测试直接验证状态到 UI 的映射。 */
-    internal fun renderPlaybackState(state: VideoPlaybackState) {
-        val displayedState = if (media?.isSameSourceAs(state.media) == true) {
-            state
-        } else {
-            VideoPlaybackState(status = VideoPlaybackStatus.IDLE)
-        }
-        onPlaybackStateChanged(displayedState)
-    }
-
-
-    /** 子类只负责把已筛选的当前媒体播放状态渲染为自己的 UI。 */
-    protected abstract fun onPlaybackStateChanged(state: VideoPlaybackState)
-
-
-    /**
-     * View 因重建或列表复用重新绑定到当前播放媒体时，恢复它原本的画面输出。
-     *
-     * 首次绑定不会满足条件，仍必须由 [play] 主动激活。若已有其他容器承载画面，不能抢占。
-     */
-    private fun restoreRenderIfCurrentMedia() {
-        val state = currentPlaybackState
-        if (
-            !isAttachedToWindow ||
-            controller.hasAttachedRender() ||
-            media?.isSameSourceAs(state.media) != true
-        ) {
-            return
-        }
-        attachRender()
     }
 
     /** 单击统一走 [performClick]；其余手势先通知子类更新 UI，再执行基类的默认播放命令。 */
@@ -279,5 +184,111 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         viewWidth = width,
         viewHeight = height,
     )
+
+    /* ----------- 媒体与播放控制相关 ----------- */
+
+    /** 绑定当前 View 要展示的视频，不会自动开始播放。 */
+    fun setMedia(media: VideoMedia) {
+        if (this.media == media) return
+        this.media = media
+        renderPlaybackState(currentPlaybackState)
+        restoreRenderIfCurrentMedia()
+    }
+
+    /** 请求播放已绑定的视频；控制器会自行决定切换、恢复、重播或忽略重复请求。 */
+    fun play() {
+        media?.let {
+            attachRender()
+            controller.play(it)
+        }
+    }
+
+    /** 绑定并立即请求播放指定视频。 */
+    fun play(media: VideoMedia) {
+        setMedia(media)
+        play()
+    }
+
+    /** 暂停当前视频；界面状态以真实播放器回调为准。 */
+    fun pause() = controller.pause()
+
+    /** 跳转当前视频到指定位置；未知时长的媒体会忽略该请求。 */
+    fun seekTo(positionMs: Long) = controller.seekTo(positionMs)
+
+    /** 停止当前视频的播放与加载，但保留播放列表，后续仍可重新准备并播放。 */
+    fun stop() = controller.stop()
+
+    /** 停止并移除当前视频，使其不能再由系统媒体控制恢复。 */
+    fun removeCurrentMedia() = controller.removeCurrentMedia()
+
+    /* ----------- 画面迁移与生命周期相关 ----------- */
+
+    /**
+     * 让当前播放器 View 接管正在播放的视频画面，不改变媒体和播放状态。
+     *
+     * 从业务侧的全屏或小窗容器返回内嵌页面时调用即可，无需通过 [play] 间接恢复画面。
+     */
+    fun attachRender() = controller.attachRenderTo(this)
+
+    /**
+     * 请求当前 View 接管视频画面。
+     *
+     * 全屏页、小窗或列表项成为当前播放项时调用；该操作不会重新播放视频。
+     */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        observePlaybackState()
+        restoreRenderIfCurrentMedia()
+    }
+
+    override fun onDetachedFromWindow() {
+        gestureConfig?.let(touchHandler::cancel)
+        stateCollectionScope?.cancel()
+        stateCollectionScope = null
+        controller.detachRenderFrom(this)
+        super.onDetachedFromWindow()
+    }
+
+    /* ----------- 播放状态观察相关 ----------- */
+
+    private fun observePlaybackState() {
+        stateCollectionScope?.cancel()
+        stateCollectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        stateCollectionScope?.launch {
+            controller.playbackState.collect(::renderPlaybackState)
+        }
+    }
+
+    /** 供同模块界面测试直接验证状态到 UI 的映射。 */
+    internal fun renderPlaybackState(state: VideoPlaybackState) {
+        val displayedState = if (media?.isSameSourceAs(state.media) == true) {
+            state
+        } else {
+            VideoPlaybackState(status = VideoPlaybackStatus.IDLE)
+        }
+        onPlaybackStateChanged(displayedState)
+    }
+
+
+    /** 子类只负责把已筛选的当前媒体播放状态渲染为自己的 UI。 */
+    protected abstract fun onPlaybackStateChanged(state: VideoPlaybackState)
+
+
+    /**
+     * View 因重建或列表复用重新绑定到当前播放媒体时，恢复它原本的画面输出。
+     *
+     * 首次绑定不会满足条件，仍必须由 [play] 主动激活。若已有其他容器承载画面，不能抢占。
+     */
+    private fun restoreRenderIfCurrentMedia() {
+        val state = currentPlaybackState
+        if (
+            !isAttachedToWindow ||
+            controller.hasAttachedRender() ||
+            media?.isSameSourceAs(state.media) != true
+        ) {
+            return
+        }
+        attachRender()
+    }
 
 }

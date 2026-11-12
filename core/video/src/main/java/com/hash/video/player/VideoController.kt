@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.asStateFlow
 @OptIn(UnstableApi::class)
 class VideoController internal constructor(context: Context) {
 
+    /* ----------- 连接与会话状态相关 ----------- */
+
     /** 播放服务与播放器只能使用进程级 Context，禁止由全局控制器持有页面 Context。 */
     private val context = context.applicationContext
 
@@ -99,6 +101,8 @@ class VideoController internal constructor(context: Context) {
         }
     }
 
+    /* ----------- 服务连接相关 ----------- */
+
     init {
         // Future 完成表示已成功连接到媒体服务，或连接过程已经失败。连接成功后只注册一次监听器。
         controllerFuture.addListener(
@@ -143,6 +147,8 @@ class VideoController internal constructor(context: Context) {
         )
     }
 
+    /* ----------- 画面渲染迁移相关 ----------- */
+
     /** 将唯一 PlayerView 挂载到目标容器，不改变媒体或播放状态。 */
     internal fun attachRenderTo(container: ViewGroup) {
         if (isReleased) return
@@ -161,6 +167,8 @@ class VideoController internal constructor(context: Context) {
     /** 当前是否已有容器承载唯一 PlayerView。 */
     internal fun hasAttachedRender(): Boolean =
         renderCoordinator.isInitialized() && renderCoordinator.value.currentContainer() != null
+
+    /* ----------- 播放控制相关 ----------- */
 
     /**
      * 确保指定媒体正在播放。
@@ -288,6 +296,8 @@ class VideoController internal constructor(context: Context) {
         }
     }
 
+    /* ----------- 释放与会话结束相关 ----------- */
+
     /** 释放媒体控制器，使空闲媒体服务销毁其 ExoPlayer。释放后不可继续使用该实例。 */
     internal fun release() {
         if (isReleased) {
@@ -351,6 +361,8 @@ class VideoController internal constructor(context: Context) {
         }
     }
 
+    /* ----------- 播放器状态回调相关 ----------- */
+
     /**
      * 为已连接的 MediaController 注册状态监听。
      *
@@ -402,6 +414,8 @@ class VideoController internal constructor(context: Context) {
             }
         })
     }
+
+    /* ----------- 播放进度与状态同步相关 ----------- */
 
     /**
      * 以固定频率同步真实播放位置和缓冲位置，供详情、全屏和小窗等任意展示宿主复用。
@@ -460,6 +474,8 @@ class VideoController internal constructor(context: Context) {
             errorMessage = errorMessage,
         )
     }
+
+    /* ----------- 常量 ----------- */
 
     private companion object {
         const val LOG_TAG = "HashVideoLifecycle"

@@ -59,7 +59,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <com.hash.video.ui.player.PortraitVideoPlayerView
+        <com.hash.home.ui.featured.detail.video.NewsDetailPortraitVideoPlayerView
             android:id="@+id/portrait_video_player"
             android:layout_width="0dp"
             android:layout_height="0dp"
