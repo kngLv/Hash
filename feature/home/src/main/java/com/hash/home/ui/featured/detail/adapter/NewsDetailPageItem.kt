@@ -7,7 +7,12 @@ sealed interface NewsDetailPageItem {
     data class Header(val title: String, val meta: String) : NewsDetailPageItem
     data class Text(val content: String) : NewsDetailPageItem
     data class Image(val imageUrl: String) : NewsDetailPageItem
-    data class Video(val coverUrl: String, val videoUrl: String) : NewsDetailPageItem
+    data class Video(
+        val coverUrl: String,
+        val videoUrl: String,
+        val coverWidth: Int? = null,
+        val coverHeight: Int? = null,
+    ) : NewsDetailPageItem
     data object Empty : NewsDetailPageItem
 }
 

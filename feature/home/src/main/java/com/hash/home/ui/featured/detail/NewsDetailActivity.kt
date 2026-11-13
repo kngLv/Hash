@@ -11,15 +11,18 @@ import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alibaba.android.arouter.facade.annotation.Route
+import com.hash.home.BuildConfig
 import com.hash.common.R as CommonR
 import com.hash.common.base.activity.BaseBindingActivity
 import com.hash.common.ext.showToast
 import com.hash.common.ui.loading.LoadingStateOwner
 import com.hash.common.ui.insets.applyScrollContentInsets
 import com.hash.common.ui.insets.applyTopBarInsets
+import com.hash.common.utils.image.ImageLoader
 import com.hash.home.R
 import com.hash.home.data.model.NewsDetailBean
 import com.hash.home.databinding.ActivityNewsDetailBinding
@@ -33,6 +36,12 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.player.VideoPlaybackOwner
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.video.ui.player.BaseHashVideoPlayerView
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 @Route(path = RouterActivityPath.Home.NEWS_DETAIL)
 class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
@@ -48,6 +57,8 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             ::showLandscapeVideo,
             ::showPortraitVideo,
             ::setVideoNotificationActivity,
+            showVideoNotification = !BuildConfig.DEBUG || DEBUG_ENABLE_VIDEO_NOTIFICATION,
+            showVideoNotificationArtwork = !BuildConfig.DEBUG || DEBUG_ENABLE_VIDEO_NOTIFICATION_ARTWORK,
         )
     }
     private var isSourceVisible = false
@@ -55,6 +66,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private var activePresentationPlayer: BaseHashVideoPlayerView? = null
     private var presentationMode: VideoPresentationMode? = null
     private var originalRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private var detailRenderRequestId = 0L
     private val videoPresentationBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = closeVideoPresentation()
     }
@@ -138,7 +150,50 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
                 postTime = intent.getStringExtra(EXTRA_POST_TIME).orEmpty(),
                 detailItems = detail.items,
             )
-        detailAdapter.submitList(pageItems)
+            .toMutableList()
+            .apply {
+                if (BuildConfig.DEBUG) addAll(DEBUG_TEST_VIDEO_ITEMS)
+            }
+        val deduplicatedItems = pageItems.deduplicateVideos()
+        val requestId = ++detailRenderRequestId
+        lifecycleScope.launch {
+            val sizedItems = deduplicatedItems.withResolvedVideoCoverSizes()
+            if (requestId != detailRenderRequestId) return@launch
+            detailAdapter.submitList(sizedItems)
+        }
+    }
+
+    /** 在提交列表前并行读取封面原始尺寸，避免播放器模块在绑定后再触发布局变化。 */
+    private suspend fun List<NewsDetailPageItem>.withResolvedVideoCoverSizes(): List<NewsDetailPageItem> =
+        coroutineScope {
+            map { item ->
+                async {
+                    val video = item as? NewsDetailPageItem.Video ?: return@async item
+                    if ((video.coverWidth ?: 0) > 0 && (video.coverHeight ?: 0) > 0) {
+                        return@async video
+                    }
+                    val size = video.coverUrl.takeIf { it.isNotBlank() }?.let { loadImageSize(it) }
+                    video.copy(
+                        coverWidth = size?.width,
+                        coverHeight = size?.height,
+                    )
+                }
+            }.awaitAll()
+        }
+
+    private suspend fun loadImageSize(url: String): ImageLoader.ImageSize? =
+        suspendCancellableCoroutine { continuation ->
+            val request = ImageLoader.loadImageSize(this, url) { size ->
+                if (continuation.isActive) continuation.resume(size)
+            }
+            continuation.invokeOnCancellation { request.cancel() }
+        }
+
+    private fun List<NewsDetailPageItem>.deduplicateVideos(): List<NewsDetailPageItem> {
+        val displayedVideoUrls = mutableSetOf<String>()
+        return filter { item ->
+            item !is NewsDetailPageItem.Video || displayedVideoUrls.add(item.videoUrl)
+        }
     }
 
     private fun updateToolbarSource() {
@@ -252,6 +307,38 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_SOURCE = "source"
         const val EXTRA_POST_TIME = "postTime"
+
+        /** 临时用于排查播放后列表滑动卡顿；本轮保留通知，移除通知中的远程封面。 */
+        private const val DEBUG_ENABLE_VIDEO_NOTIFICATION = true
+        private const val DEBUG_ENABLE_VIDEO_NOTIFICATION_ARTWORK = false
+
+        /** 仅调试包追加，用于验证详情页多个视频的切换、迁移与释放。 */
+        private val DEBUG_TEST_VIDEO_ITEMS = listOf(
+            NewsDetailPageItem.Video(
+                coverUrl = "http://videoimg.ws.126.net/cover/20261112/yrgIujvcs_cover.jpg",
+                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc18170259a7ffdf260df7aeb1419b39ff224873eb5ee382ec02443d6d398ef0d8356ef56fa26898794882592a1f72486c096ee086ab35e0e24b0283a873b7a2ed5103bdeba57ff0388307a7d4578c49f3d2da8296d6ba7c1acd51b06e1a5f5a0ee23938f321f786a6624047eacd1f3580e14.mp4",
+            ),
+            NewsDetailPageItem.Video(
+                coverUrl = "http://videoimg.ws.126.net/cover/20261111/Tn63ejVcF_cover.jpg",
+                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc181a0ccda658d0cd6357323580545d52b9db7250001559819ed92bcf5433383346905ab95ca0491a6cd3f2b3d7a787ecf3f9dd8da146fa439623d45803b461887fb4f37ca8937976c831b56667bfd272b3e881b35dfb0580c9e0d309970bb774f09f2794b4fd9c878ddf7e9a3abade3d3dd.mp4",
+            ),
+            NewsDetailPageItem.Video(
+                coverUrl = "http://videoimg.ws.126.net/cover/20261111/bkryRlOPS_cover.jpg",
+                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc181fbb95c830762ec279c05742363e88a90136516667c195d7add054d609c2fa5de7111dc0bbe1e492f2693516ee3fc06b5581817b7fdfd4dc1a61ea9c24b62d5b8c34ea3d65d9bf8dcd4cb7d453ebeafcd7bca66095ddbb96a5d8c701c6ffe95ef0cef7d4d05b0261e53258a22816356e7.mp4",
+            ),
+            NewsDetailPageItem.Video(
+                coverUrl = "http://videoimg.ws.126.net/cover/20261110/AcGXIWe1f_cover.jpg",
+                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc181c73bee7a77100e52d2518a3e8d93f85ec21fe421bf07b4788c28a779eccbdef2b762bd43068924334f44976f9c1a29c9bdedcfa0ab7b49d7c99b38d45f76249eec949a8287ec7c0b6a6c552102c2b572ba112e99f0f95f2658007f0b189fcb1d9267a8893331603f99c0a35328af51cf.mp4",
+            ),
+            NewsDetailPageItem.Video(
+                coverUrl = "http://videoimg.ws.126.net/cover/20261110/sjKXkI3Pm_cover.jpg",
+                videoUrl = "http://flv0.bn.netease.com/8c084e400104322edb93a34bea79e0b373d53af841294ed9e7503474b9adff259f4ff5b78b476498462d0b72ffaade3dcdc15ba722ec686a3f3944369eb730465ead976b454de9aeb2977da25c3f59dd8480f9c59498c1f72e70dcd722e1694c6831404f2c03337314585c9265b87416b809b3ed370b056f.mp4",
+            ),
+            NewsDetailPageItem.Video(
+                coverUrl = "http://videoimg.ws.126.net/cover/20261109/oteqfWPi2_cover.jpg",
+                videoUrl = "http://flv0.bn.netease.com/11e0ef4101124a0ce513ea99f83ea7793bd3579b975aaaaad7d53a20e5c220ae83faa730aff83e54bdf2ed12b02eaac35dd3d1f408f83792da2ab16a64eb3b5e9feb3f3e7dcdc35de96854d4c9a2bec89cab84eb151f53c74315ed637898321b03f43a587506d692d12d8eb2fd5ee8599d569a48fb173121.mp4",
+            ),
+        )
     }
 
     private enum class VideoPresentationMode {

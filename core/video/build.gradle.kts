@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer) // ExoPlayer 播放、解码和缓冲内核
     implementation(libs.androidx.media3.session) // 后台播放服务、通知栏和系统媒体控制
     implementation(libs.androidx.media3.ui) // PlayerView 等视频播放界面组件
+    implementation(libs.glide) // 内嵌播放器的封面加载与尺寸读取
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1") // 播放状态的主线程收集
     testImplementation(libs.junit)
     androidTestImplementation("androidx.test:core:1.6.1") // ActivityScenario 驱动呈现宿主设备测试

@@ -2,8 +2,10 @@ package com.hash.video.player
 
 import android.app.Application
 import android.app.PendingIntent
+import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
+import android.util.LruCache
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.media3.common.C
@@ -18,6 +20,7 @@ import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.cache.VideoCacheProvider
+import com.hash.video.cache.VideoCacheKeyFactory
 import com.hash.video.service.HashVideoPlaybackService
 import com.hash.video.ui.render.VideoRenderCoordinator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +39,14 @@ internal object VideoPlayerEngine {
 
     /** 当前有权控制和释放播放器的页面 Owner。 */
     private var activeOwner: VideoPlaybackOwner? = null
+
+    /** 每个视频最近一次切走的位置；重新点回同一条视频时从这里续播。 */
+    private val savedPositionsMs = mutableMapOf<String, Long>()
+
+    /** 旧卡片的最后一帧缩略图，容量按像素内存限制，避免列表切换导致黑屏。 */
+    private val pausedFrames = object : LruCache<String, Bitmap>(MAX_PAUSED_FRAME_BYTES) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
+    }
 
     /** 所有播放器 View 共享的播放状态。 */
     private val _playbackState = MutableStateFlow(VideoPlaybackState())
@@ -111,30 +122,40 @@ internal object VideoPlayerEngine {
         owner: VideoPlaybackOwner,
         media: VideoMedia,
         showNotification: Boolean,
+        showNotificationArtwork: Boolean,
     ) {
         activeOwner = owner
         val current = get(application)
         val action = _playbackState.value.resolvePlayAction(media)
         if (action == VideoPlayAction.IGNORE) return
         val requestId = ++latestRequestId
+        val previousMedia = _playbackState.value.media
         if (action == VideoPlayAction.REPLACE || action == VideoPlayAction.REPLAY) {
             _playbackState.value = _playbackState.value.prepareForPlay(media, action)
-        }
-        if (showNotification) {
-            HashVideoPlaybackService.ensureSession(application)
-        } else {
-            // 信息流切换自详情播放时，必须先移除旧的媒体会话，避免沿用详情通知。
-            HashVideoPlaybackService.stopSession(application)
         }
         if (requestId != latestRequestId) return
         when (action) {
             VideoPlayAction.REPLACE -> current.run {
-                setMediaItem(VideoMediaItemFactory.create(media)); prepare(); play()
+                rememberPlaybackOf(previousMedia, this)
+                val startPositionMs = savedPositionsMs[media.cacheKey()].orEmptyPosition()
+                setMediaItem(
+                    VideoMediaItemFactory.create(media, includeArtwork = showNotificationArtwork),
+                    startPositionMs,
+                )
+                prepare()
+                play()
             }
 
             VideoPlayAction.RESUME -> current.play()
             VideoPlayAction.REPLAY -> current.run { seekToDefaultPosition(); play() }
             VideoPlayAction.IGNORE -> Unit
+        }
+        if (showNotification) {
+            // 先让 Player 进入准备/播放态再启动前台服务，MediaSessionService 才会立即发布媒体通知。
+            HashVideoPlaybackService.ensureSession(application)
+        } else {
+            // 信息流切换自详情播放时，必须先移除旧的媒体会话，避免沿用详情通知。
+            HashVideoPlaybackService.stopSession(application)
         }
     }
 
@@ -204,6 +225,8 @@ internal object VideoPlayerEngine {
         renderCoordinator?.clear()
         renderCoordinator = null
         _playbackState.value = _playbackState.value.resetPlaybackSession()
+        savedPositionsMs.clear()
+        pausedFrames.evictAll()
         activeOwner = null
         HashVideoPlaybackService.stopSession(application)
         synchronized(this) {
@@ -224,6 +247,9 @@ internal object VideoPlayerEngine {
                 duration
             ),
         )
+        _playbackState.value.media?.let { media ->
+            savedPositionsMs[media.cacheKey()] = player.currentPosition.coerceAtLeast(0L)
+        }
     }
 
     private fun updateProgressTracking(player: Player) {
@@ -255,6 +281,22 @@ internal object VideoPlayerEngine {
             _playbackState.value.copy(status = status, errorMessage = errorMessage)
     }
 
+    /** 提供给列表卡片展示；快照只在对应视频非当前渲染目标时使用。 */
+    fun pausedFrameFor(media: VideoMedia): Bitmap? = pausedFrames.get(media.cacheKey())
+
+    private fun rememberPlaybackOf(media: VideoMedia?, player: ExoPlayer) {
+        media ?: return
+        savedPositionsMs[media.cacheKey()] = player.currentPosition.coerceAtLeast(0L)
+        renderCoordinator?.captureFrame()?.let { frame ->
+            pausedFrames.put(media.cacheKey(), frame)
+        }
+    }
+
+    private fun VideoMedia.cacheKey(): String = VideoCacheKeyFactory.create(this)
+
+    private fun Long?.orEmptyPosition(): Long = this?.coerceAtLeast(0L) ?: 0L
+
     private const val NOTIFICATION_SEEK_INCREMENT_MS = 15_000L
     private const val PROGRESS_UPDATE_INTERVAL_MS = 500L
+    private const val MAX_PAUSED_FRAME_BYTES = 12 * 1024 * 1024
 }

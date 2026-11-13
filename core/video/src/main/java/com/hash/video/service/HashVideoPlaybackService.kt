@@ -6,7 +6,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.core.os.BundleCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
@@ -70,22 +69,19 @@ class HashVideoPlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, VideoPlayerEngine.get(application))
             .setCallback(sessionCallback)
             .setMediaButtonPreferences(notificationMediaButtonPreferences())
+            // 详情页已直接观察 Player 进度；通知仅需在状态/跳转时同步，避免周期位置同步影响列表滚动。
+            .setPeriodicPositionUpdateEnabled(false)
             .build()
+        // 由服务主动启动时不会自动调用 onGetSession，必须显式注册，Media3 才会创建通知控制器。
+        addSession(mediaSession)
+        mediaSession.setSessionActivity(notificationActivity)
         Log.d(LOG_TAG, "MediaSession 已创建")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (intent?.action == ACTION_SET_NOTIFICATION_ACTIVITY) {
-            val pendingIntent = intent.extras?.let { extras ->
-                BundleCompat.getParcelable(
-                    extras,
-                    EXTRA_NOTIFICATION_ACTIVITY,
-                    PendingIntent::class.java,
-                )
-            }
-            mediaSession.setSessionActivity(pendingIntent)
-        }
+        // Media3 在注册会话、播放器状态变更时会自行刷新通知。这里手动刷新会触发
+        // Media3 再次 startForegroundService，自身 onStartCommand 又再次刷新，从而形成循环。
         return START_NOT_STICKY
     }
 
@@ -113,6 +109,9 @@ class HashVideoPlaybackService : MediaSessionService() {
     private fun releaseSession() {
         if (sessionReleased) return
         sessionReleased = true
+        if (getSessions().contains(mediaSession)) {
+            removeSession(mediaSession)
+        }
         mediaSession.release()
     }
 
@@ -136,28 +135,29 @@ class HashVideoPlaybackService : MediaSessionService() {
     companion object {
         private const val LOG_TAG = "HashVideoLifecycle"
         private const val ACTION_ENSURE_SESSION = "com.hash.video.action.ENSURE_SESSION"
-        private const val ACTION_SET_NOTIFICATION_ACTIVITY =
-            "com.hash.video.action.SET_NOTIFICATION_ACTIVITY"
-        private const val EXTRA_NOTIFICATION_ACTIVITY = "notification_activity"
+        @Volatile
+        private var notificationActivity: PendingIntent? = null
 
-        /** 前台页面播放前建立会话；空闲播放器不会显示通知。 */
+        /**
+         * 前台页面播放后建立媒体会话。
+         *
+         * MediaSessionService 会根据播放器状态自行发布通知并提升为前台服务；不能以
+         * startForegroundService 强制启动，否则视频源立即失败时没有通知可供服务及时提升前台。
+         */
         fun ensureSession(context: Context) {
             context.startService(
                 Intent(context, HashVideoPlaybackService::class.java).setAction(ACTION_ENSURE_SESSION),
             )
         }
 
-        /** 更新通知点击目标；目标仅保存在服务的 MediaSession 中，不会引用 Activity。 */
+        /** 更新通知点击目标；未创建服务时仅暂存，不提前启动空闲会话。 */
         fun setNotificationActivity(context: Context, pendingIntent: PendingIntent?) {
-            context.startService(
-                Intent(context, HashVideoPlaybackService::class.java)
-                    .setAction(ACTION_SET_NOTIFICATION_ACTIVITY)
-                    .putExtra(EXTRA_NOTIFICATION_ACTIVITY, pendingIntent),
-            )
+            notificationActivity = pendingIntent
         }
 
         /** 页面真正退出时销毁会话；播放器释放仍由 VideoController 负责。 */
         fun stopSession(context: Context) {
+            notificationActivity = null
             context.stopService(Intent(context, HashVideoPlaybackService::class.java))
         }
     }

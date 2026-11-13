@@ -18,6 +18,7 @@ import com.bumptech.glide.load.resource.bitmap.GranularRoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.target.CustomViewTarget
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.request.transition.DrawableCrossFadeFactory
@@ -30,7 +31,51 @@ import com.bumptech.glide.RequestManager
  */
 object ImageLoader {
 
+    data class ImageSize(val width: Int, val height: Int)
+
+    fun interface ImageSizeRequest {
+        fun cancel()
+    }
+
     enum class ExpectedListenerType { ANY, BITMAP, GIF, DRAWABLE }
+
+    /**
+     * 加载图片原始尺寸，不绑定任何 ImageView。
+     *
+     * 调用方应在页面销毁或协程取消时调用返回请求的 [ImageSizeRequest.cancel]。
+     */
+    fun loadImageSize(
+        context: Context,
+        model: Any?,
+        onResult: (ImageSize?) -> Unit,
+    ): ImageSizeRequest {
+        if (model == null || (model is String && model.isBlank())) {
+            onResult(null)
+            return ImageSizeRequest {}
+        }
+        val requestManager = GlideApp.with(context)
+        val target = object : CustomTarget<Drawable>() {
+            private var completed = false
+
+            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                if (completed) return
+                completed = true
+                val width = resource.intrinsicWidth
+                val height = resource.intrinsicHeight
+                onResult(ImageSize(width, height).takeIf { width > 0 && height > 0 })
+            }
+
+            override fun onLoadCleared(placeholder: Drawable?) = Unit
+
+            override fun onLoadFailed(errorDrawable: Drawable?) {
+                if (completed) return
+                completed = true
+                onResult(null)
+            }
+        }
+        requestManager.load(model).into(target)
+        return ImageSizeRequest { requestManager.clear(target) }
+    }
 
     // LoadOptions 在 LoadOptions.kt 中定义
 

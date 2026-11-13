@@ -6,7 +6,6 @@ import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.R
-import com.hash.video.api.VideoContentSize
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
@@ -264,7 +263,7 @@ class EmbeddedVideoPlayerViewTest {
     }
 
     @Test
-    fun 竖屏视频应在布局稳定后按最终宽度更新高度() {
+    fun 配置的竖屏封面应按最终宽度更新高度() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val scenario = androidx.test.core.app.ActivityScenario.launch(
             VideoPlayerViewTestActivity::class.java,
@@ -277,23 +276,9 @@ class EmbeddedVideoPlayerViewTest {
                 }
                 activity.findViewById<android.view.ViewGroup>(android.R.id.content).addView(view)
                 view.apply {
-                    setMedia(media)
+                    setMedia(media.copy(coverWidth = 9, coverHeight = 16))
                     layout(0, 0, 360, 208)
                 }
-
-                view.renderPlaybackState(
-                    VideoPlaybackState(
-                        media = media,
-                        status = VideoPlaybackStatus.PLAYING,
-                        contentSize = VideoContentSize(width = 9, height = 16),
-                    ),
-                )
-
-                assertEquals(208, view.layoutParams.height)
-            }
-
-            instrumentation.waitForIdleSync()
-            scenario.onActivity {
                 assertEquals(640, view.layoutParams.height)
             }
         } finally {
@@ -302,12 +287,12 @@ class EmbeddedVideoPlayerViewTest {
     }
 
     @Test
-    fun RecyclerView复用为新媒体时立即清除旧进度并恢复默认高度() {
+    fun RecyclerView复用新媒体时立即清除旧进度并应用新封面比例() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         instrumentation.runOnMainSync {
-            val oldMedia = VideoMedia("video-old", "https://example.com/old.mp4")
-            val newMedia = VideoMedia("video-new", "https://example.com/new.mp4")
+            val oldMedia = VideoMedia("video-old", "https://example.com/old.mp4", coverWidth = 9, coverHeight = 16)
+            val newMedia = VideoMedia("video-new", "https://example.com/new.mp4", coverWidth = 16, coverHeight = 9)
             val view = EmbeddedVideoPlayerView(context).apply {
                 layoutParams = android.widget.FrameLayout.LayoutParams(360, 208)
                 setMedia(oldMedia)
@@ -322,13 +307,12 @@ class EmbeddedVideoPlayerViewTest {
                         bufferedPositionMs = 750L,
                         durationMs = 1_000L,
                     ),
-                    contentSize = VideoContentSize(width = 9, height = 16),
                 ),
             )
 
             view.setMedia(newMedia)
 
-            assertEquals(208, view.layoutParams.height)
+            assertEquals(203, view.layoutParams.height)
             assertEquals(View.GONE, view.findViewById<View>(R.id.video_progress).visibility)
             assertEquals(View.VISIBLE, view.findViewById<View>(R.id.video_play_action).visibility)
         }

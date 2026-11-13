@@ -1,7 +1,9 @@
 package com.hash.video.ui.render
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.view.LayoutInflater
+import android.view.TextureView
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -62,10 +64,29 @@ internal class VideoRenderCoordinator(
         (renderView.parent as? ViewGroup)?.removeView(renderView)
     }
 
+    /**
+     * 在画面迁移前抓取低分辨率暂停帧。
+     *
+     * 渲染 View 固定为 TextureView，抓帧不会改变播放器或 Surface 绑定；失败时调用方使用封面回退。
+     */
+    fun captureFrame(): Bitmap? {
+        val surface = renderView.videoSurfaceView as? TextureView ?: return null
+        if (!surface.isAvailable || surface.width <= 0 || surface.height <= 0) return null
+        val largestEdge = maxOf(surface.width, surface.height)
+        val scale = minOf(1f, MAX_SNAPSHOT_EDGE_PX.toFloat() / largestEdge)
+        val width = (surface.width * scale).toInt().coerceAtLeast(1)
+        val height = (surface.height * scale).toInt().coerceAtLeast(1)
+        return surface.getBitmap(width, height)
+    }
+
     /** 当前实际承载唯一渲染视图的容器；容器被外部移除后自动视为未挂载。 */
     fun currentContainer(): ViewGroup? {
         val container = renderContainer?.get() ?: return null
         return container.takeIf { renderView.parent === it }
+    }
+
+    private companion object {
+        const val MAX_SNAPSHOT_EDGE_PX = 720
     }
 
 }

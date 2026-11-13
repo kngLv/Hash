@@ -12,14 +12,14 @@ import com.hash.video.cache.VideoCacheKeyFactory
 @OptIn(UnstableApi::class)
 object VideoMediaItemFactory {
 
-    fun create(media: VideoMedia): MediaItem = MediaItem.Builder()
+    fun create(media: VideoMedia, includeArtwork: Boolean = true): MediaItem = MediaItem.Builder()
         .setMediaId(media.id)
         .setUri(media.url)
         .setCustomCacheKey(VideoCacheKeyFactory.create(media))
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle(media.title)
-                .setArtworkUri(media.coverUrl?.let(Uri::parse))
+                .setArtworkUri(media.coverUrl?.takeIf { includeArtwork }?.let(Uri::parse))
                 .build(),
         )
         .build()

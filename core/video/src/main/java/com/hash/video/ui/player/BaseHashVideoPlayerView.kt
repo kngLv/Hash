@@ -76,6 +76,13 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
             controller.showNotification = value
         }
 
+    /** 是否将视频封面作为系统媒体通知 artwork。 */
+    var showNotificationArtwork: Boolean
+        get() = controller.showNotificationArtwork
+        set(value) {
+            controller.showNotificationArtwork = value
+        }
+
     /** 多个播放器 View 可注入同一页面 Owner，共享全局播放会话的释放权限。 */
     var playbackOwner: VideoPlaybackOwner
         get() = controller.playbackOwner
@@ -208,9 +215,13 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     fun setMedia(media: VideoMedia) {
         if (this.media == media) return
         this.media = media
+        onMediaChanged(media)
         renderPlaybackState(currentPlaybackState)
         restoreRenderIfCurrentMedia()
     }
+
+    /** 媒体绑定变化时通知子类刷新封面、比例等与业务媒体关联的展示。 */
+    protected open fun onMediaChanged(media: VideoMedia) = Unit
 
     /** 请求播放已绑定的视频；控制器会自行决定切换、恢复、重播或忽略重复请求。 */
     open fun play() {
@@ -247,6 +258,14 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
 
     /** 页面真正结束播放会话时释放应用级播放器。 */
     fun releasePlayback() = controller.releasePlayback()
+
+    /** 当前媒体此前切走时保留的缩略暂停帧；没有时由子类回退到封面。 */
+    protected fun pausedFrameFor(media: VideoMedia) = controller.pausedFrameFor(media)
+
+    /** 在唯一渲染画面之上、手势层之下添加静态内容，例如视频封面。 */
+    protected fun addContentOverlay(view: android.view.View, params: LayoutParams) {
+        addView(view, indexOfChild(gestureOverlay).coerceAtLeast(0), params)
+    }
 
     /* ----------- 画面迁移与生命周期相关 ----------- */
 
