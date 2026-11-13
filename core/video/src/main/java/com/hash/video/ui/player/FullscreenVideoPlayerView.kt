@@ -2,6 +2,7 @@ package com.hash.video.ui.player
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
@@ -110,6 +111,11 @@ open class FullscreenVideoPlayerView @JvmOverloads constructor(
         errorMessageView.text = errorMessage.orEmpty()
         errorMessageView.contentDescription = errorMessage?.let { "$it，点击重试" }
         controls.render(state)
+    }
+
+    override fun onDetachedFromWindow() {
+        (loadingView.indeterminateDrawable as? Animatable)?.stop()
+        super.onDetachedFromWindow()
     }
 
     private fun togglePlayback() {

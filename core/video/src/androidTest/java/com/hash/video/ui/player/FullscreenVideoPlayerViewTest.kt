@@ -132,10 +132,10 @@ class FullscreenVideoPlayerViewTest {
         instrumentation.runOnMainSync {
             val view = FullscreenVideoPlayerView(instrumentation.targetContext)
 
-            com.hash.video.player.HashVideo.attachRenderTo(view)
+            view.attachRender()
 
             org.junit.Assert.assertTrue(view.getChildAt(0) is PlayerView)
-            com.hash.video.player.HashVideo.release()
+            view.releasePlayback()
         }
     }
 

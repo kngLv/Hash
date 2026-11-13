@@ -1,10 +1,11 @@
 package com.hash.video.ui.render
 
-import android.content.Context
+import android.app.Application
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import com.hash.video.R
 import com.hash.video.player.VideoController
@@ -17,27 +18,26 @@ import java.lang.ref.WeakReference
  */
 @OptIn(UnstableApi::class)
 internal class VideoRenderCoordinator(
-    context: Context,
-    controller: VideoController? = null,
+    application: Application,
+    player: Player,
 ) {
-
     /** 唯一的 Media3 画面渲染 View，会在不同业务容器之间迁移。 */
-    private val renderView = LayoutInflater.from(context).inflate(
+    private val renderView = LayoutInflater.from(application).inflate(
         R.layout.view_video_render,
         null,
         false,
     ) as PlayerView
-    /** 当前承载 [renderView] 的业务容器；弱引用避免页面退出后被渲染器持有。 */
+    /** 当前承载 [renderView] 的业务容器，仅用于校验迁移目标。 */
     private var renderContainer: WeakReference<ViewGroup>? = null
 
     init {
-        controller?.withPlayer { player -> renderView.player = player }
+        renderView.player = player
     }
 
     /** 将唯一渲染视图迁移至目标容器；迁移不会修改媒体或播放状态。 */
     fun attachTo(container: ViewGroup) {
         if (currentContainer() === container) return
-        (renderView.parent as? ViewGroup)?.removeView(renderView)
+        clear()
         container.addView(
             renderView,
             0,
@@ -51,7 +51,7 @@ internal class VideoRenderCoordinator(
 
     /** 仅当指定容器仍承载画面时解除挂载，避免旧页面误清理新页面的画面。 */
     fun detachFrom(container: ViewGroup): Boolean {
-        if (currentContainer() !== container) return false
+        if (renderContainer?.get() !== container) return false
         clear()
         return true
     }
@@ -67,4 +67,5 @@ internal class VideoRenderCoordinator(
         val container = renderContainer?.get() ?: return null
         return container.takeIf { renderView.parent === it }
     }
+
 }

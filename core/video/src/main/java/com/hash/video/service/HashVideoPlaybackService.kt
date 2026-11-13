@@ -1,175 +1,164 @@
 package com.hash.video.service
 
 import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.os.BundleCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
-import com.hash.video.cache.VideoCacheProvider
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.hash.video.R
+import com.hash.video.player.VideoPlayerEngine
 
 /**
- * 持有 App 唯一 ExoPlayer 的媒体前台服务。
+ * 系统媒体会话服务。
  *
- * 页面只通过 MediaController 访问播放器，因此 Activity 销毁、全屏和悬浮窗迁移不会重建播放会话。
+ * 播放器由 [VideoPlayerEngine] 在应用进程内持有，服务只在需要通知时为它创建
+ * [MediaSession]。因此关闭通知不会清空媒体、释放播放器或移除页面画面。
  */
 @OptIn(UnstableApi::class)
 class HashVideoPlaybackService : MediaSessionService() {
 
-    /** 服务持有的唯一媒体会话，负责向 App 内的 MediaController 暴露播放器能力。 */
     private lateinit var mediaSession: MediaSession
+    private var sessionReleased = false
 
-    /** 处理控制器连接和 App 内部自定义命令。 */
     private val sessionCallback = object : MediaSession.Callback {
-        /**
-         * MediaController 连接服务时调用。
-         *
-         * 保留 Media3 默认命令，并且只向本应用进程开放内部会话命令，避免外部应用修改通知跳转
-         * 目标、停止播放器或清空播放列表。
-         */
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
-            Log.d(LOG_TAG, "MediaController 正在连接：package=${controller.packageName}")
-            val resultBuilder = MediaSession.ConnectionResult.AcceptedResultBuilder(
-                session,
-                controller,
+            val resultBuilder = MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
+            val defaultCommands = resultBuilder.build().availableSessionCommands
+            resultBuilder.setAvailableSessionCommands(
+                defaultCommands.buildUpon()
+                    .add(VideoSessionCommands.dismissNotification)
+                    .build(),
             )
-            if (controller.packageName == packageName) {
-                val defaultCommands = resultBuilder.build().availableSessionCommands
-                resultBuilder.setAvailableSessionCommands(
-                    defaultCommands.buildUpon()
-                        .add(VideoSessionCommands.setNotificationActivity)
-                        .add(VideoSessionCommands.releasePlaybackSession)
-                        .build(),
-                )
-                Log.d(LOG_TAG, "已向应用内 MediaController 开放释放命令")
-            }
             return resultBuilder.build()
         }
 
-        /**
-         * 接收控制器发送的自定义会话命令。
-         *
-         * 仅处理本应用发起的内部命令：设置通知点击目标，或释放播放会话。
-         * 其他来源或未支持的命令统一返回不支持。
-         */
         override fun onCustomCommand(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
-            Log.d(
-                LOG_TAG,
-                "收到自定义命令：action=${customCommand.customAction}, " +
-                    "package=${controller.packageName}",
-            )
-            if (controller.packageName != packageName) {
-                Log.w(LOG_TAG, "已拒绝自定义命令")
-                return Futures.immediateFuture(
-                    SessionResult(SessionError.ERROR_NOT_SUPPORTED),
-                )
+            if (customCommand != VideoSessionCommands.dismissNotification) {
+                return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
             }
 
-            return when (customCommand) {
-                VideoSessionCommands.setNotificationActivity -> {
-                    val pendingIntent = BundleCompat.getParcelable(
-                        args,
-                        VideoSessionCommands.ARGUMENT_NOTIFICATION_ACTIVITY,
-                        PendingIntent::class.java,
-                    )
-                    session.setSessionActivity(pendingIntent)
-                    Log.d(LOG_TAG, "已${if (pendingIntent == null) "清空" else "更新"}通知点击目标")
-                    Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-                }
-
-                VideoSessionCommands.releasePlaybackSession -> {
-                    Log.d(
-                        LOG_TAG,
-                        "正在释放播放会话：mediaItemCount=${session.player.mediaItemCount}, " +
-                            "playbackState=${session.player.playbackState}",
-                    )
-                    session.setSessionActivity(null)
-                    Log.d(LOG_TAG, "通知点击目标已清空")
-                    session.player.stop()
-                    Log.d(LOG_TAG, "ExoPlayer 已停止")
-                    session.player.clearMediaItems()
-                    Log.d(LOG_TAG, "播放列表已清空：mediaItemCount=${session.player.mediaItemCount}")
-                    pauseAllPlayersAndStopSelf()
-                    Log.d(LOG_TAG, "已请求停止 HashVideoPlaybackService")
-                    Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-                }
-
-                else -> {
-                    Log.w(LOG_TAG, "不支持的自定义命令")
-                    Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
-                }
-            }
+            // 保留媒体项、进度与渲染画面，仅结束能产生通知的媒体会话。
+            session.player.pause()
+            releaseSessionAndStop()
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
     }
 
-    /** 创建服务唯一的 ExoPlayer 和 MediaSession，并关闭播放器空闲时的通知。 */
     override fun onCreate() {
         super.onCreate()
-        Log.d(LOG_TAG, "HashVideoPlaybackService onCreate")
         setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER)
-        val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(
-                DefaultMediaSourceFactory(VideoCacheProvider.getDataSourceFactory(this)),
-            )
-            .build()
-        mediaSession = MediaSession.Builder(this, player)
+        mediaSession = MediaSession.Builder(this, VideoPlayerEngine.get(application))
             .setCallback(sessionCallback)
+            .setMediaButtonPreferences(notificationMediaButtonPreferences())
             .build()
-        Log.d(LOG_TAG, "ExoPlayer 和 MediaSession 已创建")
+        Log.d(LOG_TAG, "MediaSession 已创建")
     }
 
-    /** 为连接到该服务的控制器返回唯一的媒体会话。 */
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession {
-        Log.d(LOG_TAG, "MediaController 请求 MediaSession：package=${controllerInfo.packageName}")
-        return mediaSession
-    }
-
-    /** App 任务从最近任务中移除时，若当前没有继续播放的意图，则请求停止服务。 */
-    override fun onTaskRemoved(rootIntent: android.content.Intent?) {
-        Log.d(
-            LOG_TAG,
-            "应用任务已从最近任务移除：playWhenReady=${mediaSession.player.playWhenReady}",
-        )
-        if (!mediaSession.player.playWhenReady) {
-            stopSelf()
-            Log.d(LOG_TAG, "任务移除后已请求停止 HashVideoPlaybackService")
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        if (intent?.action == ACTION_SET_NOTIFICATION_ACTIVITY) {
+            val pendingIntent = intent.extras?.let { extras ->
+                BundleCompat.getParcelable(
+                    extras,
+                    EXTRA_NOTIFICATION_ACTIVITY,
+                    PendingIntent::class.java,
+                )
+            }
+            mediaSession.setSessionActivity(pendingIntent)
         }
+        return START_NOT_STICKY
     }
 
-    /** 服务真正销毁时释放底层播放器和媒体会话资源。 */
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
+        mediaSession.takeUnless { sessionReleased }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (!mediaSession.player.playWhenReady) stopSelf()
+    }
+
     override fun onDestroy() {
-        Log.d(
-            LOG_TAG,
-            "HashVideoPlaybackService onDestroy 开始：mediaItemCount=${mediaSession.player.mediaItemCount}",
-        )
-        mediaSession.run {
-            player.release()
-            Log.d(LOG_TAG, "ExoPlayer 已释放")
-            release()
-            Log.d(LOG_TAG, "MediaSession 已释放")
-        }
+        releaseSession()
         super.onDestroy()
-        Log.d(LOG_TAG, "HashVideoPlaybackService onDestroy 完成")
     }
 
-    private companion object {
-        const val LOG_TAG = "HashVideoLifecycle"
+    private fun releaseSessionAndStop() {
+        if (sessionReleased) return
+        mediaSession.setSessionActivity(null)
+        releaseSession()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        Log.d(LOG_TAG, "通知关闭：已暂停播放器并释放 MediaSession")
+    }
+
+    private fun releaseSession() {
+        if (sessionReleased) return
+        sessionReleased = true
+        mediaSession.release()
+    }
+
+    /** 通知完整视图依序展示后退 15 秒、播放暂停、前进 15 秒和关闭。 */
+    private fun notificationMediaButtonPreferences(): List<CommandButton> = listOf(
+        CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
+            .setPlayerCommand(Player.COMMAND_SEEK_BACK)
+            .setDisplayName(getString(R.string.video_skip_back_15_seconds))
+            .build(),
+        CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_15)
+            .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+            .setDisplayName(getString(R.string.video_skip_forward_15_seconds))
+            .build(),
+        CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+            .setCustomIconResId(R.drawable.ic_video_notification_close)
+            .setSessionCommand(VideoSessionCommands.dismissNotification)
+            .setDisplayName(getString(R.string.video_close_notification))
+            .build(),
+    )
+
+    companion object {
+        private const val LOG_TAG = "HashVideoLifecycle"
+        private const val ACTION_ENSURE_SESSION = "com.hash.video.action.ENSURE_SESSION"
+        private const val ACTION_SET_NOTIFICATION_ACTIVITY =
+            "com.hash.video.action.SET_NOTIFICATION_ACTIVITY"
+        private const val EXTRA_NOTIFICATION_ACTIVITY = "notification_activity"
+
+        /** 前台页面播放前建立会话；空闲播放器不会显示通知。 */
+        fun ensureSession(context: Context) {
+            context.startService(
+                Intent(context, HashVideoPlaybackService::class.java).setAction(ACTION_ENSURE_SESSION),
+            )
+        }
+
+        /** 更新通知点击目标；目标仅保存在服务的 MediaSession 中，不会引用 Activity。 */
+        fun setNotificationActivity(context: Context, pendingIntent: PendingIntent?) {
+            context.startService(
+                Intent(context, HashVideoPlaybackService::class.java)
+                    .setAction(ACTION_SET_NOTIFICATION_ACTIVITY)
+                    .putExtra(EXTRA_NOTIFICATION_ACTIVITY, pendingIntent),
+            )
+        }
+
+        /** 页面真正退出时销毁会话；播放器释放仍由 VideoController 负责。 */
+        fun stopSession(context: Context) {
+            context.stopService(Intent(context, HashVideoPlaybackService::class.java))
+        }
     }
 }

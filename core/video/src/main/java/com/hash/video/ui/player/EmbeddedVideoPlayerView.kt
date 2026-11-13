@@ -3,6 +3,7 @@ package com.hash.video.ui.player
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
@@ -51,6 +52,10 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     private var defaultHeight: Int? = null
     private var renderedContentSize: VideoContentSize? = null
     private var isContentHeightUpdatePosted = false
+    private val contentHeightUpdater = Runnable {
+        isContentHeightUpdatePosted = false
+        renderedContentSize?.let(::applyContentHeight)
+    }
 
     /** 宿主负责横屏、竖屏、小窗等呈现策略；未设置时不展示全屏入口。 */
     var onFullscreenRequested: (() -> Unit)? = null
@@ -127,6 +132,13 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         scheduleContentHeightUpdate()
     }
 
+    override fun onDetachedFromWindow() {
+        removeCallbacks(contentHeightUpdater)
+        isContentHeightUpdatePosted = false
+        (loadingView.indeterminateDrawable as? Animatable)?.stop()
+        super.onDetachedFromWindow()
+    }
+
     private fun togglePlayback() {
         val currentMedia = media ?: return
         val state = currentPlaybackState
@@ -175,10 +187,7 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         if (renderedContentSize == null || isContentHeightUpdatePosted) return
 
         isContentHeightUpdatePosted = true
-        post {
-            isContentHeightUpdatePosted = false
-            renderedContentSize?.let(::applyContentHeight)
-        }
+        post(contentHeightUpdater)
     }
 
     /** 真实尺寸到达后，按最终可用宽度计算高度，保证视频画面完整铺满横向空间而不发生形变。 */

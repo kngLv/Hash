@@ -3,18 +3,12 @@ package com.hash.video.service
 import android.os.Bundle
 import androidx.media3.session.SessionCommand
 
-/** 仅供 App 内部控制器与视频播放服务通信的会话命令。 */
+/** 系统媒体通知可调用的会话命令。 */
 internal object VideoSessionCommands {
 
-    const val ARGUMENT_NOTIFICATION_ACTIVITY = "notification_activity"
-
-    val setNotificationActivity = SessionCommand(
-        "com.hash.video.SET_NOTIFICATION_ACTIVITY",
-        Bundle.EMPTY,
-    )
-
-    val releasePlaybackSession = SessionCommand(
-        "com.hash.video.RELEASE_PLAYBACK_SESSION",
+    /** 暂停应用播放器并销毁 MediaSession，以彻底移除系统媒体通知。 */
+    val dismissNotification = SessionCommand(
+        "com.hash.video.DISMISS_NOTIFICATION",
         Bundle.EMPTY,
     )
 }

@@ -1,6 +1,7 @@
 package com.hash.video.ui.player
 
 import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Color
 import android.os.Handler
@@ -16,7 +17,8 @@ import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
-import com.hash.video.player.HashVideo
+import com.hash.video.player.VideoController
+import com.hash.video.player.VideoPlaybackOwner
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureDirection
 import com.hash.video.ui.gesture.VideoGestureEvent
@@ -44,7 +46,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
 
     /* ----------- 基础依赖与状态 ----------- */
 
-    private val controller = HashVideo.controller(context)
+    private val controller = VideoController(context)
     private val gestureHandler = Handler(Looper.getMainLooper())
     private val touchHandler = VideoTouchHandler(
         touchSlopPx = ViewConfiguration.get(context).scaledTouchSlop.toFloat(),
@@ -66,6 +68,20 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 当前真实播放状态，供具体场景处理播放 / 暂停交互。 */
     protected val currentPlaybackState: VideoPlaybackState
         get() = controller.playbackState.value
+
+    /** 列表等前台-only 场景可关闭系统媒体通知；详情默认开启。 */
+    var showNotification: Boolean
+        get() = controller.showNotification
+        set(value) {
+            controller.showNotification = value
+        }
+
+    /** 多个播放器 View 可注入同一页面 Owner，共享全局播放会话的释放权限。 */
+    var playbackOwner: VideoPlaybackOwner
+        get() = controller.playbackOwner
+        set(value) {
+            controller.playbackOwner = value
+        }
 
     /* ----------- 初始化相关 ----------- */
 
@@ -119,9 +135,10 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     }
 
     /** 触摸过程中复用配置，避免高频 MOVE 事件反复创建对象。 */
-    private fun currentGestureConfig(): VideoGestureConfig = gestureConfig ?: createGestureConfig().also {
-        gestureConfig = it
-    }
+    private fun currentGestureConfig(): VideoGestureConfig =
+        gestureConfig ?: createGestureConfig().also {
+            gestureConfig = it
+        }
 
     /** 单击统一走 [performClick]；其余手势先通知子类更新 UI，再执行基类的默认播放命令。 */
     private fun handleVideoGesture(event: VideoGestureEvent) {
@@ -221,6 +238,16 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 停止并移除当前视频，使其不能再由系统媒体控制恢复。 */
     fun removeCurrentMedia() = controller.removeCurrentMedia()
 
+    /** 更新详情播放通知的点击目标。 */
+    fun setNotificationActivity(pendingIntent: PendingIntent?) =
+        controller.setNotificationActivity(pendingIntent)
+
+    /** 解除当前 View 的画面承载，但不停止播放器。 */
+    fun detachRender(): Boolean = controller.detachRenderFrom(this)
+
+    /** 页面真正结束播放会话时释放应用级播放器。 */
+    fun releasePlayback() = controller.releasePlayback()
+
     /* ----------- 画面迁移与生命周期相关 ----------- */
 
     /**
@@ -245,7 +272,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         gestureConfig?.let(touchHandler::cancel)
         stateCollectionScope?.cancel()
         stateCollectionScope = null
-        controller.detachRenderFrom(this)
+        detachRender()
         super.onDetachedFromWindow()
     }
 

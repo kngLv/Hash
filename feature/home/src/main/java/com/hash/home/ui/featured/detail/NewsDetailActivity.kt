@@ -29,8 +29,8 @@ import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItemFactory
 import com.hash.home.ui.featured.detail.vm.NewsDetailViewModel
 import com.hash.common.ui.toolbar.HashToolbar.TitleGravity
 import com.hash.router.RouterActivityPath
-import com.hash.video.player.HashVideo
 import com.hash.video.api.VideoMedia
+import com.hash.video.player.VideoPlaybackOwner
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.video.ui.player.BaseHashVideoPlayerView
 
@@ -41,15 +41,16 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private val newsId get() = intent.getStringExtra(EXTRA_NEWS_ID).orEmpty()
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
+    private val videoPlaybackOwner = VideoPlaybackOwner()
     private val detailAdapter by lazy {
         NewsDetailAdapter(
+            videoPlaybackOwner,
             ::showLandscapeVideo,
             ::showPortraitVideo,
             ::setVideoNotificationActivity,
         )
     }
     private var isSourceVisible = false
-    private var hasVideoContent = false
     private var sourceVideoPlayer: EmbeddedVideoPlayerView? = null
     private var activePresentationPlayer: BaseHashVideoPlayerView? = null
     private var presentationMode: VideoPresentationMode? = null
@@ -89,6 +90,8 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         toolbar.addAction(listenAction)
         fullscreenVideoPlayer.onExitFullscreenRequested = ::closeVideoPresentation
         portraitVideoPlayer.onExitPortraitRequested = ::closeVideoPresentation
+        fullscreenVideoPlayer.playbackOwner = videoPlaybackOwner
+        portraitVideoPlayer.playbackOwner = videoPlaybackOwner
         contentRecycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 updateToolbarSource()
@@ -135,7 +138,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
                 postTime = intent.getStringExtra(EXTRA_POST_TIME).orEmpty(),
                 detailItems = detail.items,
             )
-        hasVideoContent = pageItems.any { it is NewsDetailPageItem.Video }
         detailAdapter.submitList(pageItems)
     }
 
@@ -167,7 +169,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     /** 仅在用户实际播放详情视频前，注册可恢复当前新闻的通知点击目标。 */
     private fun setVideoNotificationActivity() {
         if (newsId.isBlank()) return
-        HashVideo.setNotificationActivity(this, createNotificationPendingIntent())
+        binding.fullscreenVideoPlayer.setNotificationActivity(createNotificationPendingIntent())
     }
 
     private fun createNotificationPendingIntent(): PendingIntent {
@@ -215,7 +217,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         player.setMedia(media)
         player.visibility = View.VISIBLE
         videoPresentationBackCallback.isEnabled = true
-        HashVideo.attachRenderTo(player)
+        player.attachRender()
         requestedOrientation = when (mode) {
             VideoPresentationMode.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             VideoPresentationMode.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -228,7 +230,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         if (sourceVideoPlayer?.isAttachedToWindow == true) {
             sourceVideoPlayer?.attachRender()
         } else {
-            activePresentationPlayer?.let(HashVideo::detachRenderFrom)
+            activePresentationPlayer?.detachRender()
         }
         binding.fullscreenVideoPlayer.visibility = View.GONE
         binding.portraitVideoPlayer.visibility = View.GONE
@@ -241,9 +243,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
 
     override fun onDestroy() {
         closeVideoPresentation()
-        if (isFinishing && hasVideoContent) {
-            HashVideo.release()
-        }
+        videoPlaybackOwner.release(this)
         super.onDestroy()
     }
 

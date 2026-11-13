@@ -8,4 +8,7 @@
     <string name="video_float">悬浮</string>
     <string name="video_quality">清晰度</string>
     <string name="video_exit_fullscreen">退出全屏</string>
+    <string name="video_skip_back_15_seconds">后退 15 秒</string>
+    <string name="video_skip_forward_15_seconds">前进 15 秒</string>
+    <string name="video_close_notification">关闭</string>
 </resources>

@@ -11,7 +11,6 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
-import com.hash.video.player.HashVideo
 import com.hash.video.ui.controls.EmbeddedVideoControls
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

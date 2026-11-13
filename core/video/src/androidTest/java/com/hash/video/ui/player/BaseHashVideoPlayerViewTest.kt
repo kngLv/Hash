@@ -10,7 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoMedia
-import com.hash.video.player.HashVideo
+import com.hash.video.player.VideoPlayerEngine
 import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
 import org.junit.Assert.assertEquals
@@ -67,7 +67,6 @@ class BaseHashVideoPlayerViewTest {
         )
         try {
             scenario.onActivity { activity ->
-                HashVideo.release()
                 val media = VideoMedia("same-media", "https://example.com/same.mp4")
                 val first = TestVideoPlayerView(activity).apply { setMedia(media) }
                 val second = TestVideoPlayerView(activity).apply { setMedia(media) }
@@ -80,7 +79,9 @@ class BaseHashVideoPlayerViewTest {
                 assertTrue(second.getChildAt(0) !is PlayerView)
             }
         } finally {
-            scenario.onActivity { HashVideo.release() }
+            scenario.onActivity { activity ->
+                VideoPlayerEngine.release(activity.application)
+            }
             scenario.close()
         }
     }
@@ -92,7 +93,6 @@ class BaseHashVideoPlayerViewTest {
         )
         try {
             scenario.onActivity { activity ->
-                HashVideo.release()
                 val view = TestVideoPlayerView(activity)
                 activity.findViewById<ViewGroup>(android.R.id.content).addView(view)
 
@@ -101,7 +101,9 @@ class BaseHashVideoPlayerViewTest {
                 assertTrue(view.getChildAt(0) is PlayerView)
             }
         } finally {
-            scenario.onActivity { HashVideo.release() }
+            scenario.onActivity { activity ->
+                VideoPlayerEngine.release(activity.application)
+            }
             scenario.close()
         }
     }
