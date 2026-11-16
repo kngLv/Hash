@@ -39,8 +39,7 @@ internal fun VideoPlaybackState.resolvePlayAction(media: VideoMedia): VideoPlayA
 /**
  * 为替换媒体或重播创建准备状态。
  *
- * 重播仍使用同一条媒体流，已解析的视频尺寸有效，不能清空；只有替换媒体时才丢弃上一条的尺寸，
- * 避免旧比例影响新视频的布局。
+ * 播放器展示尺寸由业务传入的媒体宽高决定，不依赖底层媒体流的真实尺寸。
  */
 internal fun VideoPlaybackState.prepareForPlay(
     media: VideoMedia,
@@ -49,7 +48,6 @@ internal fun VideoPlaybackState.prepareForPlay(
     media = media,
     status = VideoPlaybackStatus.PREPARING,
     progress = VideoPlaybackProgress(),
-    contentSize = if (action == VideoPlayAction.REPLACE) null else contentSize,
     errorMessage = null,
 )
 
@@ -63,6 +61,5 @@ internal fun VideoPlaybackState.resetPlaybackSession(): VideoPlaybackState = cop
     media = null,
     status = VideoPlaybackStatus.IDLE,
     progress = VideoPlaybackProgress(),
-    contentSize = null,
     errorMessage = null,
 )

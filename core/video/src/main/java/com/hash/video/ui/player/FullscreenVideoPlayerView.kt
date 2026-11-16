@@ -10,6 +10,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.isLoading
@@ -27,6 +28,15 @@ open class FullscreenVideoPlayerView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : BaseHashVideoPlayerView(context, attrs, defStyleAttr) {
+
+    /** 全屏尺寸由外层覆盖容器决定，不能修改 ConstraintLayout 的全屏约束。 */
+    override fun resolveDisplaySize(
+        containerWidth: Int,
+        containerHeight: Int,
+        media: VideoMedia,
+    ) = VideoDisplaySize(containerWidth, containerHeight)
+
+    override fun applyDisplaySize(size: VideoDisplaySize) = Unit
 
     /**
      * 亮度、音量需要宿主实际提供系统级处理器才启用，避免手势已被消费却没有任何效果。

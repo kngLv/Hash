@@ -3,6 +3,7 @@ package com.hash.video.ui.player
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
@@ -29,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * 视频播放界面的抽象基类。
@@ -57,9 +59,15 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     )
     private var stateCollectionScope: CoroutineScope? = null
     private var gestureConfig: VideoGestureConfig? = null
+    private var lastRenderedPlaybackState: VideoPlaybackState? = null
+    private var resolvedDisplaySize: VideoDisplaySize? = null
 
     /** 覆盖在视频画面之上的透明手势层，位于控制栏和 Loading 等业务 UI 之下。 */
     private val gestureOverlay = FrameLayout(context)
+
+    /** 统一展示封面、旧卡片暂停帧和跨容器迁移帧。 */
+    private val posterFrameView = VideoPosterFrameView(context)
+    private var displayingTransferredFrame = false
 
     /** 当前 View 要展示的媒体；设置媒体不会自动播放。 */
     protected var media: VideoMedia? = null
@@ -94,6 +102,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
 
     init {
         setBackgroundColor(Color.BLACK)
+        addView(posterFrameView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(gestureOverlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         isClickable = true
         bindVideoTouchHandler()
@@ -214,9 +223,13 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 绑定当前 View 要展示的视频，不会自动开始播放。 */
     fun setMedia(media: VideoMedia) {
         if (this.media == media) return
+        clearTransferredFrame()
+        lastRenderedPlaybackState = null
+        resolvedDisplaySize = null
         this.media = media
         onMediaChanged(media)
         renderPlaybackState(currentPlaybackState)
+        resolveDisplaySizeIfNeeded()
         restoreRenderIfCurrentMedia()
     }
 
@@ -262,9 +275,61 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 当前媒体此前切走时保留的缩略暂停帧；没有时由子类回退到封面。 */
     protected fun pausedFrameFor(media: VideoMedia) = controller.pausedFrameFor(media)
 
-    /** 在唯一渲染画面之上、手势层之下添加静态内容，例如视频封面。 */
-    protected fun addContentOverlay(view: android.view.View, params: LayoutParams) {
-        addView(view, indexOfChild(gestureOverlay).coerceAtLeast(0), params)
+    /** 绑定新媒体的封面；封面与暂停帧始终复用同一展示 View。 */
+    protected fun setPosterCover(media: VideoMedia) = posterFrameView.setCover(media.coverUrl)
+
+    /** 当前卡片不再承载真实画面时，展示之前缓存的暂停帧。 */
+    protected fun showPosterFrame(frame: Bitmap) = posterFrameView.showFrozenFrame(frame)
+
+    /** 当前卡片没有暂停帧可用时，显示它自己的封面。 */
+    protected fun showPosterCover() = posterFrameView.showCover()
+
+    /** 当前真实视频画面可用时隐藏封面或暂停帧。 */
+    protected fun hidePoster() = posterFrameView.hide()
+
+
+    /**
+     * 根据播放器所在容器和业务传入的展示宽高，计算当前媒体首次展示时使用的固定尺寸。
+     *
+     * 默认让宽度填满容器，高度按传入比例计算；未传有效宽高时使用 16:9 兜底。
+     */
+    protected open fun resolveDisplaySize(
+        containerWidth: Int,
+        containerHeight: Int,
+        media: VideoMedia,
+    ): VideoDisplaySize {
+        val aspectRatio = media.coverAspectRatioOrNull() ?: DEFAULT_DISPLAY_ASPECT_RATIO
+        return VideoDisplaySize(
+            width = containerWidth,
+            height = (containerWidth / aspectRatio).roundToInt().coerceAtLeast(1),
+        )
+    }
+
+    /** 默认把计算结果应用到播放器根 View；全屏播放器可覆盖并交给父容器控制。 */
+    protected open fun applyDisplaySize(size: VideoDisplaySize) {
+        val params = layoutParams ?: return
+        if (params.width == size.width && params.height == size.height) return
+        layoutParams = params.apply {
+            width = size.width
+            height = size.height
+        }
+    }
+
+    /** 业务明确要求按当前容器尺寸重新计算时调用；普通尺寸变化不会自动触发。 */
+    fun refreshDisplaySize() {
+        resolvedDisplaySize = null
+        resolveDisplaySizeIfNeeded()
+    }
+
+    /** 首次获得有效容器宽度时确定尺寸；缓存存在后即使方向变化也不再自动重算。 */
+    private fun resolveDisplaySizeIfNeeded() {
+        if (resolvedDisplaySize != null) return
+        val boundMedia = media ?: return
+        if (width <= 0 || height < 0) return
+        resolveDisplaySize(width, height, boundMedia).also {
+            resolvedDisplaySize = it
+            applyDisplaySize(it)
+        }
     }
 
     /* ----------- 画面迁移与生命周期相关 ----------- */
@@ -274,7 +339,10 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      *
      * 从业务侧的全屏或小窗容器返回内嵌页面时调用即可，无需通过 [play] 间接恢复画面。
      */
-    fun attachRender() = controller.attachRenderTo(this)
+    fun attachRender() {
+        controller.attachRenderTo(this, media)
+        showTransferredFrameIfNeeded()
+    }
 
     /**
      * 请求当前 View 接管视频画面。
@@ -283,8 +351,15 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
      */
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        lastRenderedPlaybackState = null
         observePlaybackState()
         restoreRenderIfCurrentMedia()
+        resolveDisplaySizeIfNeeded()
+    }
+
+    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight)
+        resolveDisplaySizeIfNeeded()
     }
 
     override fun onDetachedFromWindow() {
@@ -312,7 +387,42 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         } else {
             VideoPlaybackState(status = VideoPlaybackStatus.IDLE)
         }
+        if (displayedState == lastRenderedPlaybackState) return
+        lastRenderedPlaybackState = displayedState
+        updateTransferredFrame(displayedState)
         onPlaybackStateChanged(displayedState)
+    }
+
+    /** 仅在迁移后的暂停或结束状态保留快照；恢复播放后立即交还真实渲染画面。 */
+    private fun updateTransferredFrame(state: VideoPlaybackState) {
+        if (state.status == VideoPlaybackStatus.PLAYING) {
+            clearTransferredFrame()
+        }
+    }
+
+    /** 迁移到新容器后，暂停或播完的视频优先显示之前保存的画面，防止黑屏。 */
+    private fun showTransferredFrameIfNeeded() {
+        val boundMedia = media ?: return
+        val state = currentPlaybackState
+        if (
+            boundMedia.isSameSourceAs(state.media) &&
+            (state.status == VideoPlaybackStatus.PAUSED || state.status == VideoPlaybackStatus.ENDED)
+        ) {
+            pausedFrameFor(boundMedia)?.let(::showTransferredFrame)
+        }
+    }
+
+    /** 将保存的画面盖在真实播放器上方，直到视频恢复播放。 */
+    private fun showTransferredFrame(frame: Bitmap) {
+        showPosterFrame(frame)
+        displayingTransferredFrame = true
+    }
+
+    /** 视频恢复播放后移除静态画面，重新显示真实视频。 */
+    private fun clearTransferredFrame() {
+        if (!displayingTransferredFrame) return
+        posterFrameView.hideFrozenFrame()
+        displayingTransferredFrame = false
     }
 
 
@@ -335,6 +445,10 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
             return
         }
         attachRender()
+    }
+
+    private companion object {
+        const val DEFAULT_DISPLAY_ASPECT_RATIO = 16f / 9f
     }
 
 }

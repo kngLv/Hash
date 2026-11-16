@@ -46,8 +46,8 @@ class VideoController(context: Context) {
     fun setNotificationActivity(pendingIntent: PendingIntent?) =
         VideoPlayerEngine.setNotificationActivity(application, pendingIntent)
 
-    fun attachRenderTo(container: ViewGroup) =
-        VideoPlayerEngine.attachRenderTo(application, playbackOwner, container)
+    fun attachRenderTo(container: ViewGroup, targetMedia: VideoMedia?) =
+        VideoPlayerEngine.attachRenderTo(application, playbackOwner, container, targetMedia)
 
     fun detachRenderFrom(container: ViewGroup): Boolean =
         VideoPlayerEngine.detachRenderFrom(playbackOwner, container)

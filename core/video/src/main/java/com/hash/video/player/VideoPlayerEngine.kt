@@ -10,15 +10,14 @@ import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import com.hash.video.api.VideoContentSize
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.api.isSameSourceAs
 import com.hash.video.cache.VideoCacheProvider
 import com.hash.video.cache.VideoCacheKeyFactory
 import com.hash.video.service.HashVideoPlaybackService
@@ -47,6 +46,9 @@ internal object VideoPlayerEngine {
     private val pausedFrames = object : LruCache<String, Bitmap>(MAX_PAUSED_FRAME_BYTES) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
+
+    /** 本次画面迁移已保存的旧媒体帧，避免替换媒体时被新 Surface 的空帧覆盖。 */
+    private var transferredFrameMediaKey: String? = null
 
     /** 所有播放器 View 共享的播放状态。 */
     private val _playbackState = MutableStateFlow(VideoPlaybackState())
@@ -87,13 +89,6 @@ internal object VideoPlayerEngine {
             newPosition: Player.PositionInfo,
             reason: Int,
         ) = currentPlayer()?.let(::updateProgress) ?: Unit
-
-        override fun onVideoSizeChanged(videoSize: VideoSize) {
-            val contentSize = videoSize.toContentSizeOrNull() ?: return
-            if (_playbackState.value.media != null) {
-                _playbackState.value = _playbackState.value.copy(contentSize = contentSize)
-            }
-        }
 
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
             stopProgressTracking()
@@ -136,7 +131,11 @@ internal object VideoPlayerEngine {
         if (requestId != latestRequestId) return
         when (action) {
             VideoPlayAction.REPLACE -> current.run {
-                rememberPlaybackOf(previousMedia, this)
+                rememberPlaybackOf(
+                    previousMedia,
+                    this,
+                    captureFrame = previousMedia?.cacheKey() != transferredFrameMediaKey,
+                )
                 val startPositionMs = savedPositionsMs[media.cacheKey()].orEmptyPosition()
                 setMediaItem(
                     VideoMediaItemFactory.create(media, includeArtwork = showNotificationArtwork),
@@ -199,13 +198,37 @@ internal object VideoPlayerEngine {
         HashVideoPlaybackService.setNotificationActivity(application, pendingIntent)
 
     /** 将唯一画面挂载到当前 Owner 的目标容器。 */
-    fun attachRenderTo(application: Application, owner: VideoPlaybackOwner, container: ViewGroup) {
+    fun attachRenderTo(
+        application: Application,
+        owner: VideoPlaybackOwner,
+        container: ViewGroup,
+        targetMedia: VideoMedia? = null,
+    ) {
         if (activeOwner != null && owner !== activeOwner) return
         if (activeOwner == null) activeOwner = owner
-        val current = get(application)
+        val currentPlayer = get(application)
         val coordinator = renderCoordinator ?: VideoRenderCoordinator(
-            application, current
+            application, currentPlayer
         ).also { renderCoordinator = it }
+        transferredFrameMediaKey = null
+        val currentState = _playbackState.value
+        val currentMedia = currentState.media
+        // 切换播放源后旧卡片失去唯一画面，必须保存旧帧。相同播放源迁移时，只有暂停或结束
+        // 的播放器不会向新 Surface 重绘，才保存画面兜底。
+        if (coordinator.currentContainer() !== container) {
+            currentMedia?.let { media ->
+                val isSwitchingSource = !media.isSameSourceAs(targetMedia)
+                val needsFrozenFrame = currentState.status == VideoPlaybackStatus.PAUSED ||
+                    currentState.status == VideoPlaybackStatus.ENDED
+                //播放源已切换 or 播放处于暂停或者结束
+                if (isSwitchingSource || needsFrozenFrame) {
+                    coordinator.captureFrame()?.let { frame ->
+                        pausedFrames.put(media.cacheKey(), frame)
+                        transferredFrameMediaKey = media.cacheKey()
+                    }
+                }
+            }
+        }
         coordinator.attachTo(container)
     }
 
@@ -269,9 +292,6 @@ internal object VideoPlayerEngine {
     private fun Player.shouldTrackProgress(): Boolean =
         playWhenReady && (playbackState == Player.STATE_READY || playbackState == Player.STATE_BUFFERING)
 
-    private fun VideoSize.toContentSizeOrNull(): VideoContentSize? =
-        VideoContentSize(width, height, pixelWidthHeightRatio).takeIf { it.aspectRatio > 0f }
-
     private fun updateState(status: VideoPlaybackStatus, errorMessage: String? = null) {
         // Media3 报错后还会继续派发 IDLE/非播放回调，不能覆盖刚展示给用户的错误。
         if (_playbackState.value.status == VideoPlaybackStatus.ERROR && status != VideoPlaybackStatus.ERROR) {
@@ -284,11 +304,13 @@ internal object VideoPlayerEngine {
     /** 提供给列表卡片展示；快照只在对应视频非当前渲染目标时使用。 */
     fun pausedFrameFor(media: VideoMedia): Bitmap? = pausedFrames.get(media.cacheKey())
 
-    private fun rememberPlaybackOf(media: VideoMedia?, player: ExoPlayer) {
+    private fun rememberPlaybackOf(media: VideoMedia?, player: ExoPlayer, captureFrame: Boolean) {
         media ?: return
         savedPositionsMs[media.cacheKey()] = player.currentPosition.coerceAtLeast(0L)
-        renderCoordinator?.captureFrame()?.let { frame ->
-            pausedFrames.put(media.cacheKey(), frame)
+        if (captureFrame) {
+            renderCoordinator?.captureFrame()?.let { frame ->
+                pausedFrames.put(media.cacheKey(), frame)
+            }
         }
     }
 

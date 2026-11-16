@@ -1,7 +1,6 @@
 package com.hash.video.player
 
 import com.hash.video.api.VideoMedia
-import com.hash.video.api.VideoContentSize
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
@@ -56,21 +55,6 @@ class VideoPlayActionTest {
     }
 
     @Test
-    fun `同一结束视频重播时应保留已解析的视频尺寸`() {
-        val contentSize = VideoContentSize(width = 1_080, height = 1_920)
-        val state = VideoPlaybackState(
-            media = media,
-            status = VideoPlaybackStatus.ENDED,
-            contentSize = contentSize,
-        )
-
-        val preparingState = state.prepareForPlay(media, VideoPlayAction.REPLAY)
-
-        assertEquals(contentSize, preparingState.contentSize)
-        assertEquals(VideoPlaybackStatus.PREPARING, preparingState.status)
-    }
-
-    @Test
     fun `不同视频应替换当前媒体`() {
         val state = VideoPlaybackState(media = media, status = VideoPlaybackStatus.PLAYING)
         val nextMedia = VideoMedia("video-2", "https://example.com/2.mp4")
@@ -104,14 +88,6 @@ class VideoPlayActionTest {
         assertEquals(VideoPlaybackStatus.IDLE, releasedState.status)
         assertEquals(null, releasedState.errorMessage)
         assertEquals(VideoPlayAction.REPLACE, releasedState.resolvePlayAction(media))
-    }
-
-    @Test
-    fun `视频尺寸应包含像素比例计算展示比例`() {
-        val contentSize = VideoContentSize(width = 720, height = 1280, pixelWidthHeightRatio = 1.5f)
-
-        assertEquals(0.84375f, contentSize.aspectRatio, 0.0001f)
-        assertTrue(contentSize.isPortrait)
     }
 
     @Test

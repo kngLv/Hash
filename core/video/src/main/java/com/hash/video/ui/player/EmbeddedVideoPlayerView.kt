@@ -8,12 +8,10 @@ import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import com.bumptech.glide.Glide
 import com.hash.video.R
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackState
@@ -52,14 +50,8 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         id = R.id.video_play_action
     }
     private val controls = EmbeddedVideoControls(context)
-    private val coverView = ImageView(context).apply {
-        scaleType = ImageView.ScaleType.CENTER_CROP
-        setBackgroundColor(Color.BLACK)
-        isClickable = false
-        isFocusable = false
-    }
-    private var coverAspectRatio = DEFAULT_COVER_ASPECT_RATIO
-    private var displayingPausedFrame = false
+    /** 当前媒体已经出现过真实视频画面后，暂停或短暂缓冲都不应再回退到封面。 */
+    private var hasDisplayedPlaybackFrame = false
 
     /** 宿主负责横屏、竖屏、小窗等呈现策略；未设置时不展示全屏入口。 */
     var onFullscreenRequested: (() -> Unit)? = null
@@ -87,7 +79,6 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
 
     init {
         setBackgroundColor(Color.BLACK)
-        addContentOverlay(coverView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(loadingView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         addView(
             errorMessageView,
@@ -110,9 +101,8 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     }
 
     override fun onMediaChanged(media: VideoMedia) {
-        displayingPausedFrame = false
-        loadCover(media)
-        updateCoverAspectRatio(media.coverAspectRatioOrNull() ?: DEFAULT_COVER_ASPECT_RATIO)
+        hasDisplayedPlaybackFrame = false
+        setPosterCover(media)
     }
 
     override fun play() {
@@ -136,11 +126,6 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         )
         controls.render(state, hasMedia = media != null)
         renderCover(state)
-    }
-
-    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
-        super.onSizeChanged(width, height, oldWidth, oldHeight)
-        applyCoverHeight()
     }
 
     override fun onDetachedFromWindow() {
@@ -179,53 +164,22 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
     /** 非当前播放项展示暂停帧或封面；当前项保留真实暂停画面，不被封面覆盖。 */
     private fun renderCover(state: VideoPlaybackState) {
         val boundMedia = media ?: return
+        // 正在播放的不是当前视频源，检查是否需要展示暂停帧或封面
         if (!boundMedia.isSameSourceAs(state.media)) {
             pausedFrameFor(boundMedia)?.let { frame ->
-                if (!displayingPausedFrame) {
-                    Glide.with(coverView).clear(coverView)
-                    coverView.setImageBitmap(frame)
-                    displayingPausedFrame = true
-                }
-            }
-            coverView.visibility = VISIBLE
+                showPosterFrame(frame)
+            } ?: showPosterCover()
             return
         }
-        displayingPausedFrame = false
-        coverView.visibility = when (state.status) {
+        when (state.status) {
             VideoPlaybackStatus.PLAYING,
             VideoPlaybackStatus.PAUSED,
             VideoPlaybackStatus.ENDED,
-                -> GONE
+                -> hasDisplayedPlaybackFrame = true
 
-            else -> VISIBLE
+            else -> Unit
         }
-    }
-
-    /** 封面比例是内嵌容器唯一尺寸来源，不再使用媒体流解析出的实际视频尺寸。 */
-    private fun updateCoverAspectRatio(aspectRatio: Float) {
-        coverAspectRatio = aspectRatio.takeIf { it > 0f } ?: DEFAULT_COVER_ASPECT_RATIO
-        applyCoverHeight()
-    }
-
-    private fun applyCoverHeight() {
-        if (width <= 0) return
-        val params = layoutParams ?: return
-        val targetHeight = (width / coverAspectRatio).roundToInt().coerceAtLeast(1)
-        if (params.height != targetHeight) {
-            layoutParams = params.apply { height = targetHeight }
-        }
-    }
-
-    private fun loadCover(media: VideoMedia) {
-        val coverUrl = media.coverUrl
-        if (coverUrl.isNullOrBlank()) {
-            Glide.with(coverView).clear(coverView)
-            coverView.setImageDrawable(null)
-            return
-        }
-        Glide.with(coverView)
-            .load(coverUrl)
-            .into(coverView)
+        if (hasDisplayedPlaybackFrame) hidePoster() else showPosterCover()
     }
 
     private fun createIconAction(iconRes: Int, sizeDp: Int): ImageButton = ImageButton(context).apply {
@@ -270,6 +224,5 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
         const val ERROR_CORNER_RADIUS_DP = 8
         const val ERROR_HORIZONTAL_PADDING_DP = 16
         const val ERROR_VERTICAL_PADDING_DP = 10
-        const val DEFAULT_COVER_ASPECT_RATIO = 16f / 9f
     }
 }

@@ -122,7 +122,10 @@ class BaseHashVideoPlayerViewTest {
     }
 
     private fun BaseHashVideoPlayerView.gestureOverlay(): FrameLayout =
-        getChildAt(0) as FrameLayout
+        (0 until childCount)
+            .map(::getChildAt)
+            .filterIsInstance<FrameLayout>()
+            .single()
 
     private class TestVideoPlayerView(context: Context) : BaseHashVideoPlayerView(context) {
         val handledEvents = mutableListOf<VideoGestureEvent>()

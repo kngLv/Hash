@@ -287,6 +287,32 @@ class EmbeddedVideoPlayerViewTest {
     }
 
     @Test
+    fun 已确定的内嵌尺寸不应随容器宽度变化自动重算() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val context = instrumentation.targetContext
+            val view = EmbeddedVideoPlayerView(context).apply {
+                layoutParams = android.widget.FrameLayout.LayoutParams(360, 208)
+                setMedia(media.copy(coverWidth = 9, coverHeight = 16))
+                layout(0, 0, 360, 208)
+            }
+
+            assertEquals(360, view.layoutParams.width)
+            assertEquals(640, view.layoutParams.height)
+
+            view.layout(0, 0, 640, 360)
+
+            assertEquals(360, view.layoutParams.width)
+            assertEquals(640, view.layoutParams.height)
+
+            view.refreshDisplaySize()
+
+            assertEquals(640, view.layoutParams.width)
+            assertEquals(1_138, view.layoutParams.height)
+        }
+    }
+
+    @Test
     fun RecyclerView复用新媒体时立即清除旧进度并应用新封面比例() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

@@ -8,8 +8,6 @@ data class VideoPlaybackState(
     val status: VideoPlaybackStatus = VideoPlaybackStatus.IDLE,
     /** 当前媒体的播放位置、缓冲位置与总时长。 */
     val progress: VideoPlaybackProgress = VideoPlaybackProgress(),
-    /** 从媒体流解析出的真实视频尺寸，未知时为空。 */
-    val contentSize: VideoContentSize? = null,
     /** 最近一次不可恢复播放错误的说明。 */
     val errorMessage: String? = null,
 )
