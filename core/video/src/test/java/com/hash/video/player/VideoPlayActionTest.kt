@@ -11,6 +11,16 @@ import org.junit.Test
 
 class VideoPlayActionTest {
 
+    @Test
+    fun `点击另一条视频时不应暂停正在播放的当前视频`() {
+        val playingMedia = VideoMedia("video-a", "https://example.com/a.mp4")
+        val nextMedia = VideoMedia("video-b", "https://example.com/b.mp4")
+        val state = VideoPlaybackState(media = playingMedia, status = VideoPlaybackStatus.PLAYING)
+
+        assertTrue(state.isPlayingCurrentMedia(playingMedia))
+        assertFalse(state.isPlayingCurrentMedia(nextMedia))
+    }
+
     private val media = VideoMedia("video-1", "https://example.com/1.mp4")
 
     @Test

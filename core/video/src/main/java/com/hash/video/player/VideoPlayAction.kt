@@ -4,6 +4,7 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 
 /** `play(media)` 对当前播放会话应执行的最小动作。 */
@@ -35,6 +36,10 @@ internal fun VideoPlaybackState.resolvePlayAction(media: VideoMedia): VideoPlayA
             -> VideoPlayAction.REPLACE
     }
 }
+
+/** 当前状态正在播放，且指定媒体就是当前播放源。 */
+internal fun VideoPlaybackState.isPlayingCurrentMedia(media: VideoMedia?): Boolean =
+    status.isPlaying && media?.isSameSourceAs(this.media) == true
 
 /**
  * 为替换媒体或重播创建准备状态。

@@ -15,6 +15,7 @@ import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.player.VideoController
 import com.hash.video.player.VideoPlaybackOwner
+import com.hash.video.player.isPlayingCurrentMedia
 import com.hash.video.ui.interaction.VideoInteractionCoordinator
 import com.hash.video.ui.interaction.VideoInteractionIntent
 import com.hash.video.ui.gesture.VideoGestureConfig
@@ -120,7 +121,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
             VideoInteractionIntent.PlayerClicked -> performClick()
 
             VideoInteractionIntent.TogglePlayback -> {
-                if (currentPlaybackState.status.isPlaying) pause() else play()
+                if (currentPlaybackState.isPlayingCurrentMedia(media)) pause() else play()
             }
 
             is VideoInteractionIntent.SeekTo -> handleUserSeek(
@@ -167,17 +168,25 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         play()
     }
 
-    /** 暂停当前视频；界面状态以真实播放器回调为准。 */
-    fun pause() = controller.pause()
+    /** 仅在绑定媒体为当前播放源时暂停。 */
+    fun pause() {
+        if (currentPlaybackState.isPlayingCurrentMedia(media)) controller.pause()
+    }
 
-    /** 跳转当前视频到指定位置；未知时长的媒体会忽略该请求。 */
-    fun seekTo(positionMs: Long) = controller.seekTo(positionMs)
+    /** 仅在绑定媒体为当前播放源时跳转进度。 */
+    fun seekTo(positionMs: Long) {
+        if (media?.isSameSourceAs(currentPlaybackState.media) == true) controller.seekTo(positionMs)
+    }
 
-    /** 停止播放和加载，但保留媒体列表。 */
-    fun stop() = controller.stop()
+    /** 仅停止绑定媒体的当前播放会话，保留媒体项。 */
+    fun stop() {
+        if (media?.isSameSourceAs(currentPlaybackState.media) == true) controller.stop()
+    }
 
-    /** 停止播放并移除当前媒体。 */
-    fun removeCurrentMedia() = controller.removeCurrentMedia()
+    /** 仅停止并移除绑定媒体的当前媒体项。 */
+    fun removeCurrentMedia() {
+        if (media?.isSameSourceAs(currentPlaybackState.media) == true) controller.removeCurrentMedia()
+    }
 
     /** 更新详情播放通知的点击目标。 */
     fun setNotificationActivity(pendingIntent: PendingIntent?) =
