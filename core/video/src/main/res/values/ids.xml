@@ -7,10 +7,5 @@
     <item name="video_embedded_controls" type="id" />
     <item name="video_fullscreen_controls" type="id" />
     <item name="video_time" type="id" />
-    <item name="video_float_action" type="id" />
-    <item name="video_fullscreen_action" type="id" />
-    <item name="video_portrait_action" type="id" />
-    <item name="video_quality_action" type="id" />
-    <item name="video_exit_fullscreen_action" type="id" />
     <item name="video_screen_host" type="id" />
 </resources>

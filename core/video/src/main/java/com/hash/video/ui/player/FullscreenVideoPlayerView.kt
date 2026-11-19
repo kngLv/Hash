@@ -2,26 +2,15 @@ package com.hash.video.ui.player
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.Animatable
-import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
-import android.view.Gravity
-import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.hash.video.api.VideoMedia
-import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.VideoPlaybackState
-import com.hash.video.api.isLoading
-import com.hash.video.api.isPlaying
-import com.hash.video.ui.controls.FullscreenVideoControls
+import com.hash.video.ui.panel.FullscreenVideoControlPanel
 import com.hash.video.ui.gesture.VideoGestureConfig
-import com.hash.video.ui.gesture.VideoGestureEvent
-import com.hash.video.ui.gesture.VideoGesturePhase
-import kotlin.math.roundToInt
 
-/** 应用内横屏全屏播放宿主，组合完整画面手势与三层控制栏。 */
+/** 应用内横屏全屏播放宿主，页面级呈现与控制层职责分离。 */
 @OptIn(UnstableApi::class)
 open class FullscreenVideoPlayerView @JvmOverloads constructor(
     context: Context,
@@ -29,6 +18,10 @@ open class FullscreenVideoPlayerView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : BaseHashVideoPlayerView(context, attrs, defStyleAttr) {
 
+    private val controlPanel = FullscreenVideoControlPanel(context)
+    /** 当前播放器的控制面板；只暴露面板供业务配置按钮，不替换面板实例。 */
+    val panel: FullscreenVideoControlPanel
+        get() = controlPanel
     /** 全屏尺寸由外层覆盖容器决定，不能修改 ConstraintLayout 的全屏约束。 */
     override fun resolveDisplaySize(
         containerWidth: Int,
@@ -38,150 +31,19 @@ open class FullscreenVideoPlayerView @JvmOverloads constructor(
 
     override fun applyDisplaySize(size: VideoDisplaySize) = Unit
 
-    /**
-     * 亮度、音量需要宿主实际提供系统级处理器才启用，避免手势已被消费却没有任何效果。
-     * 其余播放手势由全屏播放器默认支持。
-     */
-    override fun createGestureConfig() = VideoGestureConfig(
-            singleTapEnabled = true,
-            doubleTapEnabled = true,
-            seekEnabled = true,
-            brightnessEnabled = onBrightnessGesture != null,
-            volumeEnabled = onVolumeGesture != null,
-        )
-
-    private val loadingView = ProgressBar(context).apply {
-        visibility = GONE
-        isIndeterminate = true
-    }
-    private val errorMessageView = createErrorMessageView().apply {
-        id = com.hash.video.R.id.video_error_message
-    }
-    private val controls = FullscreenVideoControls(context)
-    private var exitFullscreenHandler: (() -> Unit)? = null
-
-    /** 左侧纵向手势的亮度变化量，范围 -1 到 1；由 Activity 等宿主修改 Window 亮度。 */
-    var onBrightnessGesture: ((Float, VideoGesturePhase) -> Unit)? = null
-        set(value) {
-            field = value
-            invalidateGestureConfig()
-        }
-
-    /** 右侧纵向手势的媒体音量变化量，范围 -1 到 1；由宿主修改系统媒体音量。 */
-    var onVolumeGesture: ((Float, VideoGesturePhase) -> Unit)? = null
-        set(value) {
-            field = value
-            invalidateGestureConfig()
-        }
-
-    var onFloatRequested: (() -> Unit)?
-        get() = controls.onFloatRequested
-        set(value) {
-            controls.onFloatRequested = value
-        }
-
-    var onQualityRequested: (() -> Unit)?
-        get() = controls.onQualityRequested
-        set(value) {
-            controls.onQualityRequested = value
-        }
-
-    var onExitFullscreenRequested: (() -> Unit)?
-        get() = exitFullscreenHandler
-        set(value) {
-            exitFullscreenHandler = value
-        }
-
-    /** 请求退出当前全屏宿主；具体返回栈由承载页面处理。 */
-    fun exitFullscreen() {
-        onExitFullscreenRequested?.invoke()
-    }
-
     init {
         setBackgroundColor(Color.BLACK)
-        addView(loadingView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
-        addView(
-            errorMessageView,
-            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        installControlPanel(
+            controlPanel,
+            VideoGestureConfig(
+                singleTapEnabled = true,
+                doubleTapEnabled = true,
+                seekEnabled = true,
+            ),
         )
-        addView(controls, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
-
-        errorMessageView.setOnClickListener { play() }
-        controls.onPlaybackToggle = ::togglePlayback
-        controls.onSeekRequested = { positionMs ->
-            handleUserSeek(positionMs, currentPlaybackState.progress.durationMs)
-        }
-        controls.onExitFullscreenRequested = ::exitFullscreen
     }
 
-    override fun onPlaybackStateChanged(state: VideoPlaybackState) {
-        loadingView.visibility = if (state.status.isLoading) VISIBLE else GONE
-        val errorMessage = state.errorMessage.takeIf { state.status == VideoPlaybackStatus.ERROR }
-        errorMessageView.visibility = if (errorMessage != null) VISIBLE else GONE
-        errorMessageView.text = errorMessage.orEmpty()
-        errorMessageView.contentDescription = errorMessage?.let { "$it，点击重试" }
-        controls.render(state)
-    }
+    /** 全屏的加载、错误、进度和手势 UI 由控制层与可替换的 Panel 共同处理。 */
+    override fun onPlaybackStateChanged(state: VideoPlaybackState) = Unit
 
-    override fun onDetachedFromWindow() {
-        (loadingView.indeterminateDrawable as? Animatable)?.stop()
-        super.onDetachedFromWindow()
-    }
-
-    private fun togglePlayback() {
-        if (currentPlaybackState.status.isPlaying) pause() else play()
-    }
-
-    override fun onVideoGesture(event: VideoGestureEvent) {
-        when (event) {
-            VideoGestureEvent.Click -> controls.visibility =
-                if (controls.visibility == VISIBLE) GONE else VISIBLE
-
-            is VideoGestureEvent.SeekPreview -> {
-                controls.visibility = VISIBLE
-                controls.renderSeekPreview(event.positionMs, event.durationMs)
-            }
-
-            is VideoGestureEvent.SeekPreviewEnd -> controls.endSeekPreview()
-
-            VideoGestureEvent.SeekPreviewCancel -> controls.cancelSeekPreview()
-
-            is VideoGestureEvent.BrightnessAdjustment ->
-                onBrightnessGesture?.invoke(event.delta, event.phase)
-
-            is VideoGestureEvent.VolumeAdjustment ->
-                onVolumeGesture?.invoke(event.delta, event.phase)
-
-            else -> Unit
-        }
-    }
-
-    /** 播放失败时展示具体原因；点击后由当前播放器重新发起播放。 */
-    private fun createErrorMessageView(): TextView = TextView(context).apply {
-        visibility = GONE
-        setTextColor(Color.WHITE)
-        textSize = 14f
-        gravity = Gravity.CENTER
-        background = GradientDrawable().apply {
-            cornerRadius = context.dp(ERROR_CORNER_RADIUS_DP).toFloat()
-            setColor(ERROR_BACKGROUND_COLOR)
-        }
-        setPadding(
-            context.dp(ERROR_HORIZONTAL_PADDING_DP),
-            context.dp(ERROR_VERTICAL_PADDING_DP),
-            context.dp(ERROR_HORIZONTAL_PADDING_DP),
-            context.dp(ERROR_VERTICAL_PADDING_DP),
-        )
-        isClickable = true
-        isFocusable = true
-    }
-
-    private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
-
-    private companion object {
-        const val ERROR_BACKGROUND_COLOR = 0xAA000000.toInt()
-        const val ERROR_CORNER_RADIUS_DP = 8
-        const val ERROR_HORIZONTAL_PADDING_DP = 16
-        const val ERROR_VERTICAL_PADDING_DP = 10
-    }
 }

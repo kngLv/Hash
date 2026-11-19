@@ -20,9 +20,8 @@ import com.hash.home.databinding.ItemNewsDetailVideoBinding
 /** 展示新闻详情的头部、文字、图片、视频与空内容条目。 */
 class NewsDetailAdapter(
     private val playbackOwner: VideoPlaybackOwner,
-    private val onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
-    private val onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
-    private val onPlaybackRequested: () -> Unit = {},
+    private val showLandscape: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
+    private val showPortrait: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
     private val showVideoNotification: Boolean = true,
     private val showVideoNotificationArtwork: Boolean = true,
 ) : BaseMultiItemAdapter<NewsDetailPageItem>() {
@@ -35,9 +34,8 @@ class NewsDetailAdapter(
                 TYPE_VIDEO,
                 VideoItemListener(
                     playbackOwner,
-                    onFullscreenRequested,
-                    onPortraitRequested,
-                    onPlaybackRequested,
+                    showLandscape,
+                    showPortrait,
                     showVideoNotification,
                     showVideoNotificationArtwork,
                 ),
@@ -87,9 +85,8 @@ class NewsDetailAdapter(
 
     private class VideoItemListener(
         private val playbackOwner: VideoPlaybackOwner,
-        private val onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
-        private val onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
-        private val onPlaybackRequested: () -> Unit,
+        private val showLandscape: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+        private val showPortrait: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
         private val showVideoNotification: Boolean,
         private val showVideoNotificationArtwork: Boolean,
     ) : OnMultiItemAdapterListener<NewsDetailPageItem, VideoHolder> {
@@ -102,9 +99,8 @@ class NewsDetailAdapter(
                 holder.bind(
                     it,
                     playbackOwner,
-                    onFullscreenRequested,
-                    onPortraitRequested,
-                    onPlaybackRequested,
+                    showLandscape,
+                    showPortrait,
                     showVideoNotification,
                     showVideoNotificationArtwork,
                 )
@@ -156,9 +152,8 @@ class NewsDetailAdapter(
         fun bind(
             item: NewsDetailPageItem.Video,
             playbackOwner: VideoPlaybackOwner,
-            onFullscreenRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
-            onPortraitRequested: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
-            onPlaybackRequested: () -> Unit,
+            showLandscape: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
+            showPortrait: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
             showVideoNotification: Boolean,
             showVideoNotificationArtwork: Boolean,
         ) = with(binding) {
@@ -173,9 +168,14 @@ class NewsDetailAdapter(
             videoPlayer.playbackOwner = playbackOwner
             videoPlayer.showNotification = showVideoNotification
             videoPlayer.showNotificationArtwork = showVideoNotificationArtwork
-            videoPlayer.onFullscreenRequested = { onFullscreenRequested(videoPlayer, media) }
-            videoPlayer.onPortraitRequested = { onPortraitRequested(videoPlayer, media) }
-            videoPlayer.onPlaybackRequested = onPlaybackRequested
+            videoPlayer.panel.landscapeAction.apply {
+                visibility = View.VISIBLE
+                setOnClickListener { showLandscape(videoPlayer, media) }
+            }
+            videoPlayer.panel.portraitAction.apply {
+                visibility = View.VISIBLE
+                setOnClickListener { showPortrait(videoPlayer, media) }
+            }
         }
     }
 

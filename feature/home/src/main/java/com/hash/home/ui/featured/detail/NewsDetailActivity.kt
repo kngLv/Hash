@@ -56,7 +56,6 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             videoPlaybackOwner,
             ::showLandscapeVideo,
             ::showPortraitVideo,
-            ::setVideoNotificationActivity,
             showVideoNotification = !BuildConfig.DEBUG || DEBUG_ENABLE_VIDEO_NOTIFICATION,
             showVideoNotificationArtwork = !BuildConfig.DEBUG || DEBUG_ENABLE_VIDEO_NOTIFICATION_ARTWORK,
         )
@@ -100,10 +99,11 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             )
         }
         toolbar.addAction(listenAction)
-        fullscreenVideoPlayer.onExitFullscreenRequested = ::closeVideoPresentation
-        portraitVideoPlayer.onExitPortraitRequested = ::closeVideoPresentation
+        fullscreenVideoPlayer.panel.exitAction.setOnClickListener { closeVideoPresentation() }
+        portraitVideoPlayer.panel.exitAction.setOnClickListener { closeVideoPresentation() }
         fullscreenVideoPlayer.playbackOwner = videoPlaybackOwner
         portraitVideoPlayer.playbackOwner = videoPlaybackOwner
+        setVideoNotificationActivity()
         contentRecycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 updateToolbarSource()
@@ -221,7 +221,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         )
     }
 
-    /** 仅在用户实际播放详情视频前，注册可恢复当前新闻的通知点击目标。 */
+    /** 提前保存通知点击目标；服务尚未启动时只暂存，不会创建空通知。 */
     private fun setVideoNotificationActivity() {
         if (newsId.isBlank()) return
         binding.fullscreenVideoPlayer.setNotificationActivity(createNotificationPendingIntent())
@@ -271,6 +271,10 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         activePresentationPlayer = player
         player.setMedia(media)
         player.visibility = View.VISIBLE
+        binding.fullscreenVideoPlayer.panel.exitAction.visibility =
+            if (mode == VideoPresentationMode.LANDSCAPE) View.VISIBLE else View.GONE
+        binding.portraitVideoPlayer.panel.exitAction.visibility =
+            if (mode == VideoPresentationMode.PORTRAIT) View.VISIBLE else View.GONE
         videoPresentationBackCallback.isEnabled = true
         player.attachRender()
         requestedOrientation = when (mode) {
@@ -289,6 +293,8 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         }
         binding.fullscreenVideoPlayer.visibility = View.GONE
         binding.portraitVideoPlayer.visibility = View.GONE
+        binding.fullscreenVideoPlayer.panel.exitAction.visibility = View.GONE
+        binding.portraitVideoPlayer.panel.exitAction.visibility = View.GONE
         sourceVideoPlayer = null
         activePresentationPlayer = null
         presentationMode = null

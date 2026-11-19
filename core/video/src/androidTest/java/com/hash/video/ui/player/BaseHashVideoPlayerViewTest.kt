@@ -3,7 +3,6 @@ package com.hash.video.ui.player
 import android.content.Context
 import android.view.MotionEvent
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,8 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoMedia
 import com.hash.video.player.VideoPlayerEngine
-import com.hash.video.ui.gesture.VideoGestureConfig
 import com.hash.video.ui.gesture.VideoGestureEvent
+import com.hash.video.ui.panel.AbstractVideoControlPanel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,7 +21,7 @@ import org.junit.runner.RunWith
 class BaseHashVideoPlayerViewTest {
 
     @Test
-    fun 双击应通知子类更新界面() {
+    fun 双击应由控制层通知宿主执行播放切换() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val view = TestVideoPlayerView(instrumentation.targetContext)
@@ -46,7 +45,7 @@ class BaseHashVideoPlayerViewTest {
     }
 
     @Test
-    fun 标准点击应通知子类处理控制栏事件() {
+    fun 标准点击应仅通知播放器监听器() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val view = TestVideoPlayerView(instrumentation.targetContext)
@@ -56,7 +55,7 @@ class BaseHashVideoPlayerViewTest {
             view.performClick()
 
             assertEquals(1, clickCount)
-            assertEquals(listOf(VideoGestureEvent.Click), view.handledEvents)
+            assertEquals(0, view.controlToggleCount)
         }
     }
 
@@ -117,30 +116,29 @@ class BaseHashVideoPlayerViewTest {
 
     private fun TestVideoPlayerView.dispatchTouch(action: Int, eventTime: Long) {
         val event = MotionEvent.obtain(0L, eventTime, action, 100f, 100f, 0)
-        gestureOverlay().dispatchTouchEvent(event)
+        (getChildAt(childCount - 1) as ViewGroup).getChildAt(0).dispatchTouchEvent(event)
         event.recycle()
     }
 
-    private fun BaseHashVideoPlayerView.gestureOverlay(): FrameLayout =
-        (0 until childCount)
-            .map(::getChildAt)
-            .filterIsInstance<FrameLayout>()
-            .single()
-
     private class TestVideoPlayerView(context: Context) : BaseHashVideoPlayerView(context) {
-        val handledEvents = mutableListOf<VideoGestureEvent>()
+        private val panel = TestVideoControlPanel(context)
+        val handledEvents: List<VideoGestureEvent>
+            get() = panel.handledEvents
         var userSeek: Pair<Long, Long>? = null
+        val controlToggleCount: Int
+            get() = panel.toggleCount
 
-        override fun createGestureConfig() = VideoGestureConfig(
-            singleTapEnabled = true,
-            doubleTapEnabled = true,
-        )
+        init {
+            installControlPanel(
+                panel = panel,
+                gestureConfig = com.hash.video.ui.gesture.VideoGestureConfig(
+                    singleTapEnabled = true,
+                    doubleTapEnabled = true,
+                ),
+            )
+        }
 
         override fun onPlaybackStateChanged(state: VideoPlaybackState) = Unit
-
-        override fun onVideoGesture(event: VideoGestureEvent) {
-            handledEvents += event
-        }
 
         override fun handleUserSeek(positionMs: Long, durationMs: Long) {
             userSeek = positionMs to durationMs
@@ -149,6 +147,22 @@ class BaseHashVideoPlayerViewTest {
         fun dispatchUserSeek(positionMs: Long, durationMs: Long) {
             handleUserSeek(positionMs, durationMs)
         }
+    }
+
+    private class TestVideoControlPanel(context: Context) : AbstractVideoControlPanel(context) {
+        val handledEvents = mutableListOf<VideoGestureEvent>()
+        var toggleCount = 0
+
+        override fun toggleControls() {
+            toggleCount++
+        }
+
+        override fun render(state: VideoPlaybackState, hasMedia: Boolean) = Unit
+
+        override fun onGesture(event: VideoGestureEvent) {
+            handledEvents += event
+        }
+
     }
 }
 

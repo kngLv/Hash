@@ -10,7 +10,7 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
-import com.hash.video.ui.controls.EmbeddedVideoControls
+import com.hash.video.ui.bottombar.EmbeddedVideoBottomBar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -27,9 +27,9 @@ class EmbeddedVideoPlayerViewTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         instrumentation.runOnMainSync {
-            val controls = EmbeddedVideoControls(context)
+            val bottomBar = EmbeddedVideoBottomBar(context)
 
-            controls.render(
+            bottomBar.render(
                 VideoPlaybackState(
                     media = media,
                     status = VideoPlaybackStatus.PLAYING,
@@ -41,11 +41,11 @@ class EmbeddedVideoPlayerViewTest {
                 ),
             )
 
-            val seekBar = controls.findViewById<android.widget.SeekBar>(R.id.video_progress)
+            val seekBar = bottomBar.findViewById<android.widget.SeekBar>(R.id.video_progress)
             assertEquals(250, seekBar.progress)
             assertEquals(750, seekBar.secondaryProgress)
             assertEquals(View.VISIBLE, seekBar.visibility)
-            assertEquals("00:02 / 00:10", controls.findViewById<TextView>(R.id.video_time).text.toString())
+            assertEquals("00:02 / 00:10", bottomBar.findViewById<TextView>(R.id.video_time).text.toString())
         }
     }
 
@@ -54,7 +54,7 @@ class EmbeddedVideoPlayerViewTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         instrumentation.runOnMainSync {
-            val controls = EmbeddedVideoControls(context)
+            val bottomBar = EmbeddedVideoBottomBar(context)
             val oldState = VideoPlaybackState(
                 media = media,
                 status = VideoPlaybackStatus.PLAYING,
@@ -65,12 +65,12 @@ class EmbeddedVideoPlayerViewTest {
                 ),
             )
 
-            controls.render(oldState)
-            controls.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
-            controls.render(oldState)
+            bottomBar.render(oldState)
+            bottomBar.renderSeekPreview(positionMs = 8_000L, durationMs = 10_000L)
+            bottomBar.render(oldState)
 
-            assertEquals(800, controls.findViewById<android.widget.SeekBar>(R.id.video_progress).progress)
-            assertEquals("00:08 / 00:10", controls.findViewById<TextView>(R.id.video_time).text.toString())
+            assertEquals(800, bottomBar.findViewById<android.widget.SeekBar>(R.id.video_progress).progress)
+            assertEquals("00:08 / 00:10", bottomBar.findViewById<TextView>(R.id.video_time).text.toString())
         }
     }
 
@@ -80,10 +80,13 @@ class EmbeddedVideoPlayerViewTest {
         val context = instrumentation.targetContext
         val toggled = AtomicBoolean(false)
         instrumentation.runOnMainSync {
-            val controls = EmbeddedVideoControls(context).apply {
-                onPlaybackToggle = { toggled.set(true) }
+            val bottomBar = EmbeddedVideoBottomBar(context).apply {
+                setListener(object : EmbeddedVideoBottomBar.Listener {
+                    override fun onTogglePlayback() = toggled.set(true)
+                    override fun onSeek(positionMs: Long) = Unit
+                })
             }
-            controls.render(
+            bottomBar.render(
                 VideoPlaybackState(
                     media = media,
                     status = VideoPlaybackStatus.PAUSED,
@@ -91,7 +94,7 @@ class EmbeddedVideoPlayerViewTest {
                 ),
             )
 
-            controls.findViewById<View>(R.id.video_play_toggle).performClick()
+            bottomBar.findViewById<View>(R.id.video_play_toggle).performClick()
         }
 
         assertTrue(toggled.get())
@@ -176,62 +179,6 @@ class EmbeddedVideoPlayerViewTest {
             assertEquals(View.VISIBLE, errorMessage.visibility)
             assertEquals("视频地址无访问权限或已失效", errorMessage.text.toString())
             assertEquals(View.GONE, view.findViewById<View>(R.id.video_play_action).visibility)
-        }
-    }
-
-    @Test
-    fun 点击全屏操作会通知宿主处理展示迁移() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        val invoked = AtomicBoolean(false)
-        instrumentation.runOnMainSync {
-            val view = EmbeddedVideoPlayerView(context).apply {
-                setMedia(media)
-                onFullscreenRequested = { invoked.set(true) }
-            }
-
-            view.findViewById<android.view.View>(R.id.video_fullscreen_action).performClick()
-        }
-
-        assertTrue(invoked.get())
-    }
-
-    @Test
-    fun 点击竖屏操作会通知宿主处理展示迁移() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        val invoked = AtomicBoolean(false)
-        instrumentation.runOnMainSync {
-            val view = EmbeddedVideoPlayerView(context).apply {
-                setMedia(media)
-                onPortraitRequested = { invoked.set(true) }
-            }
-
-            view.findViewById<View>(R.id.video_portrait_action).performClick()
-        }
-
-        assertTrue(invoked.get())
-    }
-
-    @Test
-    fun 未配置回调时隐藏全屏操作() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        instrumentation.runOnMainSync {
-            val view = EmbeddedVideoPlayerView(instrumentation.targetContext).apply { setMedia(media) }
-
-            assertEquals(View.GONE, view.findViewById<View>(R.id.video_fullscreen_action).visibility)
-        }
-    }
-
-    @Test
-    fun 未配置悬浮回调时只隐藏悬浮操作() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        instrumentation.runOnMainSync {
-            val view = EmbeddedVideoPlayerView(context)
-
-            assertEquals(View.GONE, view.findViewById<View>(R.id.video_fullscreen_action).visibility)
-            assertEquals(View.GONE, view.findViewById<View>(R.id.video_float_action).visibility)
         }
     }
 

@@ -11,11 +11,9 @@ import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
-import com.hash.video.ui.gesture.VideoGestureConfig
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(AndroidJUnit4::class)
 class FullscreenVideoPlayerViewTest {
@@ -46,21 +44,6 @@ class FullscreenVideoPlayerViewTest {
             assertEquals(750, view.findViewById<SeekBar>(R.id.video_progress).secondaryProgress)
             assertEquals(View.VISIBLE, view.findViewById<View>(R.id.video_fullscreen_controls).visibility)
         }
-    }
-
-    @Test
-    fun 退出全屏操作只通知宿主处理展示迁移() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val invoked = AtomicBoolean(false)
-        instrumentation.runOnMainSync {
-            val view = FullscreenVideoPlayerView(instrumentation.targetContext).apply {
-                onExitFullscreenRequested = { invoked.set(true) }
-            }
-
-            view.findViewById<View>(R.id.video_exit_fullscreen_action).performClick()
-        }
-
-        org.junit.Assert.assertTrue(invoked.get())
     }
 
     @Test
@@ -110,23 +93,6 @@ class FullscreenVideoPlayerViewTest {
     }
 
     @Test
-    fun 仅在宿主提供处理器时启用亮度和音量手势() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        instrumentation.runOnMainSync {
-            val view = TestFullscreenVideoPlayerView(instrumentation.targetContext)
-
-            org.junit.Assert.assertFalse(view.currentGestureConfig.brightnessEnabled)
-            org.junit.Assert.assertFalse(view.currentGestureConfig.volumeEnabled)
-
-            view.onBrightnessGesture = { _, _ -> }
-            view.onVolumeGesture = { _, _ -> }
-
-            org.junit.Assert.assertTrue(view.currentGestureConfig.brightnessEnabled)
-            org.junit.Assert.assertTrue(view.currentGestureConfig.volumeEnabled)
-        }
-    }
-
-    @Test
     fun 直接挂载画面时播放器应位于控制层之下() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
@@ -137,12 +103,5 @@ class FullscreenVideoPlayerViewTest {
             org.junit.Assert.assertTrue(view.getChildAt(0) is PlayerView)
             view.releasePlayback()
         }
-    }
-
-    private class TestFullscreenVideoPlayerView(context: android.content.Context) :
-        FullscreenVideoPlayerView(context) {
-
-        val currentGestureConfig: VideoGestureConfig
-            get() = createGestureConfig()
     }
 }

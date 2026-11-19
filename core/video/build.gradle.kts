@@ -28,6 +28,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1") // 播放状态的主线程收集
     testImplementation(libs.junit)
     androidTestImplementation("androidx.test:core:1.6.1") // ActivityScenario 驱动呈现宿主设备测试
+    androidTestImplementation("com.squareup.okhttp3:mockwebserver:4.12.0") // 验证视频请求头是否真正发出
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }

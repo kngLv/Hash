@@ -13,8 +13,6 @@ class VideoGestureConfigTest {
         assertFalse(config.singleTapEnabled)
         assertFalse(config.doubleTapEnabled)
         assertFalse(config.seekEnabled)
-        assertFalse(config.brightnessEnabled)
-        assertFalse(config.volumeEnabled)
     }
 
     @Test
@@ -22,13 +20,10 @@ class VideoGestureConfigTest {
         val config = VideoGestureConfig(
             singleTapEnabled = true,
             seekEnabled = true,
-            volumeEnabled = true,
         )
 
         assertTrue(config.singleTapEnabled)
         assertFalse(config.doubleTapEnabled)
         assertTrue(config.seekEnabled)
-        assertFalse(config.brightnessEnabled)
-        assertTrue(config.volumeEnabled)
     }
 }

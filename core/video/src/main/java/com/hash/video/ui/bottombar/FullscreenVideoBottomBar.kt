@@ -1,4 +1,4 @@
-package com.hash.video.ui.controls
+package com.hash.video.ui.bottombar
 
 import android.content.Context
 import android.content.res.ColorStateList
@@ -11,9 +11,9 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.hash.video.R
+import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
-import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.isFinished
 import com.hash.video.api.isLoading
 import com.hash.video.api.isPlaying
@@ -21,8 +21,8 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** 横屏全屏播放使用的三层控制栏：时间、时间轴、播放与扩展操作。 */
-class FullscreenVideoControls @JvmOverloads constructor(
+/** 横屏全屏播放使用的三层底部操作栏：时间、时间轴、播放操作。 */
+class FullscreenVideoBottomBar @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : LinearLayout(context, attrs), SeekBar.OnSeekBarChangeListener {
@@ -37,74 +37,36 @@ class FullscreenVideoControls @JvmOverloads constructor(
     private val seekBar = SeekBar(context).apply {
         id = R.id.video_progress
         max = PROGRESS_SCALE
-        setOnSeekBarChangeListener(this@FullscreenVideoControls)
+        setOnSeekBarChangeListener(this@FullscreenVideoBottomBar)
     }
-    private val playbackAction = createIconAction(R.drawable.ic_video_play).apply {
-        id = R.id.video_play_toggle
-    }
-    private val floatAction = createTextAction(R.string.video_float).apply {
-        id = R.id.video_float_action
-    }
-    private val qualityAction = createTextAction(R.string.video_quality).apply {
-        id = R.id.video_quality_action
-    }
-    private val exitAction = createTextAction(R.string.video_exit_fullscreen).apply {
-        id = R.id.video_exit_fullscreen_action
-    }
+    private val playbackAction = createIconAction(R.drawable.ic_video_play).apply { id = R.id.video_play_toggle }
     private var currentDurationMs = 0L
     private var seekPreviewPositionMs: Long? = null
     private var isAwaitingSeekCompletion = false
     private var lastProgress = VideoPlaybackProgress()
-
-    var onPlaybackToggle: (() -> Unit)? = null
-    var onSeekRequested: ((Long) -> Unit)? = null
-    var onFloatRequested: (() -> Unit)? = null
-        set(value) {
-            field = value
-            floatAction.visibility = if (value == null) GONE else VISIBLE
-        }
-
-    var onQualityRequested: (() -> Unit)? = null
-        set(value) {
-            field = value
-            qualityAction.visibility = if (value == null) GONE else VISIBLE
-        }
-
-    var onExitFullscreenRequested: (() -> Unit)? = null
-        set(value) {
-            field = value
-            exitAction.visibility = if (value == null) GONE else VISIBLE
-        }
+    private var listener: Listener? = null
 
     init {
         id = R.id.video_fullscreen_controls
         orientation = VERTICAL
         setPadding(context.dp(16), context.dp(6), context.dp(16), context.dp(8))
         setBackgroundColor(CONTROL_BACKGROUND_COLOR)
-
         addView(timeView, LayoutParams(LayoutParams.MATCH_PARENT, context.dp(TIME_HEIGHT_DP)))
         addView(seekBar, LayoutParams(LayoutParams.MATCH_PARENT, context.dp(SEEK_HEIGHT_DP)))
         addView(createActionRow(), LayoutParams(LayoutParams.MATCH_PARENT, context.dp(ACTION_ROW_HEIGHT_DP)))
-
-        floatAction.visibility = GONE
-        qualityAction.visibility = GONE
-        exitAction.visibility = GONE
-        playbackAction.setOnClickListener { onPlaybackToggle?.invoke() }
-        floatAction.setOnClickListener { onFloatRequested?.invoke() }
-        qualityAction.setOnClickListener { onQualityRequested?.invoke() }
-        exitAction.setOnClickListener { onExitFullscreenRequested?.invoke() }
+        playbackAction.setOnClickListener { listener?.onTogglePlayback() }
     }
+
+    fun setListener(listener: Listener?) { this.listener = listener }
 
     fun render(state: VideoPlaybackState) {
         val status = state.status
         val progress = state.progress
         lastProgress = progress
         currentDurationMs = progress.durationMs
-
         playbackAction.visibility = if (state.media != null && !status.isLoading) VISIBLE else GONE
         playbackAction.setImageResource(if (status.isPlaying) R.drawable.ic_video_pause else R.drawable.ic_video_play)
         playbackAction.contentDescription = context.getString(status.playbackActionDescription())
-
         renderProgress(progress)
     }
 
@@ -113,17 +75,12 @@ class FullscreenVideoControls @JvmOverloads constructor(
         currentDurationMs = durationMs
         isAwaitingSeekCompletion = false
         seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
-        seekBar.progress = ((seekPreviewPositionMs!!.toFloat() / durationMs) * PROGRESS_SCALE)
-            .roundToInt()
-            .coerceIn(0, PROGRESS_SCALE)
+        seekBar.progress = ((seekPreviewPositionMs!!.toFloat() / durationMs) * PROGRESS_SCALE).roundToInt().coerceIn(0, PROGRESS_SCALE)
         timeView.text = formatTimeLine(seekPreviewPositionMs!!, durationMs)
     }
 
-    fun endSeekPreview() {
-        isAwaitingSeekCompletion = seekPreviewPositionMs != null
-    }
+    fun endSeekPreview() { isAwaitingSeekCompletion = seekPreviewPositionMs != null }
 
-    /** 放弃未提交的拖动预览，并立即恢复最近一次真实播放进度。 */
     fun cancelSeekPreview() {
         clearSeekPreview()
         renderProgress(lastProgress)
@@ -142,9 +99,8 @@ class FullscreenVideoControls @JvmOverloads constructor(
 
     override fun onStopTrackingTouch(seekBar: SeekBar) {
         if (currentDurationMs > 0L) {
-            val positionMs = seekBar.progress.toPositionMs()
             endSeekPreview()
-            onSeekRequested?.invoke(positionMs)
+            listener?.onSeek(seekBar.progress.toPositionMs())
         }
     }
 
@@ -153,9 +109,6 @@ class FullscreenVideoControls @JvmOverloads constructor(
         gravity = Gravity.CENTER_VERTICAL
         addView(playbackAction, LayoutParams(context.dp(ACTION_SIZE_DP), context.dp(ACTION_SIZE_DP)))
         addView(View(context), LayoutParams(0, 0, 1f))
-        addView(floatAction, actionTextLayoutParams())
-        addView(qualityAction, actionTextLayoutParams())
-        addView(exitAction, actionTextLayoutParams())
     }
 
     private fun createIconAction(iconRes: Int) = ImageButton(context).apply {
@@ -166,20 +119,8 @@ class FullscreenVideoControls @JvmOverloads constructor(
         setPadding(padding, padding, padding, padding)
     }
 
-    private fun createTextAction(textRes: Int) = TextView(context).apply {
-        setText(textRes)
-        setTextColor(Color.WHITE)
-        gravity = Gravity.CENTER
-        setPadding(context.dp(10), 0, context.dp(10), 0)
-        isClickable = true
-        isFocusable = true
-    }
-
-    private fun actionTextLayoutParams() = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
-
     private fun Int.toPositionMs(): Long = toLong() * currentDurationMs / PROGRESS_SCALE
 
-    /** 根据真实播放器进度刷新控制栏；正在预览时保留用户拖动的位置。 */
     private fun renderProgress(progress: VideoPlaybackProgress) {
         seekBar.isEnabled = progress.isAvailable
         if (!progress.isAvailable) {
@@ -193,19 +134,12 @@ class FullscreenVideoControls @JvmOverloads constructor(
             seekBar.progress = (progress.fraction * PROGRESS_SCALE).roundToInt()
             seekBar.secondaryProgress = (progress.bufferedFraction * PROGRESS_SCALE).roundToInt()
         }
-        val displayedPositionMs = seekPreviewPositionMs ?: progress.positionMs
-        timeView.text = formatTimeLine(displayedPositionMs, progress.durationMs)
+        timeView.text = formatTimeLine(seekPreviewPositionMs ?: progress.positionMs, progress.durationMs)
     }
 
-    /** 仅当播放器已接近目标位置时才恢复真实进度，避免 seek 后控制栏回跳。 */
     private fun completeSeekPreviewIfNeeded(positionMs: Long) {
-        val previewPositionMs = seekPreviewPositionMs ?: return
-        if (
-            isAwaitingSeekCompletion &&
-            abs(positionMs - previewPositionMs) <= SEEK_CONFIRM_TOLERANCE_MS
-        ) {
-            clearSeekPreview()
-        }
+        val preview = seekPreviewPositionMs ?: return
+        if (isAwaitingSeekCompletion && abs(positionMs - preview) <= SEEK_CONFIRM_TOLERANCE_MS) clearSeekPreview()
     }
 
     private fun clearSeekPreview() {
@@ -220,7 +154,7 @@ class FullscreenVideoControls @JvmOverloads constructor(
         else -> R.string.video_play
     }
 
-    private fun formatTimeLine(positionMs: Long, durationMs: Long): String =
+    private fun formatTimeLine(positionMs: Long, durationMs: Long) =
         "${formatDuration(positionMs)} / ${formatDuration(durationMs)}"
 
     private fun formatDuration(durationMs: Long): String {
@@ -228,22 +162,24 @@ class FullscreenVideoControls @JvmOverloads constructor(
         val hours = totalSeconds / 3_600L
         val minutes = totalSeconds % 3_600L / 60L
         val seconds = totalSeconds % 60L
-        return if (hours > 0L) {
-            String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
-        }
+        return if (hours > 0L) String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
+        else String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
     }
 
     private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
-    companion object {
-        private const val PROGRESS_SCALE = 1_000
-        private const val TIME_HEIGHT_DP = 28
-        private const val SEEK_HEIGHT_DP = 40
-        private const val ACTION_ROW_HEIGHT_DP = 48
-        private const val ACTION_SIZE_DP = 40
-        private const val CONTROL_BACKGROUND_COLOR = 0x66000000
-        private const val SEEK_CONFIRM_TOLERANCE_MS = 500L
+    private companion object {
+        const val PROGRESS_SCALE = 1_000
+        const val TIME_HEIGHT_DP = 28
+        const val SEEK_HEIGHT_DP = 40
+        const val ACTION_ROW_HEIGHT_DP = 48
+        const val ACTION_SIZE_DP = 40
+        const val CONTROL_BACKGROUND_COLOR = 0x66000000
+        const val SEEK_CONFIRM_TOLERANCE_MS = 500L
+    }
+
+    interface Listener {
+        fun onTogglePlayback()
+        fun onSeek(positionMs: Long)
     }
 }

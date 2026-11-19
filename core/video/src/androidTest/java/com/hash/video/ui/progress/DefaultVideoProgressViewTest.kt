@@ -141,7 +141,7 @@ class DefaultVideoProgressViewTest {
         val positionMs = AtomicLong(-1L)
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val view = DefaultVideoProgressView(context).apply {
-                onSeekRequested = positionMs::set
+                setSeekListener { positionMs.set(it) }
             }
             view.renderProgress(VideoPlaybackProgress(durationMs = 10_000L))
             val seekBar = view.findViewById<SeekBar>(R.id.video_progress).apply { progress = 600 }

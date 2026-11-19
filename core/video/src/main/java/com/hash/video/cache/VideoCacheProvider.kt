@@ -20,11 +20,18 @@ object VideoCacheProvider {
     @Volatile
     private var cache: SimpleCache? = null
 
-    fun getDataSourceFactory(context: Context): CacheDataSource.Factory {
+    /** 为当前媒体创建数据源；请求头会同时用于首次请求和后续分片、Range 请求。 */
+    fun getDataSourceFactory(
+        context: Context,
+        requestHeaders: Map<String, String> = emptyMap(),
+    ): CacheDataSource.Factory {
         val applicationContext = context.applicationContext
+        val upstreamFactory = DefaultHttpDataSource.Factory().apply {
+            if (requestHeaders.isNotEmpty()) setDefaultRequestProperties(requestHeaders)
+        }
         return CacheDataSource.Factory()
             .setCache(getCache(applicationContext))
-            .setUpstreamDataSourceFactory(DefaultHttpDataSource.Factory())
+            .setUpstreamDataSourceFactory(upstreamFactory)
     }
 
     private fun getCache(context: Context): SimpleCache {

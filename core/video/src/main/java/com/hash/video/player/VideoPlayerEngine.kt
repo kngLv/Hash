@@ -98,18 +98,16 @@ internal object VideoPlayerEngine {
 
     /** 按需创建唯一 ExoPlayer，并只注册一次底层监听。 */
     @Synchronized
-    fun get(application: Application): ExoPlayer = player ?: ExoPlayer.Builder(application)
-        .setSeekBackIncrementMs(NOTIFICATION_SEEK_INCREMENT_MS)
-        .setSeekForwardIncrementMs(NOTIFICATION_SEEK_INCREMENT_MS).setMediaSourceFactory(
-            DefaultMediaSourceFactory(
-                VideoCacheProvider.getDataSourceFactory(
-                    application
-                )
-            )
-        ).build().also {
-            it.addListener(playerListener)
-            player = it
-        }
+    fun get(application: Application): ExoPlayer {
+        checkMainThread()
+        return player ?: ExoPlayer.Builder(application)
+            .setSeekBackIncrementMs(NOTIFICATION_SEEK_INCREMENT_MS)
+            .setSeekForwardIncrementMs(NOTIFICATION_SEEK_INCREMENT_MS)
+            .build().also {
+                it.addListener(playerListener)
+                player = it
+            }
+    }
 
     /** 当前 Owner 请求播放媒体；新 Owner 会接管全局播放器。 */
     fun play(
@@ -119,52 +117,53 @@ internal object VideoPlayerEngine {
         showNotification: Boolean,
         showNotificationArtwork: Boolean,
     ) {
+        checkMainThread()
         activeOwner = owner
         val current = get(application)
         val action = _playbackState.value.resolvePlayAction(media)
-        if (action == VideoPlayAction.IGNORE) return
-        val requestId = ++latestRequestId
-        val previousMedia = _playbackState.value.media
-        if (action == VideoPlayAction.REPLACE || action == VideoPlayAction.REPLAY) {
-            _playbackState.value = _playbackState.value.prepareForPlay(media, action)
-        }
-        if (requestId != latestRequestId) return
-        when (action) {
-            VideoPlayAction.REPLACE -> current.run {
-                rememberPlaybackOf(
-                    previousMedia,
-                    this,
-                    captureFrame = previousMedia?.cacheKey() != transferredFrameMediaKey,
-                )
-                val startPositionMs = savedPositionsMs[media.cacheKey()].orEmptyPosition()
-                setMediaItem(
-                    VideoMediaItemFactory.create(media, includeArtwork = showNotificationArtwork),
-                    startPositionMs,
-                )
-                prepare()
-                play()
+        if (action != VideoPlayAction.IGNORE) {
+            val requestId = ++latestRequestId
+            val previousMedia = _playbackState.value.media
+            if (action == VideoPlayAction.REPLACE || action == VideoPlayAction.REPLAY) {
+                _playbackState.value = _playbackState.value.prepareForPlay(media, action)
             }
+            if (requestId == latestRequestId) {
+                when (action) {
+                    VideoPlayAction.REPLACE -> current.run {
+                        rememberPlaybackOf(
+                            previousMedia,
+                            this,
+                            captureFrame = previousMedia?.cacheKey() != transferredFrameMediaKey,
+                        )
+                        val startPositionMs = savedPositionsMs[media.cacheKey()].orEmptyPosition()
+                        val mediaItem = VideoMediaItemFactory.create(media, includeArtwork = showNotificationArtwork)
+                        val sourceFactory = DefaultMediaSourceFactory(
+                            VideoCacheProvider.getDataSourceFactory(application, media.headers),
+                        )
+                        setMediaSource(sourceFactory.createMediaSource(mediaItem), startPositionMs)
+                        prepare()
+                        play()
+                    }
 
-            VideoPlayAction.RESUME -> current.play()
-            VideoPlayAction.REPLAY -> current.run { seekToDefaultPosition(); play() }
-            VideoPlayAction.IGNORE -> Unit
+                    VideoPlayAction.RESUME -> current.play()
+                    VideoPlayAction.REPLAY -> current.run { seekToDefaultPosition(); play() }
+                    VideoPlayAction.IGNORE -> Unit
+                }
+            }
         }
-        if (showNotification) {
-            // 先让 Player 进入准备/播放态再启动前台服务，MediaSessionService 才会立即发布媒体通知。
-            HashVideoPlaybackService.ensureSession(application)
-        } else {
-            // 信息流切换自详情播放时，必须先移除旧的媒体会话，避免沿用详情通知。
-            HashVideoPlaybackService.stopSession(application)
-        }
+        // 通知策略与播放动作独立：同源视频在详情/信息流之间迁移时也必须切换通知。
+        syncNotificationSession(application, showNotification)
     }
 
     /** 只有当前 Owner 可以暂停播放。 */
     fun pause(owner: VideoPlaybackOwner) {
+        checkMainThread()
         if (owner === activeOwner) currentPlayer()?.pause()
     }
 
     /** 仅允许当前 Owner 跳转进度。 */
     fun seekTo(owner: VideoPlaybackOwner, positionMs: Long) {
+        checkMainThread()
         if (owner !== activeOwner) return
         val current = currentPlayer() ?: return
         val durationMs = _playbackState.value.progress.durationMs
@@ -177,6 +176,7 @@ internal object VideoPlayerEngine {
 
     /** 停止当前媒体，但保留媒体项以便后续恢复。 */
     fun stop(owner: VideoPlaybackOwner) {
+        checkMainThread()
         if (owner !== activeOwner) return
         latestRequestId++; stopProgressTracking(); _playbackState.value =
             _playbackState.value.resetPlaybackSession(); currentPlayer()?.stop()
@@ -184,6 +184,7 @@ internal object VideoPlayerEngine {
 
     /** 停止并移除当前媒体项。 */
     fun removeCurrentMedia(owner: VideoPlaybackOwner) {
+        checkMainThread()
         if (owner !== activeOwner) return
         val current = currentPlayer() ?: return
         latestRequestId++; stopProgressTracking(); _playbackState.value =
@@ -194,8 +195,10 @@ internal object VideoPlayerEngine {
     }
 
     /** 通知点击目标由服务持有 PendingIntent，不保存页面实例。 */
-    fun setNotificationActivity(application: Application, pendingIntent: PendingIntent?) =
+    fun setNotificationActivity(application: Application, pendingIntent: PendingIntent?) {
+        checkMainThread()
         HashVideoPlaybackService.setNotificationActivity(application, pendingIntent)
+    }
 
     /** 将唯一画面挂载到当前 Owner 的目标容器。 */
     fun attachRenderTo(
@@ -204,6 +207,7 @@ internal object VideoPlayerEngine {
         container: ViewGroup,
         targetMedia: VideoMedia? = null,
     ) {
+        checkMainThread()
         if (activeOwner != null && owner !== activeOwner) return
         if (activeOwner == null) activeOwner = owner
         val currentPlayer = get(application)
@@ -234,14 +238,19 @@ internal object VideoPlayerEngine {
 
     /** 仅当前 Owner 可解除自己的画面容器。 */
     fun detachRenderFrom(owner: VideoPlaybackOwner, container: ViewGroup): Boolean {
+        checkMainThread()
         if (owner !== activeOwner) return false
         return renderCoordinator?.detachFrom(container) ?: false
     }
 
-    fun hasAttachedRender(): Boolean = renderCoordinator?.currentContainer() != null
+    fun hasAttachedRender(): Boolean {
+        checkMainThread()
+        return renderCoordinator?.currentContainer() != null
+    }
 
     /** 释放播放器、渲染画面和媒体会话；旧 Owner 的请求会被忽略。 */
     fun release(application: Application, owner: VideoPlaybackOwner? = null) {
+        checkMainThread()
         if (owner != null && owner !== activeOwner) return
         latestRequestId++
         stopProgressTracking()
@@ -302,7 +311,24 @@ internal object VideoPlayerEngine {
     }
 
     /** 提供给列表卡片展示；快照只在对应视频非当前渲染目标时使用。 */
-    fun pausedFrameFor(media: VideoMedia): Bitmap? = pausedFrames.get(media.cacheKey())
+    fun pausedFrameFor(media: VideoMedia): Bitmap? {
+        checkMainThread()
+        return pausedFrames.get(media.cacheKey())
+    }
+
+    private fun syncNotificationSession(application: Application, showNotification: Boolean) {
+        if (showNotification) {
+            HashVideoPlaybackService.ensureSession(application)
+        } else {
+            HashVideoPlaybackService.stopSession(application)
+        }
+    }
+
+    private fun checkMainThread() {
+        check(Looper.myLooper() == Looper.getMainLooper()) {
+            "VideoPlayerEngine must be called on the main thread."
+        }
+    }
 
     private fun rememberPlaybackOf(media: VideoMedia?, player: ExoPlayer, captureFrame: Boolean) {
         media ?: return

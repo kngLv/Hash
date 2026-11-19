@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
 import android.view.ViewGroup
+import androidx.annotation.MainThread
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackState
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,7 @@ class VideoController(context: Context) {
     /** 默认每个 View 独立持有；列表或详情页可注入页面级 Owner 统一管理。 */
     var playbackOwner: VideoPlaybackOwner = VideoPlaybackOwner()
 
+    @MainThread
     fun play(media: VideoMedia) =
         VideoPlayerEngine.play(
             application,
@@ -39,23 +41,37 @@ class VideoController(context: Context) {
             showNotificationArtwork,
         )
 
+    @MainThread
     fun pause() = VideoPlayerEngine.pause(playbackOwner)
+
+    @MainThread
     fun seekTo(positionMs: Long) = VideoPlayerEngine.seekTo(playbackOwner, positionMs)
+
+    @MainThread
     fun stop() = VideoPlayerEngine.stop(playbackOwner)
+
+    @MainThread
     fun removeCurrentMedia() = VideoPlayerEngine.removeCurrentMedia(playbackOwner)
+
+    @MainThread
     fun setNotificationActivity(pendingIntent: PendingIntent?) =
         VideoPlayerEngine.setNotificationActivity(application, pendingIntent)
 
+    @MainThread
     fun attachRenderTo(container: ViewGroup, targetMedia: VideoMedia?) =
         VideoPlayerEngine.attachRenderTo(application, playbackOwner, container, targetMedia)
 
+    @MainThread
     fun detachRenderFrom(container: ViewGroup): Boolean =
         VideoPlayerEngine.detachRenderFrom(playbackOwner, container)
 
+    @MainThread
     fun hasAttachedRender(): Boolean = VideoPlayerEngine.hasAttachedRender()
 
+    @MainThread
     internal fun pausedFrameFor(media: VideoMedia): Bitmap? = VideoPlayerEngine.pausedFrameFor(media)
 
     /** 页面真正结束当前播放会话时调用；引擎尚未创建时也安全。 */
+    @MainThread
     fun releasePlayback() = VideoPlayerEngine.release(application, playbackOwner)
 }

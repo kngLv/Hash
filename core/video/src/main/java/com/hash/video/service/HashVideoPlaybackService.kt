@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
@@ -30,6 +32,7 @@ class HashVideoPlaybackService : MediaSessionService() {
 
     private lateinit var mediaSession: MediaSession
     private var sessionReleased = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val sessionCallback = object : MediaSession.Callback {
         override fun onConnect(
@@ -58,7 +61,8 @@ class HashVideoPlaybackService : MediaSessionService() {
 
             // 保留媒体项、进度与渲染画面，仅结束能产生通知的媒体会话。
             session.player.pause()
-            releaseSessionAndStop()
+            // 先回传命令结果；立即释放会话会使控制器收不到成功回执。
+            mainHandler.post(::releaseSessionAndStop)
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
     }

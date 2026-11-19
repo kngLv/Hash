@@ -1,13 +1,11 @@
 <resources>
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>
+    <string name="video_landscape">横屏</string>
+    <string name="video_portrait">竖屏</string>
+    <string name="video_exit">退出</string>
     <string name="video_replay">重播</string>
     <string name="video_retry">重试</string>
-    <string name="video_fullscreen">全屏</string>
-    <string name="video_portrait">竖屏</string>
-    <string name="video_float">悬浮</string>
-    <string name="video_quality">清晰度</string>
-    <string name="video_exit_fullscreen">退出全屏</string>
     <string name="video_skip_back_15_seconds">后退 15 秒</string>
     <string name="video_skip_forward_15_seconds">前进 15 秒</string>
     <string name="video_close_notification">关闭</string>

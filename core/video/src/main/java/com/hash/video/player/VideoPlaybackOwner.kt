@@ -2,6 +2,7 @@ package com.hash.video.player
 
 import android.app.Application
 import android.content.Context
+import androidx.annotation.MainThread
 
 /**
  * 一个页面或信息流协调器的播放会话所有权。
@@ -11,6 +12,7 @@ import android.content.Context
 class VideoPlaybackOwner {
 
     /** 结束该 Owner 当前持有的播放会话；非当前 Owner 的调用会被忽略。 */
+    @MainThread
     fun release(context: Context) {
         VideoPlayerEngine.release(context.applicationContext as Application, this)
     }

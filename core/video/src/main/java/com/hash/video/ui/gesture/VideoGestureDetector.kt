@@ -47,7 +47,7 @@ internal class VideoGestureDetector(
         cancelled = false
     }
 
-    /** 根据移动方向生成跳转、亮度或音量的过程事件。 */
+    /** 根据移动方向生成播放进度预览事件。 */
     fun onMove(
         x: Float,
         y: Float,
@@ -68,7 +68,7 @@ internal class VideoGestureDetector(
                 VideoGestureEvent.SeekPreview(targetPositionMs(x), durationMs)
             } else null
 
-            VideoGestureDirection.VERTICAL -> verticalGesture(x, y, config, VideoGesturePhase.UPDATE)
+            VideoGestureDirection.VERTICAL -> null
             VideoGestureDirection.NONE -> null
         }
     }
@@ -90,9 +90,7 @@ internal class VideoGestureDetector(
                 null
             }
         }
-        if (direction == VideoGestureDirection.VERTICAL) {
-            return verticalGesture(x, y, config, VideoGesturePhase.END)
-        }
+        if (direction == VideoGestureDirection.VERTICAL) return null
 
         val previousTapTimeMs = lastTapTimeMs
         val isWithinDoubleTapArea = previousTapTimeMs != null &&
@@ -117,12 +115,7 @@ internal class VideoGestureDetector(
     fun cancel(config: VideoGestureConfig): VideoGestureEvent? {
         val cancelEvent = when (direction) {
             VideoGestureDirection.HORIZONTAL -> VideoGestureEvent.SeekPreviewCancel.takeIf { config.seekEnabled }
-            VideoGestureDirection.VERTICAL -> verticalGesture(
-                latestX,
-                latestY,
-                config,
-                VideoGesturePhase.CANCEL
-            )
+            VideoGestureDirection.VERTICAL -> null
 
             VideoGestureDirection.NONE -> null
         }
@@ -153,22 +146,6 @@ internal class VideoGestureDetector(
         if (viewWidth <= 0 || durationMs <= 0L) return initialPositionMs
         val deltaMs = ((x - downX) / viewWidth * durationMs).toLong()
         return (initialPositionMs + deltaMs).coerceIn(0L, durationMs)
-    }
-
-    /** 根据触点所在半屏生成亮度或音量调节事件。 */
-    private fun verticalGesture(
-        x: Float,
-        y: Float,
-        config: VideoGestureConfig,
-        phase: VideoGesturePhase,
-    ): VideoGestureEvent? {
-        if (viewHeight <= 0) return null
-        val delta = ((downY - y) / viewHeight).coerceIn(-1f, 1f)
-        return if (downX < viewWidth / 2f) {
-            VideoGestureEvent.BrightnessAdjustment(delta, phase).takeIf { config.brightnessEnabled }
-        } else {
-            VideoGestureEvent.VolumeAdjustment(delta, phase).takeIf { config.volumeEnabled }
-        }
     }
 
     companion object {

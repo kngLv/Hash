@@ -5,12 +5,7 @@ import android.util.AttributeSet
 import android.widget.LinearLayout
 import com.hash.video.api.VideoPlaybackProgress
 
-/**
- * 视频进度组件的状态基类。
- *
- * 负责合并播放器进度与用户拖动预览，不决定任何控件外观；具体场景只需实现
- * [renderProgress]，即可使用不同的进度条、时间文本或拖动交互。
- */
+/** 进度 UI 基类：统一处理真实进度和用户拖动预览。 */
 abstract class BaseVideoProgressView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -20,15 +15,19 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     /** 拖动期间的临时展示位置。 */
     private var seekPreviewPositionMs: Long? = null
 
-    /** 拖动进度条时，播放器尚未返回真实位置前的占位状态。 */
+    /** 跳转后等待播放器返回目标位置。 */
     private var isAwaitingSeekCompletion = false
-    /** 最近一次由播放器发布的真实进度，用于取消预览后立即恢复画面。 */
+    /** 最近一次真实进度。 */
     private var lastPlaybackProgress = VideoPlaybackProgress()
 
-    /** 用户确认拖动后的跳转请求，由外层控制栏或播放器执行。 */
-    var onSeekRequested: ((Long) -> Unit)? = null
+    /** 用户确认跳转的位置。 */
+    private var seekListener: SeekListener? = null
 
-    /** 输入播放器的真实进度，基类计算当前 UI 应显示的进度。 */
+    fun setSeekListener(listener: SeekListener?) {
+        seekListener = listener
+    }
+
+    /** 更新真实播放进度。 */
     fun renderProgress(progress: VideoPlaybackProgress) {
         lastPlaybackProgress = progress
         if (!progress.isAvailable) {
@@ -55,7 +54,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
         )
     }
 
-    /** 画面横滑等外部手势拖动时，立即渲染目标位置但不触发真实跳转。 */
+    /** 显示横滑等手势的目标位置，不立即跳转。 */
     fun renderSeekPreview(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
         isAwaitingSeekCompletion = false
@@ -63,41 +62,36 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
         renderProgress(ProgressDisplayState(positionMs = seekPreviewPositionMs!!, durationMs = durationMs))
     }
 
-    /** 外部手势已结束并将要执行 seek，等待播放器返回真实位置前继续保留预览。 */
+    /** 手势结束后保留预览，直到播放器跳到目标位置。 */
     fun endSeekPreview() {
         isAwaitingSeekCompletion = seekPreviewPositionMs != null
     }
 
-    /** 外部手势被取消时丢弃预览并等待下一次真实进度刷新。 */
+    /** 取消预览并恢复真实进度。 */
     fun cancelSeekPreview() {
         clearPreview()
         renderLastPlaybackProgress()
     }
 
-    /** 具体 UI 将用户拖动过程的位置交给基类统一记录。 */
+    /** 记录用户正在拖动的位置。 */
     protected fun dispatchUserSeekPreview(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
         isAwaitingSeekCompletion = false
         seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
     }
 
-    /** 具体 UI 在用户松开进度条后调用，基类保留预览并分发跳转。 */
+    /** 用户松开进度条后发送跳转请求。 */
     protected fun dispatchUserSeek(positionMs: Long, durationMs: Long) {
         if (durationMs <= 0L) return
         seekPreviewPositionMs = positionMs.coerceIn(0L, durationMs)
         endSeekPreview()
-        onSeekRequested?.invoke(seekPreviewPositionMs!!)
+        seekListener?.onSeek(seekPreviewPositionMs!!)
     }
 
-    /** 子类只根据计算完成的展示状态渲染，不应维护额外进度状态。 */
+    /** 子类只负责显示计算后的进度。 */
     protected abstract fun renderProgress(state: ProgressDisplayState)
 
-    /**
-     * 基础进度状态机计算出的展示数据。
-     *
-     * [positionMs] 已优先合并用户预览和播放器进度；具体 UI 只需渲染该状态，
-     * 不需要自行判断真实播放进度与预览进度的优先级。
-     */
+    /** 已合并真实进度和预览进度的显示数据。 */
     protected data class ProgressDisplayState(
         /** 当前应展示的播放位置，单位为毫秒。 */
         val positionMs: Long = 0L,
@@ -106,7 +100,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
         /** 媒体总时长，未知或直播流时为 `0`。 */
         val durationMs: Long = 0L,
     ) {
-        /** 是否有可供确定进度条渲染的有效时长。 */
+        /** 是否可以显示可跳转的进度。 */
         val isAvailable: Boolean
             get() = durationMs > 0L
     }
@@ -116,7 +110,7 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
         isAwaitingSeekCompletion = false
     }
 
-    /** 取消预览后立即恢复最近一次播放器进度，避免等待下一轮轮询造成画面停留。 */
+    /** 取消预览后立即恢复真实进度。 */
     private fun renderLastPlaybackProgress() {
         val progress = lastPlaybackProgress
         if (!progress.isAvailable) {
@@ -133,7 +127,11 @@ abstract class BaseVideoProgressView @JvmOverloads constructor(
     }
 
     private companion object {
-        /** seek 完成确认允许的时间误差，覆盖轮询间隔和解码位置的小幅偏移。 */
+        /** 认为跳转完成时允许的位置误差。 */
         const val SEEK_CONFIRM_TOLERANCE_MS = 500L
+    }
+
+    fun interface SeekListener {
+        fun onSeek(positionMs: Long)
     }
 }

@@ -53,7 +53,7 @@ class VideoGestureDetectorTest {
     @Test
     fun `方向锁定后不应被后续垂直位移改写`() {
         val detector = VideoGestureDetector(touchSlopPx = 8f)
-        val config = VideoGestureConfig(seekEnabled = true, brightnessEnabled = true)
+        val config = VideoGestureConfig(seekEnabled = true)
         detector.onDown(x = 100f, y = 100f, viewWidth = 400, viewHeight = 200, currentPositionMs = 0L, durationMs = 10_000L)
 
         detector.onMove(140f, 105f, 1, config)
@@ -81,32 +81,4 @@ class VideoGestureDetectorTest {
         assertEquals(VideoGestureEvent.SeekPreviewCancel, detector.cancel(config))
     }
 
-    @Test
-    fun `亮度手势移动和抬手应分别发出更新与结束阶段`() {
-        val detector = VideoGestureDetector(touchSlopPx = 8f)
-        val config = VideoGestureConfig(brightnessEnabled = true)
-        detector.onDown(x = 50f, y = 150f, viewWidth = 400, viewHeight = 200, currentPositionMs = 0L, durationMs = 0L)
-
-        assertEquals(
-            VideoGestureEvent.BrightnessAdjustment(0.5f, VideoGesturePhase.UPDATE),
-            detector.onMove(50f, 50f, 1, config),
-        )
-        assertEquals(
-            VideoGestureEvent.BrightnessAdjustment(0.5f, VideoGesturePhase.END),
-            detector.onUp(50f, 50f, 100L, config),
-        )
-    }
-
-    @Test
-    fun `音量手势被取消时应发出取消阶段`() {
-        val detector = VideoGestureDetector(touchSlopPx = 8f)
-        val config = VideoGestureConfig(volumeEnabled = true)
-        detector.onDown(x = 350f, y = 150f, viewWidth = 400, viewHeight = 200, currentPositionMs = 0L, durationMs = 0L)
-        detector.onMove(350f, 50f, 1, config)
-
-        assertEquals(
-            VideoGestureEvent.VolumeAdjustment(0.5f, VideoGesturePhase.CANCEL),
-            detector.cancel(config),
-        )
-    }
 }
