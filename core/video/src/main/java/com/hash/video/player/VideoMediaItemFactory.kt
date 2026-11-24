@@ -10,7 +10,7 @@ import com.hash.video.cache.VideoCacheKeyFactory
 
 /** 将业务无关的视频描述转换为 Media3 播放项。 */
 @OptIn(UnstableApi::class)
-object VideoMediaItemFactory {
+internal object VideoMediaItemFactory {
 
     fun create(media: VideoMedia, includeArtwork: Boolean = true): MediaItem = MediaItem.Builder()
         .setMediaId(media.id)

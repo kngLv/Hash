@@ -11,7 +11,6 @@ import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
-import androidx.core.app.TaskStackBuilder
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -131,6 +130,8 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     override fun onNewIntent(intent: Intent) {
         val previousNewsId = newsId
         super.onNewIntent(intent)
+        // Activity 被通知 PendingIntent 复用时，后续读取的新闻参数必须来自最新 Intent。
+        setIntent(intent)
         if (newsId != previousNewsId) {
             viewModel.load(newsId)
         }
@@ -279,7 +280,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     /** 提前保存通知点击目标；服务尚未启动时只暂存，不会创建空通知。 */
     private fun setVideoNotificationActivity() {
         if (newsId.isBlank()) return
-        binding.fullscreenVideoPlayer.setNotificationActivity(createNotificationPendingIntent())
+        videoPresentationCoordinator.setNotificationActivity(createNotificationPendingIntent())
     }
 
     private fun createNotificationPendingIntent(): PendingIntent {
@@ -289,13 +290,9 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             .putExtra(EXTRA_TITLE, newsTitle)
             .putExtra(EXTRA_SOURCE, newsSource)
             .putExtra(EXTRA_POST_TIME, intent.getStringExtra(EXTRA_POST_TIME).orEmpty())
-        // 使用 Manifest 声明的父级构造任务栈：通知从冷启动恢复详情时，返回仍会回到主页。
-        return TaskStackBuilder.create(this)
-            .addNextIntentWithParentStack(intent)
-            .getPendingIntent(
-                newsId.hashCode(),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            ) ?: PendingIntent.getActivity(
+        // 复用后台已有的详情页。TaskStackBuilder 会清空并重建任务栈，使旧详情页销毁并释放
+        // 正在播放的全局 Owner，进而让通知和播放一同消失。
+        return PendingIntent.getActivity(
             this,
             newsId.hashCode(),
             intent,

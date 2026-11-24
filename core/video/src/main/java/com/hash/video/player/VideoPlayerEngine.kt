@@ -118,9 +118,16 @@ internal object VideoPlayerEngine {
             val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist ?: return
             val index = current.currentMediaItemIndex
             val media = activePlaylist.items.getOrNull(index) ?: return
-            // 通知播放index发生变化
-            _playbackState.value = _playbackState.value.prepareForPlay(media, VideoPlayAction.REPLACE)
-                .copy(playlistIndex = index, playlistSize = activePlaylist.items.size)
+            // 自动切项时，ExoPlayer 可能仍处于 READY/播放中，不一定会再派发一次状态变化。
+            // 不能无条件写成 PREPARING，否则 UI 会持续显示 loading，而进度实际上仍在推进。
+            val status = VideoPlaybackStatusMapper.from(current.playbackState, current.isPlaying)
+            _playbackState.value = _playbackState.value.replaceMedia(
+                media = media,
+                status = status,
+                playlistIndex = index,
+                playlistSize = activePlaylist.items.size,
+            )
+            updateProgressTracking(current)
             updateNotificationControls(current)
         }
 
@@ -175,16 +182,19 @@ internal object VideoPlayerEngine {
         updateNotificationControls()
         activeOwner = owner
         val current = get(application)
-        val action = _playbackState.value.resolvePlayAction(media)
-        if (action != VideoPlayAction.IGNORE) {
+        val command = _playbackState.value.resolvePlayCommand(media)
+        if (command != VideoPlayCommand.NO_OP) {
             val requestId = ++latestRequestId
             val previousMedia = _playbackState.value.media
-            if (action == VideoPlayAction.REPLACE || action == VideoPlayAction.REPLAY) {
-                _playbackState.value = _playbackState.value.prepareForPlay(media, action)
+            if (command == VideoPlayCommand.REPLACE || command == VideoPlayCommand.REPLAY) {
+                _playbackState.value = _playbackState.value.replaceMedia(
+                    media = media,
+                    status = VideoPlaybackStatus.PREPARING,
+                )
             }
             if (requestId == latestRequestId) {
-                when (action) {
-                    VideoPlayAction.REPLACE -> current.run {
+                when (command) {
+                    VideoPlayCommand.REPLACE -> current.run {
                         rememberPlaybackOf(
                             previousMedia,
                             this,
@@ -200,9 +210,9 @@ internal object VideoPlayerEngine {
                         play()
                     }
 
-                    VideoPlayAction.RESUME -> current.play()
-                    VideoPlayAction.REPLAY -> current.run { seekToDefaultPosition(); play() }
-                    VideoPlayAction.IGNORE -> Unit
+                    VideoPlayCommand.RESUME -> current.play()
+                    VideoPlayCommand.REPLAY -> current.run { seekToDefaultPosition(); play() }
+                    VideoPlayCommand.NO_OP -> Unit
                 }
             }
         }
@@ -457,10 +467,12 @@ internal object VideoPlayerEngine {
             //记住上一个视频的位置和播放帧
             rememberPlaybackOf(previousMedia, current, captureFrame = true)
             //更新状态为准备播放
-            _playbackState.value = _playbackState.value.prepareForPlay(
-                activePlaylist.items[index],
-                VideoPlayAction.REPLACE,
-            ).copy(playlistIndex = index, playlistSize = activePlaylist.items.size)
+            _playbackState.value = _playbackState.value.replaceMedia(
+                media = activePlaylist.items[index],
+                status = VideoPlaybackStatus.PREPARING,
+                playlistIndex = index,
+                playlistSize = activePlaylist.items.size,
+            )
             //设置播放列表
             current.setMediaSources(
                 activePlaylist.items.map { media ->
@@ -478,20 +490,20 @@ internal object VideoPlayerEngine {
             return
         }
 
-        val action = _playbackState.value.resolvePlayAction(activePlaylist.items[index])
+        val command = _playbackState.value.resolvePlayCommand(activePlaylist.items[index])
         if (index != current.currentMediaItemIndex) {
             playLoadedPlaylistIndex(current, index)
         } else {
-            when (action) {
-                VideoPlayAction.RESUME -> current.play()
-                VideoPlayAction.REPLAY -> current.run { seekTo(index, 0L); play() }
-                VideoPlayAction.REPLACE -> {
+            when (command) {
+                VideoPlayCommand.RESUME -> current.play()
+                VideoPlayCommand.REPLAY -> current.run { seekTo(index, 0L); play() }
+                VideoPlayCommand.REPLACE -> {
                     current.seekTo(index, savedPositionsMs[activePlaylist.items[index].cacheKey()]
                         .orEmptyPosition())
                     current.prepare()
                     current.play()
                 }
-                VideoPlayAction.IGNORE -> Unit
+                VideoPlayCommand.NO_OP -> Unit
             }
         }
     }
@@ -502,8 +514,12 @@ internal object VideoPlayerEngine {
         val target = activePlaylist.items.getOrNull(index) ?: return
         rememberPlaybackOf(_playbackState.value.media, current, captureFrame = true)
         //更新播放前状态
-        _playbackState.value = _playbackState.value.prepareForPlay(target, VideoPlayAction.REPLACE)
-            .copy(playlistIndex = index, playlistSize = activePlaylist.items.size)
+        _playbackState.value = _playbackState.value.replaceMedia(
+            media = target,
+            status = VideoPlaybackStatus.PREPARING,
+            playlistIndex = index,
+            playlistSize = activePlaylist.items.size,
+        )
         current.seekTo(index, savedPositionsMs[target.cacheKey()].orEmptyPosition())
         current.play()
         updateNotificationControls(current)

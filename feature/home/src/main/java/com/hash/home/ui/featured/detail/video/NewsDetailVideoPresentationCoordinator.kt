@@ -1,5 +1,6 @@
 package com.hash.home.ui.featured.detail.video
 
+import android.app.PendingIntent
 import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -98,6 +99,11 @@ class NewsDetailVideoPresentationCoordinator(
         // submitList 可能复用一个仍在屏幕上的 Holder；旧队列位置不能继续指向它。
         hosts.clear()
         if (items.size > 1) controller.setPlaybackQueue(items) else controller.clearPlaybackQueue()
+    }
+
+    /** 设置本详情页播放会话对应的通知点击目标，与具体播放器 View 无关。 */
+    fun setNotificationActivity(pendingIntent: PendingIntent?) {
+        if (!released) controller.setNotificationActivity(pendingIntent)
     }
 
     /** 列表 Diff 提交完成后调用，补齐被复用且仍在屏幕内的 Holder。 */
