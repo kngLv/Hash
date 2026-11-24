@@ -11,6 +11,7 @@ import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.app.TaskStackBuilder
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -34,6 +35,7 @@ import com.hash.common.ui.toolbar.HashToolbar.TitleGravity
 import com.hash.router.RouterActivityPath
 import com.hash.video.api.VideoMedia
 import com.hash.video.player.VideoPlaybackOwner
+import com.hash.home.ui.featured.detail.video.NewsDetailVideoPresentationCoordinator
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.video.ui.player.BaseHashVideoPlayerView
 import kotlinx.coroutines.async
@@ -51,6 +53,15 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
     private val videoPlaybackOwner = VideoPlaybackOwner()
+    private val videoPresentationCoordinator by lazy {
+        NewsDetailVideoPresentationCoordinator(
+            context = this,
+            lifecycleOwner = this,
+            recyclerView = binding.contentRecycler,
+            adapter = detailAdapter,
+            playbackOwner = videoPlaybackOwner,
+        )
+    }
     private val detailAdapter by lazy {
         NewsDetailAdapter(
             videoPlaybackOwner,
@@ -80,6 +91,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         contentRecycler.applyScrollContentInsets()
         contentRecycler.layoutManager = LinearLayoutManager(this@NewsDetailActivity)
         contentRecycler.adapter = detailAdapter
+        videoPresentationCoordinator.start()
         toolbar.setDefaultActionClickListener { shareNews() }
         val listenAction = toolbar.createTextAction(
             text = getString(R.string.news_detail_listen),
@@ -154,12 +166,28 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             .apply {
                 if (BuildConfig.DEBUG) addAll(DEBUG_TEST_VIDEO_ITEMS)
             }
+        //去重
         val deduplicatedItems = pageItems.deduplicateVideos()
         val requestId = ++detailRenderRequestId
         lifecycleScope.launch {
             val sizedItems = deduplicatedItems.withResolvedVideoCoverSizes()
             if (requestId != detailRenderRequestId) return@launch
-            detailAdapter.submitList(sizedItems)
+            //给视频item分配索引
+            val playlistItems = sizedItems.withPlaylistIndices()
+            val playbackQueue = playlistItems.mapNotNull { item ->
+                (item as? NewsDetailPageItem.Video)?.toVideoMedia()
+            }
+            videoPresentationCoordinator.updatePlaybackQueue(
+                items = playbackQueue,
+                positions = playlistItems.mapIndexedNotNull { adapterPosition, item ->
+                    (item as? NewsDetailPageItem.Video)?.playlistIndex?.let { index ->
+                        index to adapterPosition
+                    }
+                }.toMap(),
+            )
+            detailAdapter.submitList(playlistItems) {
+                videoPresentationCoordinator.onAdapterListCommitted()
+            }
         }
     }
 
@@ -189,12 +217,39 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             continuation.invokeOnCancellation { request.cancel() }
         }
 
+    /**
+     * 按视频 URL 保留详情页中首次出现的视频条目。
+     *
+     * 同一 URL 若重复展示，会同时形成重复卡片和重复播放队列项；播放器切换时也无法唯一
+     * 确定应由哪张卡片承接画面，因此在建立队列索引前先完成去重。
+     */
     private fun List<NewsDetailPageItem>.deduplicateVideos(): List<NewsDetailPageItem> {
         val displayedVideoUrls = mutableSetOf<String>()
         return filter { item ->
             item !is NewsDetailPageItem.Video || displayedVideoUrls.add(item.videoUrl)
         }
     }
+
+    /**
+     * 为最终展示的每个视频分配从 0 开始、连续的播放队列索引。
+     *
+     * 该索引对应 ExoPlayer 队列位置，而不是 RecyclerView 的 Adapter 位置：详情里夹杂的
+     * 标题、文字和图片不会计入队列。协调器再通过“队列索引 -> Adapter 位置”映射定位卡片。
+     */
+    private fun List<NewsDetailPageItem>.withPlaylistIndices(): List<NewsDetailPageItem> {
+        var nextIndex = 0
+        return map { item ->
+            if (item is NewsDetailPageItem.Video) item.copy(playlistIndex = nextIndex++) else item
+        }
+    }
+
+    private fun NewsDetailPageItem.Video.toVideoMedia(): VideoMedia = VideoMedia(
+        id = videoUrl,
+        url = videoUrl,
+        coverUrl = coverUrl.ifBlank { null },
+        coverWidth = coverWidth,
+        coverHeight = coverHeight,
+    )
 
     private fun updateToolbarSource() {
         val shouldShow = newsSource.isNotBlank() &&
@@ -234,7 +289,13 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             .putExtra(EXTRA_TITLE, newsTitle)
             .putExtra(EXTRA_SOURCE, newsSource)
             .putExtra(EXTRA_POST_TIME, intent.getStringExtra(EXTRA_POST_TIME).orEmpty())
-        return PendingIntent.getActivity(
+        // 使用 Manifest 声明的父级构造任务栈：通知从冷启动恢复详情时，返回仍会回到主页。
+        return TaskStackBuilder.create(this)
+            .addNextIntentWithParentStack(intent)
+            .getPendingIntent(
+                newsId.hashCode(),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ) ?: PendingIntent.getActivity(
             this,
             newsId.hashCode(),
             intent,
@@ -303,6 +364,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     }
 
     override fun onDestroy() {
+        videoPresentationCoordinator.release()
         closeVideoPresentation()
         videoPlaybackOwner.release(this)
         super.onDestroy()

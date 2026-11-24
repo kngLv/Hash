@@ -67,4 +67,6 @@ internal fun VideoPlaybackState.resetPlaybackSession(): VideoPlaybackState = cop
     status = VideoPlaybackStatus.IDLE,
     progress = VideoPlaybackProgress(),
     errorMessage = null,
+    playlistIndex = null,
+    playlistSize = 0,
 )

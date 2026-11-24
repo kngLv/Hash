@@ -12,6 +12,8 @@ sealed interface NewsDetailPageItem {
         val videoUrl: String,
         val coverWidth: Int? = null,
         val coverHeight: Int? = null,
+        /** 当前详情页播放队列中的稳定位置；非最终渲染阶段为空。 */
+        val playlistIndex: Int? = null,
     ) : NewsDetailPageItem
     data object Empty : NewsDetailPageItem
 }

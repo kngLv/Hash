@@ -41,6 +41,36 @@ class VideoController(context: Context) {
             showNotificationArtwork,
         )
 
+    /**
+     * 设置供后台媒体会话使用的可选播放队列；不会自动开始播放或决定页面如何呈现下一项。
+     * 单视频页面无需调用。
+     */
+    @MainThread
+    fun setPlaybackQueue(items: List<VideoMedia>) =
+        VideoPlayerEngine.setPlaybackQueue(playbackOwner, items)
+
+    /** 清除后台上一条/下一条上下文；不会停止当前媒体。 */
+    @MainThread
+    fun clearPlaybackQueue() = VideoPlayerEngine.clearPlaybackQueue(playbackOwner)
+
+    /** 显式从队列指定位置开始播放；调用前必须先设置队列。 */
+    @MainThread
+    fun playQueueAt(index: Int) = VideoPlayerEngine.playQueueAt(
+        application,
+        playbackOwner,
+        index,
+        showNotification,
+        showNotificationArtwork,
+    )
+
+    /** 播放队列中的上一项；位于首项时安全忽略。 */
+    @MainThread
+    fun playPrevious() = VideoPlayerEngine.playPrevious(playbackOwner)
+
+    /** 播放队列中的下一项；位于末项时安全忽略。 */
+    @MainThread
+    fun playNext() = VideoPlayerEngine.playNext(playbackOwner)
+
     @MainThread
     fun pause() = VideoPlayerEngine.pause(playbackOwner)
 

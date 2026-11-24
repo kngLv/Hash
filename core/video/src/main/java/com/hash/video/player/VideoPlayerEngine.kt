@@ -13,7 +13,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.hash.video.api.VideoMedia
+import com.hash.video.api.VideoPlaylist
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
@@ -36,8 +41,23 @@ internal object VideoPlayerEngine {
     /** 负责唯一 PlayerView 在不同业务容器间迁移。 */
     private var renderCoordinator: VideoRenderCoordinator? = null
 
-    /** 当前有权控制和释放播放器的页面 Owner。 */
+    /**
+     * 当前有权控制和释放唯一 ExoPlayer 的页面 Owner。
+     *
+     * 仅在页面实际开始播放或接管画面后赋值；页面预先配置队列时不能抢占此控制权。
+     */
     private var activeOwner: VideoPlaybackOwner? = null
+
+    /**
+     * 仅供后台 MediaSession 上一条、下一条使用的可选队列会话。
+     *
+     * 队列可以在用户点击播放前预先设置，因此不与 [activeOwner] 合并；它不会抢占真实
+     * 播放器控制权。
+     */
+    private var playbackQueue: PlaybackQueueSession? = null
+
+    private var hasInstalledProcessObserver = false
+    private var isAppInForeground = true
 
     /** 每个视频最近一次切走的位置；重新点回同一条视频时从这里续播。 */
     private val savedPositionsMs = mutableMapOf<String, Long>()
@@ -53,6 +73,9 @@ internal object VideoPlayerEngine {
     /** 所有播放器 View 共享的播放状态。 */
     private val _playbackState = MutableStateFlow(VideoPlaybackState())
     val playbackState: StateFlow<VideoPlaybackState> = _playbackState.asStateFlow()
+
+    private val _notificationControls = MutableStateFlow(VideoNotificationControls())
+    val notificationControls: StateFlow<VideoNotificationControls> = _notificationControls.asStateFlow()
 
     /** 用于丢弃过期的播放请求。 */
     private var latestRequestId = 0L
@@ -90,6 +113,17 @@ internal object VideoPlayerEngine {
             reason: Int,
         ) = currentPlayer()?.let(::updateProgress) ?: Unit
 
+        override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+            val current = currentPlayer() ?: return
+            val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist ?: return
+            val index = current.currentMediaItemIndex
+            val media = activePlaylist.items.getOrNull(index) ?: return
+            // 通知播放index发生变化
+            _playbackState.value = _playbackState.value.prepareForPlay(media, VideoPlayAction.REPLACE)
+                .copy(playlistIndex = index, playlistSize = activePlaylist.items.size)
+            updateNotificationControls(current)
+        }
+
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
             stopProgressTracking()
             updateState(VideoPlaybackStatus.ERROR, VideoPlaybackErrorMessageMapper.from(error))
@@ -100,6 +134,7 @@ internal object VideoPlayerEngine {
     @Synchronized
     fun get(application: Application): ExoPlayer {
         checkMainThread()
+        installProcessObserverIfNeeded()
         return player ?: ExoPlayer.Builder(application)
             .setSeekBackIncrementMs(NOTIFICATION_SEEK_INCREMENT_MS)
             .setSeekForwardIncrementMs(NOTIFICATION_SEEK_INCREMENT_MS)
@@ -118,6 +153,26 @@ internal object VideoPlayerEngine {
         showNotificationArtwork: Boolean,
     ) {
         checkMainThread()
+        installProcessObserverIfNeeded()
+        //匹配当前队列中是否存在该视频，若存在则直接播放队列中的视频
+        val matchingPlaylistIndex = playbackQueue
+            ?.takeIf { it.owner === owner }
+            ?.playlist
+            ?.indexOf(media)
+            ?.takeIf { it >= 0 }
+        if (matchingPlaylistIndex != null) {
+            playPlaylistIndex(
+                application = application,
+                owner = owner,
+                index = matchingPlaylistIndex,
+                showNotification = showNotification,
+                showNotificationArtwork = showNotificationArtwork,
+            )
+            syncNotificationSession(application, showNotification)
+            return
+        }
+        clearPlaylist()
+        updateNotificationControls()
         activeOwner = owner
         val current = get(application)
         val action = _playbackState.value.resolvePlayAction(media)
@@ -153,6 +208,72 @@ internal object VideoPlayerEngine {
         }
         // 通知策略与播放动作独立：同源视频在详情/信息流之间迁移时也必须切换通知。
         syncNotificationSession(application, showNotification)
+    }
+
+    /** 保存可选后台播放队列；ExoPlayer 自动续播，页面只负责将画面呈现到对应宿主。 */
+    fun setPlaybackQueue(
+        owner: VideoPlaybackOwner,
+        items: List<VideoMedia>,
+    ) {
+        checkMainThread()
+        if (activeOwner != null && activeOwner !== owner) return
+        val newPlaylist = VideoPlaylist(items)
+        if (newPlaylist.items.size <= 1) {
+            clearPlaybackQueue(owner)
+            return
+        }
+        val currentQueue = playbackQueue
+        //当前队列操作者相同且队列相同
+        if (currentQueue?.owner === owner && currentQueue.playlist.items == newPlaylist.items) {
+            return
+        }
+        //是活跃的操作者且队列已加载，清空播放器和状态
+        if (activeOwner === owner && currentQueue?.isLoaded == true) {
+            currentPlayer()?.stop()
+            _playbackState.value = _playbackState.value.resetPlaybackSession()
+        }
+        //创建新的队列会话，通知服务
+        playbackQueue = PlaybackQueueSession(owner, newPlaylist)
+        updateNotificationControls()
+    }
+
+    /** 将已配置队列装入播放器，并从指定索引开始播放。 */
+    fun playQueueAt(
+        application: Application,
+        owner: VideoPlaybackOwner,
+        index: Int,
+        showNotification: Boolean,
+        showNotificationArtwork: Boolean,
+    ) {
+        checkMainThread()
+        val queue = playbackQueue?.takeIf { it.owner === owner } ?: return
+        if (index !in queue.playlist.items.indices) return
+        playPlaylistIndex(application, owner, index, showNotification, showNotificationArtwork)
+        syncNotificationSession(application, showNotification)
+    }
+
+    fun clearPlaybackQueue(owner: VideoPlaybackOwner) {
+        checkMainThread()
+        if (playbackQueue?.owner !== owner) return
+        clearPlaylist()
+        updateNotificationControls()
+    }
+
+    fun playPrevious(owner: VideoPlaybackOwner) {
+        checkMainThread()
+        val current = currentPlayer() ?: return
+        if (owner !== activeOwner || playbackQueue?.isLoaded != true || playbackQueue?.owner !== owner) return
+        val target = (current.currentMediaItemIndex - 1).takeIf { it >= 0 } ?: return
+        playLoadedPlaylistIndex(current, target)
+    }
+
+    fun playNext(owner: VideoPlaybackOwner) {
+        checkMainThread()
+        val current = currentPlayer() ?: return
+        if (owner !== activeOwner || playbackQueue?.isLoaded != true || playbackQueue?.owner !== owner) return
+        val target = current.currentMediaItemIndex + 1
+        if (target !in 0 until current.mediaItemCount) return
+        playLoadedPlaylistIndex(current, target)
     }
 
     /** 只有当前 Owner 可以暂停播放。 */
@@ -192,6 +313,8 @@ internal object VideoPlayerEngine {
         val index = current.currentMediaItemIndex
         current.stop()
         if (index != C.INDEX_UNSET && index < current.mediaItemCount) current.removeMediaItem(index)
+        clearPlaylist()
+        updateNotificationControls()
     }
 
     /** 通知点击目标由服务持有 PendingIntent，不保存页面实例。 */
@@ -260,6 +383,8 @@ internal object VideoPlayerEngine {
         savedPositionsMs.clear()
         pausedFrames.evictAll()
         activeOwner = null
+        clearPlaylist()
+        updateNotificationControls()
         HashVideoPlaybackService.stopSession(application)
         synchronized(this) {
             player?.removeListener(playerListener)
@@ -310,6 +435,145 @@ internal object VideoPlayerEngine {
             _playbackState.value.copy(status = status, errorMessage = errorMessage)
     }
 
+    /**
+     * 播放可选队列中的指定索引。
+     *
+     * 队列尚未装入 ExoPlayer 时，会先创建全部 MediaSource 并从该索引开始播放；已装入时，
+     * 则按当前媒体状态恢复、重播或跳转。
+     */
+    private fun playPlaylistIndex(
+        application: Application,
+        owner: VideoPlaybackOwner,
+        index: Int,
+        showNotification: Boolean,
+        showNotificationArtwork: Boolean,
+    ) {
+        val queue = playbackQueue?.takeIf { it.owner === owner } ?: return
+        val activePlaylist = queue.playlist
+        activeOwner = owner
+        val current = get(application)
+        if (!queue.isLoaded) {
+            val previousMedia = _playbackState.value.media
+            //记住上一个视频的位置和播放帧
+            rememberPlaybackOf(previousMedia, current, captureFrame = true)
+            //更新状态为准备播放
+            _playbackState.value = _playbackState.value.prepareForPlay(
+                activePlaylist.items[index],
+                VideoPlayAction.REPLACE,
+            ).copy(playlistIndex = index, playlistSize = activePlaylist.items.size)
+            //设置播放列表
+            current.setMediaSources(
+                activePlaylist.items.map { media ->
+                    createMediaSource(application, media, showNotificationArtwork)
+                },
+                index,
+                savedPositionsMs[activePlaylist.items[index].cacheKey()].orEmptyPosition(),
+            )
+            queue.isLoaded = true
+            // 队列由 ExoPlayer 自动续播；页面只根据新的 playlistIndex 迁移画面宿主。
+            current.pauseAtEndOfMediaItems = false
+            current.prepare()
+            current.play()
+            updateNotificationControls(current)
+            return
+        }
+
+        val action = _playbackState.value.resolvePlayAction(activePlaylist.items[index])
+        if (index != current.currentMediaItemIndex) {
+            playLoadedPlaylistIndex(current, index)
+        } else {
+            when (action) {
+                VideoPlayAction.RESUME -> current.play()
+                VideoPlayAction.REPLAY -> current.run { seekTo(index, 0L); play() }
+                VideoPlayAction.REPLACE -> {
+                    current.seekTo(index, savedPositionsMs[activePlaylist.items[index].cacheKey()]
+                        .orEmptyPosition())
+                    current.prepare()
+                    current.play()
+                }
+                VideoPlayAction.IGNORE -> Unit
+            }
+        }
+    }
+
+    /** 已装载队列内跳转到指定索引，并保留每条媒体各自已保存的播放进度。 */
+    private fun playLoadedPlaylistIndex(current: ExoPlayer, index: Int) {
+        val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist ?: return
+        val target = activePlaylist.items.getOrNull(index) ?: return
+        rememberPlaybackOf(_playbackState.value.media, current, captureFrame = true)
+        //更新播放前状态
+        _playbackState.value = _playbackState.value.prepareForPlay(target, VideoPlayAction.REPLACE)
+            .copy(playlistIndex = index, playlistSize = activePlaylist.items.size)
+        current.seekTo(index, savedPositionsMs[target.cacheKey()].orEmptyPosition())
+        current.play()
+        updateNotificationControls(current)
+    }
+
+    private fun createMediaSource(
+        application: Application,
+        media: VideoMedia,
+        includeArtwork: Boolean,
+    ): MediaSource = DefaultMediaSourceFactory(
+        VideoCacheProvider.getDataSourceFactory(application, media.headers),
+    ).createMediaSource(VideoMediaItemFactory.create(media, includeArtwork))
+
+    /**
+     * 仅注册一次进程级生命周期观察，跟踪应用是否处于前台。
+     *
+     * 状态变化时更新通知控制快照：前台使用快退/快进，后台切换为队列上一条/下一条。观察者只引用
+     * 进程单例引擎，不持有 Activity 或页面 View。
+     */
+    private fun installProcessObserverIfNeeded() {
+        if (hasInstalledProcessObserver) return
+        hasInstalledProcessObserver = true
+        isAppInForeground = ProcessLifecycleOwner.get().lifecycle.currentState
+            .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                isAppInForeground = true
+                currentPlayer()?.let {
+                    updateNotificationControls(it)
+                } ?: updateNotificationControls()
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                isAppInForeground = false
+                currentPlayer()?.let {
+                    updateNotificationControls(it)
+                }
+                if (currentPlayer() == null) updateNotificationControls()
+            }
+        })
+    }
+
+    private fun clearPlaylist() {
+        playbackQueue = null
+        currentPlayer()?.pauseAtEndOfMediaItems = false
+    }
+
+    /**
+     * 根据前后台状态及当前队列索引更新通知控制快照。
+     *
+     * 前台使用快退/快进；后台仅在存在相邻媒体时提供上一条/下一条。服务订阅该快照后自行刷新
+     * MediaSession 按钮，本方法不持有或直接操作通知 UI。
+     */
+    private fun updateNotificationControls(current: Player? = currentPlayer()) {
+        val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist
+        if (activePlaylist == null) {
+            _notificationControls.value = VideoNotificationControls(
+                isAppInForeground = isAppInForeground,
+            )
+            return
+        }
+        val index = current?.currentMediaItemIndex ?: _playbackState.value.playlistIndex
+        val count = activePlaylist.items.size
+        _notificationControls.value = VideoNotificationControls(
+            isAppInForeground = isAppInForeground,
+            hasPrevious = index != null && index > 0 && count > 1,
+            hasNext = index != null && index >= 0 && index < count - 1,
+        )
+    }
+
     /** 提供给列表卡片展示；快照只在对应视频非当前渲染目标时使用。 */
     fun pausedFrameFor(media: VideoMedia): Bitmap? {
         checkMainThread()
@@ -330,6 +594,9 @@ internal object VideoPlayerEngine {
         }
     }
 
+    /**
+     * 切换媒体前保存旧媒体进度；需要时抓取当前画面，供旧卡片在渲染 View 迁走后显示静态帧。
+     */
     private fun rememberPlaybackOf(media: VideoMedia?, player: ExoPlayer, captureFrame: Boolean) {
         media ?: return
         savedPositionsMs[media.cacheKey()] = player.currentPosition.coerceAtLeast(0L)
@@ -343,6 +610,13 @@ internal object VideoPlayerEngine {
     private fun VideoMedia.cacheKey(): String = VideoCacheKeyFactory.create(this)
 
     private fun Long?.orEmptyPosition(): Long = this?.coerceAtLeast(0L) ?: 0L
+
+    /** 一个页面预配置的可选后台队列，以及它是否已实际装载进唯一播放器。 */
+    private data class PlaybackQueueSession(
+        val owner: VideoPlaybackOwner,
+        val playlist: VideoPlaylist,
+        var isLoaded: Boolean = false,
+    )
 
     private const val NOTIFICATION_SEEK_INCREMENT_MS = 15_000L
     private const val PROGRESS_UPDATE_INTERVAL_MS = 500L

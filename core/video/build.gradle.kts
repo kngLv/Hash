@@ -18,6 +18,7 @@ android {
 dependencies {
     implementation(libs.androidx.activity.ktx) // Activity 级视频覆盖层与返回键协调
     implementation(libs.androidx.core.ktx) // 全屏页面的系统栏兼容控制
+    implementation(libs.androidx.lifecycle.process) // 根据应用前后台切换队列续播与通知操作
     implementation(libs.androidx.media3.common) // Media3 通用媒体模型与播放器接口
     implementation(libs.androidx.media3.database) // 视频缓存索引的本地数据库实现
     implementation(libs.androidx.media3.datasource) // 网络数据源与边播边缓存数据源

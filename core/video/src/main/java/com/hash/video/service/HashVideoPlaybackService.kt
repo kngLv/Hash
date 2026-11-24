@@ -20,6 +20,13 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.hash.video.R
 import com.hash.video.player.VideoPlayerEngine
+import com.hash.video.player.VideoNotificationControls
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 /**
  * 系统媒体会话服务。
@@ -33,6 +40,7 @@ class HashVideoPlaybackService : MediaSessionService() {
     private lateinit var mediaSession: MediaSession
     private var sessionReleased = false
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val notificationControlScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val sessionCallback = object : MediaSession.Callback {
         override fun onConnect(
@@ -72,13 +80,20 @@ class HashVideoPlaybackService : MediaSessionService() {
         setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER)
         mediaSession = MediaSession.Builder(this, VideoPlayerEngine.get(application))
             .setCallback(sessionCallback)
-            .setMediaButtonPreferences(notificationMediaButtonPreferences())
+            .setMediaButtonPreferences(notificationMediaButtonPreferences(VideoPlayerEngine.notificationControls.value))
             // 详情页已直接观察 Player 进度；通知仅需在状态/跳转时同步，避免周期位置同步影响列表滚动。
             .setPeriodicPositionUpdateEnabled(false)
             .build()
         // 由服务主动启动时不会自动调用 onGetSession，必须显式注册，Media3 才会创建通知控制器。
         addSession(mediaSession)
         mediaSession.setSessionActivity(notificationActivity)
+        notificationControlScope.launch {
+            VideoPlayerEngine.notificationControls.collect { controls ->
+                if (!sessionReleased) {
+                    mediaSession.setMediaButtonPreferences(notificationMediaButtonPreferences(controls))
+                }
+            }
+        }
         Log.d(LOG_TAG, "MediaSession 已创建")
     }
 
@@ -97,6 +112,7 @@ class HashVideoPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        notificationControlScope.cancel()
         releaseSession()
         super.onDestroy()
     }
@@ -119,22 +135,49 @@ class HashVideoPlaybackService : MediaSessionService() {
         mediaSession.release()
     }
 
-    /** 通知完整视图依序展示后退 15 秒、播放暂停、前进 15 秒和关闭。 */
-    private fun notificationMediaButtonPreferences(): List<CommandButton> = listOf(
-        CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
-            .setPlayerCommand(Player.COMMAND_SEEK_BACK)
-            .setDisplayName(getString(R.string.video_skip_back_15_seconds))
-            .build(),
-        CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_15)
-            .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
-            .setDisplayName(getString(R.string.video_skip_forward_15_seconds))
-            .build(),
-        CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-            .setCustomIconResId(R.drawable.ic_video_notification_close)
-            .setSessionCommand(VideoSessionCommands.dismissNotification)
-            .setDisplayName(getString(R.string.video_close_notification))
-            .build(),
-    )
+    /** 前台使用 15 秒跳转；后台仅在队列有相邻项时提供上一条、下一条。 */
+    private fun notificationMediaButtonPreferences(
+        controls: VideoNotificationControls,
+    ): List<CommandButton> = buildList {
+        if (controls.usesPlaylistNavigation) {
+            if (controls.hasPrevious) {
+                add(
+                    CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+                        .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                        .setDisplayName(getString(R.string.video_previous))
+                        .build(),
+                )
+            }
+            if (controls.hasNext) {
+                add(
+                    CommandButton.Builder(CommandButton.ICON_NEXT)
+                        .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                        .setDisplayName(getString(R.string.video_next))
+                        .build(),
+                )
+            }
+        } else {
+            add(
+                CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
+                    .setPlayerCommand(Player.COMMAND_SEEK_BACK)
+                    .setDisplayName(getString(R.string.video_skip_back_15_seconds))
+                    .build(),
+            )
+            add(
+                CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_15)
+                    .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+                    .setDisplayName(getString(R.string.video_skip_forward_15_seconds))
+                    .build(),
+            )
+        }
+        add(
+            CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+                .setCustomIconResId(R.drawable.ic_video_notification_close)
+                .setSessionCommand(VideoSessionCommands.dismissNotification)
+                .setDisplayName(getString(R.string.video_close_notification))
+                .build(),
+        )
+    }
 
     companion object {
         private const val LOG_TAG = "HashVideoLifecycle"

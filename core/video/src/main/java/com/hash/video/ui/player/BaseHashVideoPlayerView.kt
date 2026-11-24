@@ -192,6 +192,18 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     fun setNotificationActivity(pendingIntent: PendingIntent?) =
         controller.setNotificationActivity(pendingIntent)
 
+    /** 为后台通知提供可选的上一条、下一条媒体顺序；单视频页面无需调用。 */
+    fun setPlaybackQueue(items: List<VideoMedia>) = controller.setPlaybackQueue(items)
+
+    /** 移除后台通知的队列上下文，不停止当前媒体。 */
+    fun clearPlaybackQueue() = controller.clearPlaybackQueue()
+
+    /** 接管画面后从可选队列的指定位置开始播放。 */
+    fun playQueueAt(index: Int) {
+        attachRender()
+        controller.playQueueAt(index)
+    }
+
     /** 解除当前 View 的画面承载，但不停止播放器。 */
     fun detachRender(): Boolean = controller.detachRenderFrom(this)
 

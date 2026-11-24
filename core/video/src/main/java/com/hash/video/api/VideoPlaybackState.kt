@@ -10,6 +10,10 @@ data class VideoPlaybackState(
     val progress: VideoPlaybackProgress = VideoPlaybackProgress(),
     /** 最近一次不可恢复播放错误的说明。 */
     val errorMessage: String? = null,
+    /** 当前媒体在播放队列中的位置；非队列播放时为空。 */
+    val playlistIndex: Int? = null,
+    /** 当前播放队列的项目总数；非队列播放时为 0。 */
+    val playlistSize: Int = 0,
 )
 
 /** 播放器当前的稳定状态，供界面根据状态渲染播放控件。 */

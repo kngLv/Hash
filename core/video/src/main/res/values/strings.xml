@@ -1,4 +1,6 @@
 <resources>
+    <string name="video_previous">上一条</string>
+    <string name="video_next">下一条</string>
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>
     <string name="video_landscape">横屏</string>

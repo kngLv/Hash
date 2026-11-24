@@ -5,6 +5,7 @@
         <activity
             android:name=".ui.featured.detail.NewsDetailActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
-            android:launchMode="singleTop" />
+            android:launchMode="singleTop"
+            android:parentActivityName="com.hash.main.MainActivity" />
     </application>
 </manifest>

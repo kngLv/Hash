@@ -25,17 +25,17 @@ import org.junit.runner.RunWith
 class VideoSessionReleaseCommandTest {
 
     @Test
-    fun `通知提供十五秒跳转与关闭命令`() {
+    fun `后台单媒体通知不展示无意义的跳转或队列命令`() {
         val controller = createController()
         try {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 assertEquals(15_000L, controller.seekBackIncrement)
                 assertEquals(15_000L, controller.seekForwardIncrement)
                 assertTrue(controller.availableSessionCommands.contains(VideoSessionCommands.dismissNotification))
-                assertTrue(controller.mediaButtonPreferences.any {
+                assertFalse(controller.mediaButtonPreferences.any {
                     it.playerCommand == Player.COMMAND_SEEK_BACK
                 })
-                assertTrue(controller.mediaButtonPreferences.any {
+                assertFalse(controller.mediaButtonPreferences.any {
                     it.playerCommand == Player.COMMAND_SEEK_FORWARD
                 })
                 assertTrue(controller.mediaButtonPreferences.any {

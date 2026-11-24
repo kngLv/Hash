@@ -52,6 +52,21 @@ class NewsDetailAdapter(
         NewsDetailPageItem.Empty -> TYPE_EMPTY
     }
 
+    /**
+     * 将库提供的 Adapter 级 attach/detach 回调中的 Holder 转为视频宿主。
+     *
+     * 详情页协调器只需要这一份只读信息，不需要穿透到 Holder 内部注册回调。
+     */
+    fun videoHostOf(holder: RecyclerView.ViewHolder): VideoHost? {
+        val videoHolder = holder as? VideoHolder ?: return null
+        val playlistIndex = videoHolder.playlistIndex ?: return null
+        return VideoHost(
+            playlistIndex = playlistIndex,
+            adapterPosition = videoHolder.bindingAdapterPosition,
+            playerView = videoHolder.playerView,
+        )
+    }
+
     private class HeaderItemListener :
         OnMultiItemAdapterListener<NewsDetailPageItem, HeaderHolder> {
         override fun onCreate(context: Context, parent: ViewGroup, viewType: Int) = HeaderHolder(
@@ -149,6 +164,11 @@ class NewsDetailAdapter(
     private class VideoHolder(
         private val binding: ItemNewsDetailVideoBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
+        var playlistIndex: Int? = null
+            private set
+        val playerView: EmbeddedVideoPlayerView
+            get() = binding.videoPlayer
+
         fun bind(
             item: NewsDetailPageItem.Video,
             playbackOwner: VideoPlaybackOwner,
@@ -157,6 +177,7 @@ class NewsDetailAdapter(
             showVideoNotification: Boolean,
             showVideoNotificationArtwork: Boolean,
         ) = with(binding) {
+            playlistIndex = item.playlistIndex
             val media = VideoMedia(
                 id = item.videoUrl,
                 url = item.videoUrl,
@@ -190,3 +211,10 @@ class NewsDetailAdapter(
         const val TYPE_EMPTY = 4
     }
 }
+
+/** 多视频详情页中，一个已绑定视频卡片对应的队列位置与播放器 View。 */
+data class VideoHost(
+    val playlistIndex: Int,
+    val adapterPosition: Int,
+    val playerView: EmbeddedVideoPlayerView,
+)
