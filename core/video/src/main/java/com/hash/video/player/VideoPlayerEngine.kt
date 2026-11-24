@@ -80,39 +80,35 @@ internal object VideoPlayerEngine {
     /** 用于丢弃过期的播放请求。 */
     private var latestRequestId = 0L
     private val progressHandler = Handler(Looper.getMainLooper())
-    private var progressPlayer: Player? = null
+    /** 播放期间每 500ms 刷新进度；暂停、结束或释放时停止。 */
     private val progressUpdater = object : Runnable {
         override fun run() {
-            val source = progressPlayer ?: return
-            updateProgress(source)
-            if (source.shouldTrackProgress()) progressHandler.postDelayed(
-                this, PROGRESS_UPDATE_INTERVAL_MS
-            )
-            else progressPlayer = null
+            val current = currentPlayer() ?: return
+            publishProgress(current)
+            if (current.shouldPollProgress()) {
+                progressHandler.postDelayed(this, PROGRESS_UPDATE_INTERVAL_MS)
+            }
         }
     }
     private val playerListener = object : Player.Listener {
+        /** ExoPlayer 播放阶段变化：空闲、缓冲、就绪或播放结束。 */
         override fun onPlaybackStateChanged(playbackState: Int) {
-            // 播放器状态变化时，同步 UI 状态和进度轮询。
-            currentPlayer()?.let {
-                updateState(VideoPlaybackStatusMapper.from(playbackState, it.isPlaying))
-                updateProgressTracking(it)
-            }
+            currentPlayer()?.let(::syncPlaybackSnapshot)
         }
 
+        /** 实际是否正在输出媒体内容发生变化，例如播放、暂停或缓冲导致的停播。 */
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            currentPlayer()?.let {
-                updateState(VideoPlaybackStatusMapper.from(it.playbackState, isPlaying))
-                updateProgressTracking(it)
-            }
+            currentPlayer()?.let(::syncPlaybackSnapshot)
         }
 
+        /** 播放位置发生跳变，例如用户拖动进度、自动下一条或切换媒体。 */
         override fun onPositionDiscontinuity(
             oldPosition: Player.PositionInfo,
             newPosition: Player.PositionInfo,
             reason: Int,
-        ) = currentPlayer()?.let(::updateProgress) ?: Unit
+        ) = currentPlayer()?.let(::publishProgress) ?: Unit
 
+        /** 当前 MediaItem 已切换，用于同步新的业务媒体和播放队列索引。 */
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
             val current = currentPlayer() ?: return
             val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist ?: return
@@ -127,12 +123,13 @@ internal object VideoPlayerEngine {
                 playlistIndex = index,
                 playlistSize = activePlaylist.items.size,
             )
-            updateProgressTracking(current)
+            syncProgressPolling(current)
             updateNotificationControls(current)
         }
 
+        /** ExoPlayer 遇到不可恢复播放错误。 */
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-            stopProgressTracking()
+            stopProgressPolling()
             updateState(VideoPlaybackStatus.ERROR, VideoPlaybackErrorMessageMapper.from(error))
         }
     }
@@ -309,8 +306,10 @@ internal object VideoPlayerEngine {
     fun stop(owner: VideoPlaybackOwner) {
         checkMainThread()
         if (owner !== activeOwner) return
-        latestRequestId++; stopProgressTracking(); _playbackState.value =
-            _playbackState.value.resetPlaybackSession(); currentPlayer()?.stop()
+        latestRequestId++
+        stopProgressPolling()
+        _playbackState.value = _playbackState.value.resetPlaybackSession()
+        currentPlayer()?.stop()
     }
 
     /** 停止并移除当前媒体项。 */
@@ -318,8 +317,9 @@ internal object VideoPlayerEngine {
         checkMainThread()
         if (owner !== activeOwner) return
         val current = currentPlayer() ?: return
-        latestRequestId++; stopProgressTracking(); _playbackState.value =
-            _playbackState.value.resetPlaybackSession()
+        latestRequestId++
+        stopProgressPolling()
+        _playbackState.value = _playbackState.value.resetPlaybackSession()
         val index = current.currentMediaItemIndex
         current.stop()
         if (index != C.INDEX_UNSET && index < current.mediaItemCount) current.removeMediaItem(index)
@@ -386,7 +386,7 @@ internal object VideoPlayerEngine {
         checkMainThread()
         if (owner != null && owner !== activeOwner) return
         latestRequestId++
-        stopProgressTracking()
+        stopProgressPolling()
         renderCoordinator?.clear()
         renderCoordinator = null
         _playbackState.value = _playbackState.value.resetPlaybackSession()
@@ -404,36 +404,48 @@ internal object VideoPlayerEngine {
     }
 
     private fun currentPlayer(): ExoPlayer? = player
-    private fun updateProgress(player: Player) {
+
+    /** 发布当前进度并保存续播位置。 */
+    private fun publishProgress(player: Player) {
         if (_playbackState.value.media == null) return
+        val positionMs = player.currentPosition.coerceAtLeast(0L)
+        val bufferedPositionMs = player.bufferedPosition.coerceAtLeast(0L)
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0L } ?: 0L
         _playbackState.value = _playbackState.value.copy(
             progress = VideoPlaybackProgress(
-                player.currentPosition.coerceAtLeast(0L),
-                player.bufferedPosition.coerceAtLeast(0L),
-                duration
+                positionMs = positionMs,
+                bufferedPositionMs = bufferedPositionMs,
+                durationMs = duration,
             ),
         )
         _playbackState.value.media?.let { media ->
-            savedPositionsMs[media.cacheKey()] = player.currentPosition.coerceAtLeast(0L)
+            savedPositionsMs[media.cacheKey()] = positionMs
         }
     }
 
-    private fun updateProgressTracking(player: Player) {
-        if (player.shouldTrackProgress()) {
-            progressPlayer =
-                player; progressHandler.removeCallbacks(progressUpdater); progressUpdater.run()
+    /** 同步播放状态和进度轮询。 */
+    private fun syncPlaybackSnapshot(player: Player) {
+        updateState(VideoPlaybackStatusMapper.from(player.playbackState, player.isPlaying))
+        syncProgressPolling(player)
+    }
+
+    /** 立即刷新进度，并按需管理 500ms 轮询。 */
+    private fun syncProgressPolling(player: Player) {
+        publishProgress(player)
+        if (player.shouldPollProgress()) {
+            progressHandler.removeCallbacks(progressUpdater)
+            progressHandler.postDelayed(progressUpdater, PROGRESS_UPDATE_INTERVAL_MS)
         } else {
-            stopProgressTracking(); updateProgress(player)
+            stopProgressPolling()
         }
     }
 
-    private fun stopProgressTracking() {
-        progressHandler.removeCallbacks(progressUpdater); progressPlayer = null
+    private fun stopProgressPolling() {
+        progressHandler.removeCallbacks(progressUpdater)
     }
 
-    // 仅在准备播放或正在播放时持续刷新进度。
-    private fun Player.shouldTrackProgress(): Boolean =
+    /** 用户未暂停，且 ExoPlayer 处于 READY 或 BUFFERING 时继续轮询。 */
+    private fun Player.shouldPollProgress(): Boolean =
         playWhenReady && (playbackState == Player.STATE_READY || playbackState == Player.STATE_BUFFERING)
 
     private fun updateState(status: VideoPlaybackStatus, errorMessage: String? = null) {
