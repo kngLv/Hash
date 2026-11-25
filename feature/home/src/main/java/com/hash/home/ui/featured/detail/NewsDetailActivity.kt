@@ -6,8 +6,11 @@ import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.Settings
 import android.util.TypedValue
 import android.view.View
+import android.widget.PopupMenu
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
@@ -19,6 +22,8 @@ import com.hash.common.R as CommonR
 import com.hash.common.base.activity.BaseBindingActivity
 import com.hash.common.ext.showToast
 import com.hash.common.ext.toAny
+import com.hash.common.ext.mmkvGetBoolean
+import com.hash.common.ext.mmkvPut
 import com.hash.common.ui.loading.LoadingStateOwner
 import com.hash.common.ui.insets.applyScrollContentInsets
 import com.hash.common.ui.insets.applyTopBarInsets
@@ -31,9 +36,15 @@ import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItem
 import com.hash.home.ui.featured.detail.adapter.NewsDetailPageItemFactory
 import com.hash.home.ui.featured.detail.vm.NewsDetailViewModel
 import com.hash.common.ui.toolbar.HashToolbar.TitleGravity
+import com.hash.common.shared.storage.MMKVConst
 import com.hash.router.RouterActivityPath
 import com.hash.video.api.VideoMedia
-import com.hash.video.player.VideoPlaybackOwner
+import com.hash.video.api.VideoOverlayResult
+import com.hash.video.player.VideoPlaybackControlToken
+import com.hash.video.api.VideoPlaybackNotification
+import com.hash.video.api.VideoPlaybackQueueManager
+import com.hash.video.api.VideoSystemOverlay
+import com.hash.video.api.isPlaying
 import com.hash.home.ui.featured.detail.video.NewsDetailVideoPresentationCoordinator
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.video.ui.player.BaseHashVideoPlayerView
@@ -51,19 +62,17 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     private val newsId get() = intent.getStringExtra(EXTRA_NEWS_ID).orEmpty()
     private val newsTitle get() = intent.getStringExtra(EXTRA_TITLE).orEmpty()
     private val newsSource get() = intent.getStringExtra(EXTRA_SOURCE).orEmpty()
-    private val videoPlaybackOwner = VideoPlaybackOwner()
+    private val videoPlaybackToken = VideoPlaybackControlToken()
     private val videoPresentationCoordinator by lazy {
         NewsDetailVideoPresentationCoordinator(
-            context = this,
             lifecycleOwner = this,
             recyclerView = binding.contentRecycler,
             adapter = detailAdapter,
-            playbackOwner = videoPlaybackOwner,
         )
     }
     private val detailAdapter by lazy {
         NewsDetailAdapter(
-            videoPlaybackOwner,
+            videoPlaybackToken,
             ::showLandscapeVideo,
             ::showPortraitVideo,
             showVideoNotification = true,
@@ -79,6 +88,9 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     private val videoPresentationBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = closeVideoPresentation()
     }
+    private val detailExitBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = requestExitDetail()
+    }
 
     override val loadingStateOwner: LoadingStateOwner
         get() = viewModel
@@ -92,6 +104,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
         contentRecycler.adapter = detailAdapter
         videoPresentationCoordinator.start()
         toolbar.setDefaultActionClickListener { shareNews() }
+        toolbar.setBackClickListener { requestExitDetail() }
         val listenAction = toolbar.createTextAction(
             text = getString(R.string.news_detail_listen),
             onClick = View.OnClickListener {
@@ -110,16 +123,21 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
             )
         }
         toolbar.addAction(listenAction)
+        toolbar.addAction(toolbar.createIconAction(
+            R.drawable.ic_news_detail_more,
+            getString(R.string.news_detail_more),
+        ) { anchor -> showMoreMenu(anchor) })
         fullscreenVideoPlayer.panel.exitAction.setOnClickListener { closeVideoPresentation() }
         portraitVideoPlayer.panel.exitAction.setOnClickListener { closeVideoPresentation() }
-        fullscreenVideoPlayer.playbackOwner = videoPlaybackOwner
-        portraitVideoPlayer.playbackOwner = videoPlaybackOwner
+        fullscreenVideoPlayer.playbackToken = videoPlaybackToken
+        portraitVideoPlayer.playbackToken = videoPlaybackToken
         setVideoNotificationActivity()
         contentRecycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 updateToolbarSource()
             }
         })
+        onBackPressedDispatcher.addCallback(this@NewsDetailActivity, detailExitBackCallback)
         onBackPressedDispatcher.addCallback(this@NewsDetailActivity, videoPresentationBackCallback)
     }
 
@@ -177,8 +195,8 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
             val playbackQueue = playlistItems.mapNotNull { item ->
                 (item as? NewsDetailPageItem.Video)?.toVideoMedia()
             }
-            videoPresentationCoordinator.updatePlaybackQueue(
-                items = playbackQueue,
+            VideoPlaybackQueueManager.setPlaybackQueue(videoPlaybackToken, playbackQueue)
+            videoPresentationCoordinator.updatePlaybackMapping(
                 positions = playlistItems.mapIndexedNotNull { adapterPosition, item ->
                     (item as? NewsDetailPageItem.Video)?.playlistIndex?.let { index ->
                         index to adapterPosition
@@ -187,7 +205,58 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
             )
             detailAdapter.submitList(playlistItems) {
                 videoPresentationCoordinator.onAdapterListCommitted()
+                if (VideoSystemOverlay.restoreIfRequested(videoPlaybackToken)) {
+                    videoPresentationCoordinator.presentCurrentPlaybackHost()
+                }
             }
+        }
+    }
+
+    /** 右上角更多菜单；始终保留手动开启小窗的入口。 */
+    private fun showMoreMenu(anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menu.add(R.string.news_detail_float_play)
+            setOnMenuItemClickListener {
+                startOverlayPlayback { finish() }
+                true
+            }
+        }.show()
+    }
+
+    /**
+     * 处理详情页返回：仅在视频播放中、已有悬浮窗权限且首次退出时询问是否转入小窗。
+     * 其他情况按普通详情页退出处理。
+     */
+    private fun requestExitDetail() {
+        if (!VideoPlaybackQueueManager.playbackState.value.status.isPlaying ||
+            !VideoSystemOverlay.canDraw(this) ||
+            MMKVConst.KEY_FEATURED_VIDEO_OVERLAY_EXIT_PROMPT_HANDLED.mmkvGetBoolean()
+        ) {
+            finish()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setMessage(R.string.news_detail_float_exit_message)
+            .setNegativeButton(R.string.news_detail_exit) { _, _ ->
+                MMKVConst.KEY_FEATURED_VIDEO_OVERLAY_EXIT_PROMPT_HANDLED.mmkvPut(true)
+                finish()
+            }
+            .setPositiveButton(R.string.news_detail_float_play) { _, _ ->
+                MMKVConst.KEY_FEATURED_VIDEO_OVERLAY_EXIT_PROMPT_HANDLED.mmkvPut(true)
+                startOverlayPlayback { finish() }
+            }
+            .show()
+    }
+
+    /**
+     * 请求悬浮窗接管当前播放会话；只有窗口成功显示后才执行 [onShown] 并关闭详情页。
+     * 未授权时仅打开授权页，当前页面和播放保持不变。
+     */
+    private fun startOverlayPlayback(onShown: () -> Unit) {
+        when (VideoSystemOverlay.enter(this, videoPlaybackToken, createNotificationPendingIntent())) {
+            VideoOverlayResult.SHOWN -> onShown()
+            VideoOverlayResult.PERMISSION_REQUIRED -> startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
+            else -> getString(R.string.news_detail_float_unavailable).showToast()
         }
     }
 
@@ -282,7 +351,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     /** 提前保存通知点击目标；服务尚未启动时只暂存，不会创建空通知。 */
     private fun setVideoNotificationActivity() {
         if (newsId.isBlank()) return
-        videoPresentationCoordinator.setNotificationActivity(createNotificationPendingIntent())
+        VideoPlaybackNotification.setActivity(this, createNotificationPendingIntent())
     }
 
     private fun createNotificationPendingIntent(): PendingIntent {
@@ -365,7 +434,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     override fun onDestroy() {
         videoPresentationCoordinator.release()
         closeVideoPresentation()
-        videoPlaybackOwner.release(this)
+        VideoPlaybackQueueManager.release(this, videoPlaybackToken)
         super.onDestroy()
     }
 

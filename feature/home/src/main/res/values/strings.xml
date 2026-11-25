@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="news_detail_more">更多</string>
+    <string name="news_detail_float_play">小窗播放</string>
+    <string name="news_detail_exit">直接退出</string>
+    <string name="news_detail_float_exit_message">是否使用小窗继续播放？</string>
+    <string name="news_detail_float_unavailable">当前没有可播放的视频</string>
     <string name="news_detail_listen">听</string>
     <string name="news_detail_share">分享</string>
     <string name="news_detail_no_readable_content">暂无可朗读的正文</string>

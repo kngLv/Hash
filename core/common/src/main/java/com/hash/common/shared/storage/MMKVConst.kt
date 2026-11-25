@@ -19,6 +19,10 @@ object MMKVConst {
     /** 置顶新闻 type 列表的最近缓存时间 */
     const val KEY_FEATURED_NEWS_TYPE_LIST_CACHE_TIME = "key_featured_news_type_list_cache_time"
 
+    /** 新闻视频详情退出时的小窗播放提示是否已处理。 */
+    const val KEY_FEATURED_VIDEO_OVERLAY_EXIT_PROMPT_HANDLED =
+        "key_featured_video_overlay_exit_prompt_handled"
+
     /** 隐私政策同意结果  */
     const val KEY_AGREE_PRIVACY_RESULT = "key_agree_privacy_result"
 }

@@ -5,7 +5,7 @@ import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.player.VideoPlayerEngine
-import com.hash.video.player.VideoPlaybackOwner
+import com.hash.video.player.VideoPlaybackControlToken
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,21 +16,21 @@ import org.junit.runner.RunWith
 class VideoRenderCoordinatorContainerTest {
 
     @Test
-    fun 旧页面Owner不能释放当前页面的画面() {
+    fun 旧页面凭证不能释放当前页面的画面() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val context = instrumentation.targetContext
             val application = context.applicationContext as Application
-            val currentOwner = VideoPlaybackOwner()
-            val oldOwner = VideoPlaybackOwner()
+            val currentToken = VideoPlaybackControlToken()
+            val oldToken = VideoPlaybackControlToken()
             val container = FrameLayout(context)
 
             VideoPlayerEngine.release(application)
-            VideoPlayerEngine.attachRenderTo(application, currentOwner, container)
-            oldOwner.release(context)
+            VideoPlayerEngine.attachRenderTo(application, currentToken, container)
+            VideoPlayerEngine.release(application, oldToken)
 
             assertEquals(1, container.childCount)
-            currentOwner.release(context)
+            VideoPlayerEngine.release(application, currentToken)
             assertEquals(0, container.childCount)
         }
     }
@@ -40,18 +40,18 @@ class VideoRenderCoordinatorContainerTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {
             val application = instrumentation.targetContext.applicationContext as Application
-            val owner = VideoPlaybackOwner()
+            val token = VideoPlaybackControlToken()
             VideoPlayerEngine.release(application)
             val firstContainer = FrameLayout(instrumentation.targetContext)
             val secondContainer = FrameLayout(instrumentation.targetContext)
 
-            VideoPlayerEngine.attachRenderTo(application, owner, firstContainer)
-            VideoPlayerEngine.attachRenderTo(application, owner, secondContainer)
+            VideoPlayerEngine.attachRenderTo(application, token, firstContainer)
+            VideoPlayerEngine.attachRenderTo(application, token, secondContainer)
 
             assertEquals(0, firstContainer.childCount)
             assertEquals(1, secondContainer.childCount)
-            assertFalse(VideoPlayerEngine.detachRenderFrom(owner, firstContainer))
-            assertTrue(VideoPlayerEngine.detachRenderFrom(owner, secondContainer))
+            assertFalse(VideoPlayerEngine.detachRenderFrom(token, firstContainer))
+            assertTrue(VideoPlayerEngine.detachRenderFrom(token, secondContainer))
             assertEquals(0, secondContainer.childCount)
             VideoPlayerEngine.release(application)
         }

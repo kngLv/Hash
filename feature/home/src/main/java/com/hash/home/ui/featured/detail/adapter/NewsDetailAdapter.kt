@@ -9,7 +9,7 @@ import com.chad.library.adapter4.BaseMultiItemAdapter
 import com.hash.common.utils.image.ImageLoader
 import com.hash.common.utils.image.LoadOptions
 import com.hash.video.api.VideoMedia
-import com.hash.video.player.VideoPlaybackOwner
+import com.hash.video.player.VideoPlaybackControlToken
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.home.databinding.ItemNewsDetailEmptyBinding
 import com.hash.home.databinding.ItemNewsDetailHeaderBinding
@@ -19,7 +19,7 @@ import com.hash.home.databinding.ItemNewsDetailVideoBinding
 
 /** 展示新闻详情的头部、文字、图片、视频与空内容条目。 */
 class NewsDetailAdapter(
-    private val playbackOwner: VideoPlaybackOwner,
+    private val playbackToken: VideoPlaybackControlToken,
     private val showLandscape: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
     private val showPortrait: (EmbeddedVideoPlayerView, VideoMedia) -> Unit = { _, _ -> },
     private val showVideoNotification: Boolean = true,
@@ -33,7 +33,7 @@ class NewsDetailAdapter(
             .addItemType(
                 TYPE_VIDEO,
                 VideoItemListener(
-                    playbackOwner,
+                    playbackToken,
                     showLandscape,
                     showPortrait,
                     showVideoNotification,
@@ -99,7 +99,7 @@ class NewsDetailAdapter(
     }
 
     private class VideoItemListener(
-        private val playbackOwner: VideoPlaybackOwner,
+        private val playbackToken: VideoPlaybackControlToken,
         private val showLandscape: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
         private val showPortrait: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
         private val showVideoNotification: Boolean,
@@ -113,7 +113,7 @@ class NewsDetailAdapter(
             (item as? NewsDetailPageItem.Video)?.let {
                 holder.bind(
                     it,
-                    playbackOwner,
+                    playbackToken,
                     showLandscape,
                     showPortrait,
                     showVideoNotification,
@@ -171,7 +171,7 @@ class NewsDetailAdapter(
 
         fun bind(
             item: NewsDetailPageItem.Video,
-            playbackOwner: VideoPlaybackOwner,
+            playbackToken: VideoPlaybackControlToken,
             showLandscape: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
             showPortrait: (EmbeddedVideoPlayerView, VideoMedia) -> Unit,
             showVideoNotification: Boolean,
@@ -186,7 +186,7 @@ class NewsDetailAdapter(
                 coverHeight = item.coverHeight,
             )
             videoPlayer.setMedia(media)
-            videoPlayer.playbackOwner = playbackOwner
+            videoPlayer.playbackToken = playbackToken
             videoPlayer.showNotification = showVideoNotification
             videoPlayer.showNotificationArtwork = showVideoNotificationArtwork
             videoPlayer.panel.landscapeAction.apply {

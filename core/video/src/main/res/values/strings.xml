@@ -11,4 +11,6 @@
     <string name="video_skip_back_15_seconds">后退 15 秒</string>
     <string name="video_skip_forward_15_seconds">前进 15 秒</string>
     <string name="video_close_notification">关闭</string>
+    <string name="video_float_restore">返回应用</string>
+    <string name="video_float_close">关闭小窗</string>
 </resources>

@@ -10,4 +10,10 @@ sealed interface VideoInteractionIntent {
 
     /** 请求跳转当前 View 绑定媒体的播放位置。 */
     data class SeekTo(val positionMs: Long) : VideoInteractionIntent
+
+    /** 请求从系统悬浮窗返回应用详情页。 */
+    data object RestoreFromOverlay : VideoInteractionIntent
+
+    /** 请求关闭系统悬浮窗并结束播放会话。 */
+    data object CloseOverlay : VideoInteractionIntent
 }

@@ -42,16 +42,16 @@ internal object VideoPlayerEngine {
     private var renderCoordinator: VideoRenderCoordinator? = null
 
     /**
-     * 当前有权控制和释放唯一 ExoPlayer 的页面 Owner。
+     * 当前有权控制和释放唯一 ExoPlayer 的操作凭证。
      *
      * 仅在页面实际开始播放或接管画面后赋值；页面预先配置队列时不能抢占此控制权。
      */
-    private var activeOwner: VideoPlaybackOwner? = null
+    private var activeToken: VideoPlaybackControlToken? = null
 
     /**
      * 仅供后台 MediaSession 上一条、下一条使用的可选队列会话。
      *
-     * 队列可以在用户点击播放前预先设置，因此不与 [activeOwner] 合并；它不会抢占真实
+     * 队列可以在用户点击播放前预先设置，因此不与 [activeToken] 合并；它不会抢占真实
      * 播放器控制权。
      */
     private var playbackQueue: PlaybackQueueSession? = null
@@ -148,10 +148,10 @@ internal object VideoPlayerEngine {
             }
     }
 
-    /** 当前 Owner 请求播放媒体；新 Owner 会接管全局播放器。 */
+    /** 当前凭证请求播放媒体；新凭证会接管全局播放器。 */
     fun play(
         application: Application,
-        owner: VideoPlaybackOwner,
+        token: VideoPlaybackControlToken,
         media: VideoMedia,
         showNotification: Boolean,
         showNotificationArtwork: Boolean,
@@ -160,14 +160,14 @@ internal object VideoPlayerEngine {
         installProcessObserverIfNeeded()
         //匹配当前队列中是否存在该视频，若存在则直接播放队列中的视频
         val matchingPlaylistIndex = playbackQueue
-            ?.takeIf { it.owner === owner }
+            ?.takeIf { it.token === token }
             ?.playlist
             ?.indexOf(media)
             ?.takeIf { it >= 0 }
         if (matchingPlaylistIndex != null) {
             playPlaylistIndex(
                 application = application,
-                owner = owner,
+                token = token,
                 index = matchingPlaylistIndex,
                 showNotificationArtwork = showNotificationArtwork,
             )
@@ -176,7 +176,7 @@ internal object VideoPlayerEngine {
         }
         clearPlaylist()
         updateNotificationControls()
-        activeOwner = owner
+        activeToken = token
         val current = get(application)
         val command = _playbackState.value.resolvePlayCommand(media)
         if (command != VideoPlayCommand.NO_OP) {
@@ -218,80 +218,80 @@ internal object VideoPlayerEngine {
 
     /** 保存可选后台播放队列；ExoPlayer 自动续播，页面只负责将画面呈现到对应宿主。 */
     fun setPlaybackQueue(
-        owner: VideoPlaybackOwner,
+        token: VideoPlaybackControlToken,
         items: List<VideoMedia>,
     ) {
         checkMainThread()
-        if (activeOwner != null && activeOwner !== owner) return
+        if (activeToken != null && activeToken !== token) return
         val newPlaylist = VideoPlaylist(items)
         if (newPlaylist.items.size <= 1) {
-            clearPlaybackQueue(owner)
+            clearPlaybackQueue(token)
             return
         }
         val currentQueue = playbackQueue
         //当前队列操作者相同且队列相同
-        if (currentQueue?.owner === owner && currentQueue.playlist.items == newPlaylist.items) {
+        if (currentQueue?.token === token && currentQueue.playlist.items == newPlaylist.items) {
             return
         }
         //是活跃的操作者且队列已加载，清空播放器和状态
-        if (activeOwner === owner && currentQueue?.isLoaded == true) {
+        if (activeToken === token && currentQueue?.isLoaded == true) {
             currentPlayer()?.stop()
             _playbackState.value = _playbackState.value.resetPlaybackSession()
         }
         //创建新的队列会话，通知服务
-        playbackQueue = PlaybackQueueSession(owner, newPlaylist)
+        playbackQueue = PlaybackQueueSession(token, newPlaylist)
         updateNotificationControls()
     }
 
     /** 将已配置队列装入播放器，并从指定索引开始播放。 */
     fun playQueueAt(
         application: Application,
-        owner: VideoPlaybackOwner,
+        token: VideoPlaybackControlToken,
         index: Int,
         showNotification: Boolean,
         showNotificationArtwork: Boolean,
     ) {
         checkMainThread()
-        val queue = playbackQueue?.takeIf { it.owner === owner } ?: return
+        val queue = playbackQueue?.takeIf { it.token === token } ?: return
         if (index !in queue.playlist.items.indices) return
-        playPlaylistIndex(application, owner, index, showNotificationArtwork)
+        playPlaylistIndex(application, token, index, showNotificationArtwork)
         syncNotificationSession(application, showNotification)
     }
 
-    fun clearPlaybackQueue(owner: VideoPlaybackOwner) {
+    fun clearPlaybackQueue(token: VideoPlaybackControlToken) {
         checkMainThread()
-        if (playbackQueue?.owner !== owner) return
+        if (playbackQueue?.token !== token) return
         clearPlaylist()
         updateNotificationControls()
     }
 
-    fun playPrevious(owner: VideoPlaybackOwner) {
+    fun playPrevious(token: VideoPlaybackControlToken) {
         checkMainThread()
         val current = currentPlayer() ?: return
-        if (owner !== activeOwner || playbackQueue?.isLoaded != true || playbackQueue?.owner !== owner) return
+        if (token !== activeToken || playbackQueue?.isLoaded != true || playbackQueue?.token !== token) return
         val target = (current.currentMediaItemIndex - 1).takeIf { it >= 0 } ?: return
         playLoadedPlaylistIndex(current, target)
     }
 
-    fun playNext(owner: VideoPlaybackOwner) {
+    fun playNext(token: VideoPlaybackControlToken) {
         checkMainThread()
         val current = currentPlayer() ?: return
-        if (owner !== activeOwner || playbackQueue?.isLoaded != true || playbackQueue?.owner !== owner) return
+        if (token !== activeToken || playbackQueue?.isLoaded != true || playbackQueue?.token !== token) return
         val target = current.currentMediaItemIndex + 1
         if (target !in 0 until current.mediaItemCount) return
         playLoadedPlaylistIndex(current, target)
     }
 
-    /** 只有当前 Owner 可以暂停播放。 */
-    fun pause(owner: VideoPlaybackOwner) {
+    /** 只有当前操作凭证可以暂停播放。 */
+    fun pause(token: VideoPlaybackControlToken) {
         checkMainThread()
-        if (owner === activeOwner) currentPlayer()?.pause()
+        if (token === activeToken) currentPlayer()?.pause()
     }
 
-    /** 仅允许当前 Owner 跳转进度。 */
-    fun seekTo(owner: VideoPlaybackOwner, positionMs: Long) {
+    /** 仅允许当前操作凭证跳转进度。 */
+    fun seekTo(token: VideoPlaybackControlToken, positionMs: Long) {
         checkMainThread()
-        if (owner !== activeOwner) return
+        if (token !== activeToken) return
         val current = currentPlayer() ?: return
         val durationMs = _playbackState.value.progress.durationMs
         if (_playbackState.value.media != null && durationMs > 0L) current.seekTo(
@@ -302,9 +302,9 @@ internal object VideoPlayerEngine {
     }
 
     /** 停止当前媒体，但保留媒体项以便后续恢复。 */
-    fun stop(owner: VideoPlaybackOwner) {
+    fun stop(token: VideoPlaybackControlToken) {
         checkMainThread()
-        if (owner !== activeOwner) return
+        if (token !== activeToken) return
         latestRequestId++
         stopProgressPolling()
         _playbackState.value = _playbackState.value.resetPlaybackSession()
@@ -312,9 +312,9 @@ internal object VideoPlayerEngine {
     }
 
     /** 停止并移除当前媒体项。 */
-    fun removeCurrentMedia(owner: VideoPlaybackOwner) {
+    fun removeCurrentMedia(token: VideoPlaybackControlToken) {
         checkMainThread()
-        if (owner !== activeOwner) return
+        if (token !== activeToken) return
         val current = currentPlayer() ?: return
         latestRequestId++
         stopProgressPolling()
@@ -332,16 +332,16 @@ internal object VideoPlayerEngine {
         HashVideoPlaybackService.setNotificationActivity(application, pendingIntent)
     }
 
-    /** 将唯一画面挂载到当前 Owner 的目标容器。 */
+    /** 将唯一画面挂载到当前操作凭证的目标容器。 */
     fun attachRenderTo(
         application: Application,
-        owner: VideoPlaybackOwner,
+        token: VideoPlaybackControlToken,
         container: ViewGroup,
         targetMedia: VideoMedia? = null,
     ) {
         checkMainThread()
-        if (activeOwner != null && owner !== activeOwner) return
-        if (activeOwner == null) activeOwner = owner
+        if (activeToken != null && token !== activeToken) return
+        if (activeToken == null) activeToken = token
         val currentPlayer = get(application)
         val coordinator = renderCoordinator ?: VideoRenderCoordinator(
             application, currentPlayer
@@ -368,10 +368,10 @@ internal object VideoPlayerEngine {
         coordinator.attachTo(container)
     }
 
-    /** 仅当前 Owner 可解除自己的画面容器。 */
-    fun detachRenderFrom(owner: VideoPlaybackOwner, container: ViewGroup): Boolean {
+    /** 仅当前操作凭证可解除自己的画面容器。 */
+    fun detachRenderFrom(token: VideoPlaybackControlToken, container: ViewGroup): Boolean {
         checkMainThread()
-        if (owner !== activeOwner) return false
+        if (token !== activeToken) return false
         return renderCoordinator?.detachFrom(container) ?: false
     }
 
@@ -380,10 +380,30 @@ internal object VideoPlayerEngine {
         return renderCoordinator?.currentContainer() != null
     }
 
-    /** 释放播放器、渲染画面和媒体会话；旧 Owner 的请求会被忽略。 */
-    fun release(application: Application, owner: VideoPlaybackOwner? = null) {
+    /** 创建系统悬浮窗专用操作凭证，并将当前播放器凭证替换为该悬浮窗凭证。 */
+    fun enterSystemOverlay(sourceToken: VideoPlaybackControlToken): VideoOverlaySession? {
         checkMainThread()
-        if (owner != null && owner !== activeOwner) return
+        if (activeToken !== sourceToken) return null
+        return VideoPlaybackControlToken().let { overlayToken ->
+            activeToken = overlayToken
+            playbackQueue?.takeIf { it.token === sourceToken }?.token = overlayToken
+            VideoOverlaySession(overlayToken)
+        }
+    }
+
+    /** 仅允许当前悬浮窗凭证将会话交回目标页面凭证。 */
+    fun restoreSystemOverlay(session: VideoOverlaySession, targetToken: VideoPlaybackControlToken): Boolean {
+        checkMainThread()
+        if (activeToken !== session.token) return false
+        activeToken = targetToken
+        playbackQueue?.takeIf { it.token === session.token }?.token = targetToken
+        return true
+    }
+
+    /** 释放播放器、渲染画面和媒体会话；旧凭证的请求会被忽略。 */
+    fun release(application: Application, token: VideoPlaybackControlToken? = null) {
+        checkMainThread()
+        if (token != null && token !== activeToken) return
         latestRequestId++
         stopProgressPolling()
         renderCoordinator?.clear()
@@ -391,7 +411,7 @@ internal object VideoPlayerEngine {
         _playbackState.value = _playbackState.value.resetPlaybackSession()
         savedPositionsMs.clear()
         pausedFrames.evictAll()
-        activeOwner = null
+        activeToken = null
         clearPlaylist()
         updateNotificationControls()
         HashVideoPlaybackService.stopSession(application)
@@ -464,13 +484,13 @@ internal object VideoPlayerEngine {
      */
     private fun playPlaylistIndex(
         application: Application,
-        owner: VideoPlaybackOwner,
+        token: VideoPlaybackControlToken,
         index: Int,
         showNotificationArtwork: Boolean,
     ) {
-        val queue = playbackQueue?.takeIf { it.owner === owner } ?: return
+        val queue = playbackQueue?.takeIf { it.token === token } ?: return
         val activePlaylist = queue.playlist
-        activeOwner = owner
+        activeToken = token
         val current = get(application)
         if (!queue.isLoaded) {
             val previousMedia = _playbackState.value.media
@@ -643,7 +663,7 @@ internal object VideoPlayerEngine {
 
     /** 一个页面预配置的可选后台队列，以及它是否已实际装载进唯一播放器。 */
     private data class PlaybackQueueSession(
-        val owner: VideoPlaybackOwner,
+        var token: VideoPlaybackControlToken,
         val playlist: VideoPlaylist,
         var isLoaded: Boolean = false,
     )

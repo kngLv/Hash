@@ -14,7 +14,7 @@ import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.player.VideoController
-import com.hash.video.player.VideoPlaybackOwner
+import com.hash.video.player.VideoPlaybackControlToken
 import com.hash.video.player.isPlayingCurrentMedia
 import com.hash.video.ui.interaction.VideoInteractionCoordinator
 import com.hash.video.ui.interaction.VideoInteractionIntent
@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -56,6 +57,10 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     protected val currentPlaybackState: VideoPlaybackState
         get() = controller.playbackState.value
 
+    /** 当前全局播放器状态；单播放器页面可据此更新选集等 UI。 */
+    val playbackState: StateFlow<VideoPlaybackState>
+        get() = controller.playbackState
+
     /** 是否显示系统媒体通知。 */
     var showNotification: Boolean
         get() = controller.showNotification
@@ -70,11 +75,11 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
             controller.showNotificationArtwork = value
         }
 
-    /** 页面用于结束当前播放会话的所有者。 */
-    var playbackOwner: VideoPlaybackOwner
-        get() = controller.playbackOwner
+    /** 多播放器页面共享的操作凭证；单播放器通常不需要设置。 */
+    var playbackToken: VideoPlaybackControlToken
+        get() = controller.playbackToken
         set(value) {
-            controller.playbackOwner = value
+            controller.playbackToken = value
         }
 
     /* ----------- 初始化相关 ----------- */
@@ -128,6 +133,11 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
                 intent.positionMs,
                 currentPlaybackState.progress.durationMs,
             )
+
+            // 系统悬浮窗专用意图由 FloatingVideoPlayerView 接管。
+            VideoInteractionIntent.RestoreFromOverlay,
+            VideoInteractionIntent.CloseOverlay,
+                -> Unit
         }
     }
 
@@ -168,6 +178,21 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         play()
     }
 
+    /** 设置当前播放器的播放队列，不会立即开始播放。 */
+    fun setPlaybackQueue(items: List<VideoMedia>) = controller.setPlaybackQueue(items)
+
+    /** 播放当前播放器队列中 [index] 对应的视频。 */
+    fun playQueueAt(index: Int) = controller.playQueueAt(index)
+
+    /** 清除当前播放器的播放队列。 */
+    fun clearPlaybackQueue() = controller.clearPlaybackQueue()
+
+    /** 设置通知点击后返回应用的 Intent。 */
+    fun setNotificationActivity(pendingIntent: PendingIntent?) = controller.setNotificationActivity(pendingIntent)
+
+    /** 页面销毁时释放当前播放器拥有的播放会话。 */
+    fun releasePlayback() = controller.releasePlayback()
+
     /** 仅在绑定媒体为当前播放源时暂停。 */
     fun pause() {
         if (currentPlaybackState.isPlayingCurrentMedia(media)) controller.pause()
@@ -188,27 +213,9 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         if (media?.isSameSourceAs(currentPlaybackState.media) == true) controller.removeCurrentMedia()
     }
 
-    /** 更新详情播放通知的点击目标。 */
-    fun setNotificationActivity(pendingIntent: PendingIntent?) =
-        controller.setNotificationActivity(pendingIntent)
-
-    /** 为后台通知提供可选的上一条、下一条媒体顺序；单视频页面无需调用。 */
-    fun setPlaybackQueue(items: List<VideoMedia>) = controller.setPlaybackQueue(items)
-
-    /** 移除后台通知的队列上下文，不停止当前媒体。 */
-    fun clearPlaybackQueue() = controller.clearPlaybackQueue()
-
-    /** 接管画面后从可选队列的指定位置开始播放。 */
-    fun playQueueAt(index: Int) {
-        attachRender()
-        controller.playQueueAt(index)
-    }
 
     /** 解除当前 View 的画面承载，但不停止播放器。 */
     fun detachRender(): Boolean = controller.detachRenderFrom(this)
-
-    /** 页面真正结束播放会话时释放应用级播放器。 */
-    fun releasePlayback() = controller.releasePlayback()
 
     /** 获取该媒体切走前保存的静态帧。 */
     protected fun pausedFrameFor(media: VideoMedia) = controller.pausedFrameFor(media)
