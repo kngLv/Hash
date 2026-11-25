@@ -7,5 +7,18 @@
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:launchMode="singleTop"
             android:parentActivityName="com.hash.main.MainActivity" />
+        <activity android:name=".ui.featured.detail.NewsVideoTypeActivity" />
+        <activity
+            android:name=".ui.featured.detail.NewsVideoSingleDetailActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:launchMode="singleTop" />
+        <activity
+            android:name=".ui.featured.detail.NewsVideoEpisodeDetailActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:launchMode="singleTop" />
+        <activity
+            android:name=".ui.featured.detail.NewsVideoListDetailActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:launchMode="singleTop" />
     </application>
 </manifest>

@@ -13,6 +13,9 @@ class RouterActivityPath {
 
         /** 新闻详情 */
         const val NEWS_DETAIL = "${ROOT}/news_detail"
+
+        /** 视频新闻的播放场景选择页。 */
+        const val NEWS_VIDEO_TYPE = "${ROOT}/news_video_type"
     }
 
     object Main {

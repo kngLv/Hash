@@ -15,10 +15,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alibaba.android.arouter.facade.annotation.Route
-import com.hash.home.BuildConfig
 import com.hash.common.R as CommonR
 import com.hash.common.base.activity.BaseBindingActivity
 import com.hash.common.ext.showToast
+import com.hash.common.ext.toAny
 import com.hash.common.ui.loading.LoadingStateOwner
 import com.hash.common.ui.insets.applyScrollContentInsets
 import com.hash.common.ui.insets.applyTopBarInsets
@@ -45,7 +45,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 @Route(path = RouterActivityPath.Home.NEWS_DETAIL)
-class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
+open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
 
     private val viewModel by viewModels<NewsDetailViewModel>()
     private val newsId get() = intent.getStringExtra(EXTRA_NEWS_ID).orEmpty()
@@ -66,8 +66,8 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
             videoPlaybackOwner,
             ::showLandscapeVideo,
             ::showPortraitVideo,
-            showVideoNotification = !BuildConfig.DEBUG || DEBUG_ENABLE_VIDEO_NOTIFICATION,
-            showVideoNotificationArtwork = !BuildConfig.DEBUG || DEBUG_ENABLE_VIDEO_NOTIFICATION_ARTWORK,
+            showVideoNotification = true,
+            showVideoNotificationArtwork = true,
         )
     }
     private var isSourceVisible = false
@@ -124,7 +124,10 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     }
 
     override fun loadData() {
-        viewModel.load(newsId)
+        intent.getStringExtra(EXTRA_DETAIL_JSON)
+            .toAny(NewsDetailBean::class.java)
+            ?.let(::renderDetail)
+            ?: viewModel.load(newsId)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -157,16 +160,12 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     private fun renderDetail(detail: NewsDetailBean) = with(binding) {
         contentRecycler.visibility = View.VISIBLE
         emptyView.visibility = View.GONE
-        val pageItems = NewsDetailPageItemFactory.create(
+        val pageItems = transformPageItems(NewsDetailPageItemFactory.create(
                 title = newsTitle,
                 source = newsSource,
                 postTime = intent.getStringExtra(EXTRA_POST_TIME).orEmpty(),
                 detailItems = detail.items,
-            )
-            .toMutableList()
-            .apply {
-                if (BuildConfig.DEBUG) addAll(DEBUG_TEST_VIDEO_ITEMS)
-            }
+            ))
         //去重
         val deduplicatedItems = pageItems.deduplicateVideos()
         val requestId = ++detailRenderRequestId
@@ -252,6 +251,9 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         coverHeight = coverHeight,
     )
 
+    /** 测试详情页可在不改变真实详情构建逻辑的前提下追加或替换页面视频。 */
+    protected open fun transformPageItems(items: List<NewsDetailPageItem>): List<NewsDetailPageItem> = items
+
     private fun updateToolbarSource() {
         val shouldShow = newsSource.isNotBlank() &&
             binding.contentRecycler.computeVerticalScrollOffset() >= binding.toolbar.height
@@ -284,7 +286,7 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
     }
 
     private fun createNotificationPendingIntent(): PendingIntent {
-        val intent = Intent(this, NewsDetailActivity::class.java)
+        val intent = Intent(this, this::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             .putExtra(EXTRA_NEWS_ID, newsId)
             .putExtra(EXTRA_TITLE, newsTitle)
@@ -372,38 +374,9 @@ class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_SOURCE = "source"
         const val EXTRA_POST_TIME = "postTime"
+        /** 视频类型选择页已加载的详情；为空时仍按 [EXTRA_NEWS_ID] 请求。 */
+        const val EXTRA_DETAIL_JSON = "detailJson"
 
-        /** 临时用于排查播放后列表滑动卡顿；本轮保留通知，移除通知中的远程封面。 */
-        private const val DEBUG_ENABLE_VIDEO_NOTIFICATION = true
-        private const val DEBUG_ENABLE_VIDEO_NOTIFICATION_ARTWORK = false
-
-        /** 仅调试包追加，用于验证详情页多个视频的切换、迁移与释放。 */
-        private val DEBUG_TEST_VIDEO_ITEMS = listOf(
-            NewsDetailPageItem.Video(
-                coverUrl = "http://videoimg.ws.126.net/cover/20261112/yrgIujvcs_cover.jpg",
-                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc18170259a7ffdf260df7aeb1419b39ff224873eb5ee382ec02443d6d398ef0d8356ef56fa26898794882592a1f72486c096ee086ab35e0e24b0283a873b7a2ed5103bdeba57ff0388307a7d4578c49f3d2da8296d6ba7c1acd51b06e1a5f5a0ee23938f321f786a6624047eacd1f3580e14.mp4",
-            ),
-            NewsDetailPageItem.Video(
-                coverUrl = "http://videoimg.ws.126.net/cover/20261111/Tn63ejVcF_cover.jpg",
-                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc181a0ccda658d0cd6357323580545d52b9db7250001559819ed92bcf5433383346905ab95ca0491a6cd3f2b3d7a787ecf3f9dd8da146fa439623d45803b461887fb4f37ca8937976c831b56667bfd272b3e881b35dfb0580c9e0d309970bb774f09f2794b4fd9c878ddf7e9a3abade3d3dd.mp4",
-            ),
-            NewsDetailPageItem.Video(
-                coverUrl = "http://videoimg.ws.126.net/cover/20261111/bkryRlOPS_cover.jpg",
-                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc181fbb95c830762ec279c05742363e88a90136516667c195d7add054d609c2fa5de7111dc0bbe1e492f2693516ee3fc06b5581817b7fdfd4dc1a61ea9c24b62d5b8c34ea3d65d9bf8dcd4cb7d453ebeafcd7bca66095ddbb96a5d8c701c6ffe95ef0cef7d4d05b0261e53258a22816356e7.mp4",
-            ),
-            NewsDetailPageItem.Video(
-                coverUrl = "http://videoimg.ws.126.net/cover/20261110/AcGXIWe1f_cover.jpg",
-                videoUrl = "http://flv0.bn.netease.com/2918f670d37bc181c73bee7a77100e52d2518a3e8d93f85ec21fe421bf07b4788c28a779eccbdef2b762bd43068924334f44976f9c1a29c9bdedcfa0ab7b49d7c99b38d45f76249eec949a8287ec7c0b6a6c552102c2b572ba112e99f0f95f2658007f0b189fcb1d9267a8893331603f99c0a35328af51cf.mp4",
-            ),
-            NewsDetailPageItem.Video(
-                coverUrl = "http://videoimg.ws.126.net/cover/20261110/sjKXkI3Pm_cover.jpg",
-                videoUrl = "http://flv0.bn.netease.com/8c084e400104322edb93a34bea79e0b373d53af841294ed9e7503474b9adff259f4ff5b78b476498462d0b72ffaade3dcdc15ba722ec686a3f3944369eb730465ead976b454de9aeb2977da25c3f59dd8480f9c59498c1f72e70dcd722e1694c6831404f2c03337314585c9265b87416b809b3ed370b056f.mp4",
-            ),
-            NewsDetailPageItem.Video(
-                coverUrl = "http://videoimg.ws.126.net/cover/20261109/oteqfWPi2_cover.jpg",
-                videoUrl = "http://flv0.bn.netease.com/11e0ef4101124a0ce513ea99f83ea7793bd3579b975aaaaad7d53a20e5c220ae83faa730aff83e54bdf2ed12b02eaac35dd3d1f408f83792da2ab16a64eb3b5e9feb3f3e7dcdc35de96854d4c9a2bec89cab84eb151f53c74315ed637898321b03f43a587506d692d12d8eb2fd5ee8599d569a48fb173121.mp4",
-            ),
-        )
     }
 
     private enum class VideoPresentationMode {

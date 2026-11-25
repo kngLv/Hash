@@ -32,7 +32,13 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
             setOnItemClickListener { adapter, _, position ->
                 val news = adapter.getItem(position)
                 ARouter.getInstance()
-                    .build(RouterActivityPath.Home.NEWS_DETAIL)
+                    .build(
+                        if (viewModel.typeId == VIDEO_NEWS_TYPE_ID) {
+                            RouterActivityPath.Home.NEWS_VIDEO_TYPE
+                        } else {
+                            RouterActivityPath.Home.NEWS_DETAIL
+                        },
+                    )
                     .withString(NewsDetailActivity.EXTRA_NEWS_ID, news.newsId)
                     .withString(NewsDetailActivity.EXTRA_TITLE, news.title)
                     .withString(NewsDetailActivity.EXTRA_SOURCE, news.source)
@@ -44,6 +50,10 @@ class FeaturedTabFragment : BaseBindingFragment<FragmentFeaturedTabBinding>() {
 
     companion object {
         const val KEY_TYPE_ID = "typeId"
+
+        /** 视频分类的服务端 typeId；该分类的新闻进入视频场景选择页。 */
+        private const val VIDEO_NEWS_TYPE_ID = "545"
+
         fun newInstance(typeId: String): FeaturedTabFragment {
             val fragment = FeaturedTabFragment()
             fragment.arguments = Bundle().apply {

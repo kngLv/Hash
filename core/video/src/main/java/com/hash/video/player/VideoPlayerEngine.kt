@@ -169,7 +169,6 @@ internal object VideoPlayerEngine {
                 application = application,
                 owner = owner,
                 index = matchingPlaylistIndex,
-                showNotification = showNotification,
                 showNotificationArtwork = showNotificationArtwork,
             )
             syncNotificationSession(application, showNotification)
@@ -255,7 +254,7 @@ internal object VideoPlayerEngine {
         checkMainThread()
         val queue = playbackQueue?.takeIf { it.owner === owner } ?: return
         if (index !in queue.playlist.items.indices) return
-        playPlaylistIndex(application, owner, index, showNotification, showNotificationArtwork)
+        playPlaylistIndex(application, owner, index, showNotificationArtwork)
         syncNotificationSession(application, showNotification)
     }
 
@@ -467,7 +466,6 @@ internal object VideoPlayerEngine {
         application: Application,
         owner: VideoPlaybackOwner,
         index: Int,
-        showNotification: Boolean,
         showNotificationArtwork: Boolean,
     ) {
         val queue = playbackQueue?.takeIf { it.owner === owner } ?: return
@@ -533,6 +531,10 @@ internal object VideoPlayerEngine {
             playlistSize = activePlaylist.items.size,
         )
         current.seekTo(index, savedPositionsMs[target.cacheKey()].orEmptyPosition())
+        // 播放失败后 ExoPlayer 会停在 ERROR/IDLE；仅 seekTo + play 无法重新加载目标媒体。
+        if (current.playbackState == Player.STATE_IDLE || current.playerError != null) {
+            current.prepare()
+        }
         current.play()
         updateNotificationControls(current)
     }
