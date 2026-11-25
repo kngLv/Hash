@@ -16,6 +16,7 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import androidx.media3.session.SessionCommands
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.hash.video.R
@@ -39,6 +40,7 @@ class HashVideoPlaybackService : MediaSessionService() {
 
     private lateinit var mediaSession: MediaSession
     private var sessionReleased = false
+    private var notificationSessionCommands: SessionCommands? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val notificationControlScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -48,11 +50,20 @@ class HashVideoPlaybackService : MediaSessionService() {
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
             val resultBuilder = MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
-            val defaultCommands = resultBuilder.build().availableSessionCommands
+            val defaultSessionCommands = resultBuilder.build().availableSessionCommands
+            val sessionCommands = defaultSessionCommands.buildUpon()
+                .add(VideoSessionCommands.dismissNotification)
+                .build()
+            if (session.isMediaNotificationController(controller)) {
+                notificationSessionCommands = sessionCommands
+                resultBuilder
+                    .setAvailablePlayerCommands(notificationPlayerCommands(VideoPlayerEngine.notificationControls.value))
+                    .setMediaButtonPreferences(
+                        notificationMediaButtonPreferences(VideoPlayerEngine.notificationControls.value),
+                    )
+            }
             resultBuilder.setAvailableSessionCommands(
-                defaultCommands.buildUpon()
-                    .add(VideoSessionCommands.dismissNotification)
-                    .build(),
+                sessionCommands,
             )
             return resultBuilder.build()
         }
@@ -91,6 +102,21 @@ class HashVideoPlaybackService : MediaSessionService() {
             VideoPlayerEngine.notificationControls.collect { controls ->
                 if (!sessionReleased) {
                     mediaSession.setMediaButtonPreferences(notificationMediaButtonPreferences(controls))
+                    mediaSession.getMediaNotificationControllerInfo()?.let { controller ->
+                        notificationSessionCommands?.let { sessionCommands ->
+                            // 通知控制器必须同时收紧可用播放器命令；仅更新按钮偏好在部分系统上
+                            // 仍会保留 ExoPlayer 默认的“上一条”，首项点击后便会重播当前媒体。
+                            mediaSession.setAvailableCommands(
+                                controller,
+                                sessionCommands,
+                                notificationPlayerCommands(controls),
+                            )
+                            mediaSession.setMediaButtonPreferences(
+                                controller,
+                                notificationMediaButtonPreferences(controls),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -140,7 +166,7 @@ class HashVideoPlaybackService : MediaSessionService() {
         controls: VideoNotificationControls,
     ): List<CommandButton> = buildList {
         if (controls.usesPlaylistNavigation) {
-            if (controls.hasPrevious) {
+            if (controls.shouldShowPrevious) {
                 add(
                     CommandButton.Builder(CommandButton.ICON_PREVIOUS)
                         .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
@@ -148,7 +174,7 @@ class HashVideoPlaybackService : MediaSessionService() {
                         .build(),
                 )
             }
-            if (controls.hasNext) {
+            if (controls.shouldShowNext) {
                 add(
                     CommandButton.Builder(CommandButton.ICON_NEXT)
                         .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
@@ -178,6 +204,13 @@ class HashVideoPlaybackService : MediaSessionService() {
                 .build(),
         )
     }
+
+    /** 只限制通知控制器，不影响页面内播放器和其他外部控制器。 */
+    private fun notificationPlayerCommands(controls: VideoNotificationControls): Player.Commands =
+        mediaSession.player.availableCommands.buildUpon().apply {
+            if (!controls.shouldShowPrevious) remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            if (!controls.shouldShowNext) remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+        }.build()
 
     companion object {
         private const val LOG_TAG = "HashVideoLifecycle"

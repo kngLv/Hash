@@ -1,6 +1,7 @@
 package com.hash.video.api
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VideoPlaylistTest {
@@ -31,5 +32,20 @@ class VideoPlaylistTest {
         val playlist = VideoPlaylist(listOf(first, second))
 
         assertEquals(1, playlist.indexOf(second.copy(title = "展示标题更新")))
+    }
+
+    @Test
+    fun `空队列没有可定位的媒体`() {
+        val playlist = VideoPlaylist(emptyList())
+
+        assertTrue(playlist.items.isEmpty())
+        assertEquals(-1, playlist.indexOf(first))
+    }
+
+    @Test
+    fun `重复媒体定位首次出现的位置`() {
+        val playlist = VideoPlaylist(listOf(first, second, first.copy(title = "重复展示")))
+
+        assertEquals(0, playlist.indexOf(first))
     }
 }

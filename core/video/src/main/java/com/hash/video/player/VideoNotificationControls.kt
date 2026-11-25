@@ -8,4 +8,12 @@ internal data class VideoNotificationControls(
 ) {
     val usesPlaylistNavigation: Boolean
         get() = !isAppInForeground
+
+    /** 后台队列中存在前一项时才显示上一条。 */
+    val shouldShowPrevious: Boolean
+        get() = usesPlaylistNavigation && hasPrevious
+
+    /** 后台队列中存在后一项时才显示下一条。 */
+    val shouldShowNext: Boolean
+        get() = usesPlaylistNavigation && hasNext
 }

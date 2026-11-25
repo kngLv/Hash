@@ -52,6 +52,9 @@ class NewsDetailVideoPresentationCoordinator(
     /** 当前由新闻详情内嵌卡片承载画面的队列位置；用于在切项时由本页主动迁移画面。 */
     private var presentedInlineIndex: Int? = null
 
+    /** 最近一次已按播放状态处理过的队列位置；进度刷新不能再次触发 RecyclerView 定位。 */
+    private var lastPresentedPlaylistIndex: Int? = null
+
     /**
      * release() 后置为 true：Adapter 可能仍派发已经排队的 attach/detach 回调，所有入口
      * 都必须停止修改宿主映射或操作 View，避免详情页销毁后发生越界渲染与引用泄漏。
@@ -98,6 +101,7 @@ class NewsDetailVideoPresentationCoordinator(
         adapterPositions.putAll(positions)
         // submitList 可能复用一个仍在屏幕上的 Holder；旧队列位置不能继续指向它。
         hosts.clear()
+        lastPresentedPlaylistIndex = null
         if (items.size > 1) controller.setPlaybackQueue(items) else controller.clearPlaybackQueue()
     }
 
@@ -133,6 +137,9 @@ class NewsDetailVideoPresentationCoordinator(
         if (released) return
         val currentIndex = state.playlistIndex ?: return
         // ExoPlayer 只发布新的媒体和队列索引；新闻多卡片页面在此决定是否迁移唯一画面。
+        // 同一媒体的进度每 500ms 都会更新，不能因此把用户刚刚滑走的卡片再滚回屏幕。
+        if (lastPresentedPlaylistIndex == currentIndex) return
+        lastPresentedPlaylistIndex = currentIndex
         presentCurrentHost(currentIndex)
     }
 
@@ -191,5 +198,6 @@ class NewsDetailVideoPresentationCoordinator(
         hosts.clear()
         adapterPositions.clear()
         presentedInlineIndex = null
+        lastPresentedPlaylistIndex = null
     }
 }
