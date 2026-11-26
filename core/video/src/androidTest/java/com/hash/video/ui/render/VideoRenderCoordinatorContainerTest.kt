@@ -5,7 +5,7 @@ import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.player.VideoPlayerEngine
-import com.hash.video.player.VideoPlaybackControlToken
+import com.hash.video.api.VideoPlaybackControlToken
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

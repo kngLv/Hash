@@ -5,8 +5,6 @@ internal data class VideoNotificationControls(
     val isAppInForeground: Boolean = true,
     val hasPrevious: Boolean = false,
     val hasNext: Boolean = false,
-    /** 仅用于通知控制器刷新；相同按钮状态也需要在播放器就绪后重新下发可用命令。 */
-    val revision: Long = 0L,
 ) {
     val usesPlaylistNavigation: Boolean
         get() = !isAppInForeground
@@ -18,4 +16,8 @@ internal data class VideoNotificationControls(
     /** 后台队列中存在后一项时才显示下一条。 */
     val shouldShowNext: Boolean
         get() = usesPlaylistNavigation && hasNext
+
+    /** 后台队列存在任一相邻媒体时，通知展示上一条和下一条两个导航按钮。 */
+    val shouldShowPlaylistNavigationButtons: Boolean
+        get() = shouldShowPrevious || shouldShowNext
 }

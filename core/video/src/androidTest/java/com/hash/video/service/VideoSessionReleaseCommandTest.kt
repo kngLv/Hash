@@ -25,17 +25,17 @@ import org.junit.runner.RunWith
 class VideoSessionReleaseCommandTest {
 
     @Test
-    fun `后台单媒体通知不展示无意义的跳转或队列命令`() {
+    fun `前台通知控制器连接后提供十五秒快退快进`() {
         val controller = createController()
         try {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 assertEquals(15_000L, controller.seekBackIncrement)
                 assertEquals(15_000L, controller.seekForwardIncrement)
                 assertTrue(controller.availableSessionCommands.contains(VideoSessionCommands.dismissNotification))
-                assertFalse(controller.mediaButtonPreferences.any {
+                assertTrue(controller.mediaButtonPreferences.any {
                     it.playerCommand == Player.COMMAND_SEEK_BACK
                 })
-                assertFalse(controller.mediaButtonPreferences.any {
+                assertTrue(controller.mediaButtonPreferences.any {
                     it.playerCommand == Player.COMMAND_SEEK_FORWARD
                 })
                 assertTrue(controller.mediaButtonPreferences.any {

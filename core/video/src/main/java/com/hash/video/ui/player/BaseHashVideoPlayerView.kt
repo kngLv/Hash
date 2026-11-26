@@ -1,6 +1,5 @@
 package com.hash.video.ui.player
 
-import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -9,12 +8,12 @@ import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.hash.video.api.VideoMedia
+import com.hash.video.api.VideoPlaybackControlToken
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
 import com.hash.video.api.isPlaying
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.player.VideoController
-import com.hash.video.player.VideoPlaybackControlToken
 import com.hash.video.player.isPlayingCurrentMedia
 import com.hash.video.ui.interaction.VideoInteractionCoordinator
 import com.hash.video.ui.interaction.VideoInteractionIntent
@@ -75,7 +74,7 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
             controller.showNotificationArtwork = value
         }
 
-    /** 多播放器页面共享的操作凭证；单播放器通常不需要设置。 */
+    /** 队列页面共享的操作凭证；没有队列的单播放器通常不需要设置。 */
     var playbackToken: VideoPlaybackControlToken
         get() = controller.playbackToken
         set(value) {
@@ -177,18 +176,6 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         setMedia(media)
         play()
     }
-
-    /** 设置当前播放器的播放队列，不会立即开始播放。 */
-    fun setPlaybackQueue(items: List<VideoMedia>) = controller.setPlaybackQueue(items)
-
-    /** 播放当前播放器队列中 [index] 对应的视频。 */
-    fun playQueueAt(index: Int) = controller.playQueueAt(index)
-
-    /** 清除当前播放器的播放队列。 */
-    fun clearPlaybackQueue() = controller.clearPlaybackQueue()
-
-    /** 设置通知点击后返回应用的 Intent。 */
-    fun setNotificationActivity(pendingIntent: PendingIntent?) = controller.setNotificationActivity(pendingIntent)
 
     /** 页面销毁时释放当前播放器拥有的播放会话。 */
     fun releasePlayback() = controller.releasePlayback()

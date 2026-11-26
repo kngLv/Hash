@@ -5,12 +5,13 @@ import android.app.PendingIntent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.annotation.MainThread
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoOverlayResult
-import com.hash.video.player.VideoPlaybackControlToken
+import com.hash.video.api.VideoPlaybackControlToken
 import com.hash.video.player.VideoPlayerEngine
 import com.hash.video.player.VideoOverlaySession
 import com.hash.video.ui.interaction.FloatingDragListener
@@ -106,7 +107,12 @@ object SystemOverlayHost {
             this.restoreIntent = returnIntent
             this.application = application
             VideoOverlayResult.SHOWN
-        }.getOrElse {
+        }.getOrElse { error ->
+            Log.w(
+                LOG_TAG,
+                "系统悬浮窗创建失败：api=${Build.VERSION.SDK_INT}，windowType=${overlayWindowType()}",
+                error,
+            )
             runCatching { manager.removeViewImmediate(overlayRoot) }
             //异常时恢复页面原来的播放凭证和渲染 View；悬浮窗创建失败不影响页面。
             VideoPlayerEngine.restoreSystemOverlay(overlaySession, sourceToken)
@@ -210,4 +216,5 @@ object SystemOverlayHost {
     private const val MAX_WIDTH_DP = 280
     private const val MAX_HEIGHT_DP = 320
     private const val SCREEN_MARGIN_DP = 12
+    private const val LOG_TAG = "HashVideoOverlay"
 }

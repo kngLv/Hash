@@ -1,5 +1,7 @@
 package com.hash.video.player
 
+import com.hash.video.api.VideoPlaybackControlToken
+
 /**
  * 系统悬浮窗持有的播放会话凭据。
  *

@@ -130,7 +130,7 @@ class HashVideoPlaybackService : MediaSessionService() {
         addSession(mediaSession)
         mediaSession.setSessionActivity(notificationActivity)
         notificationControlScope.launch {
-            VideoPlayerEngine.notificationControls.collect { controls ->
+            VideoPlayerEngine.notificationControlUpdates.collect { controls ->
                 if (!sessionReleased) {
                     (notificationController ?: mediaSession.getMediaNotificationControllerInfo())?.let { controller ->
                         notificationSessionCommands?.let { sessionCommands ->
@@ -190,7 +190,7 @@ class HashVideoPlaybackService : MediaSessionService() {
         if (controls.usesPlaylistNavigation) {
             // 系统媒体卡片以 seekToPrevious/seekToNext 渲染上一条/下一条；队列可导航时
             // 同时提供这两个按钮，首项的上一条按平台语义从当前视频开头重播。
-            if (controls.shouldShowPrevious || controls.shouldShowNext) {
+            if (controls.shouldShowPlaylistNavigationButtons) {
                 add(
                     CommandButton.Builder(CommandButton.ICON_PREVIOUS)
                         .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS)

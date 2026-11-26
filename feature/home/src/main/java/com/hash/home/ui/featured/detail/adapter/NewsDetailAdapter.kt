@@ -9,7 +9,7 @@ import com.chad.library.adapter4.BaseMultiItemAdapter
 import com.hash.common.utils.image.ImageLoader
 import com.hash.common.utils.image.LoadOptions
 import com.hash.video.api.VideoMedia
-import com.hash.video.player.VideoPlaybackControlToken
+import com.hash.video.api.VideoPlaybackControlToken
 import com.hash.video.ui.player.EmbeddedVideoPlayerView
 import com.hash.home.databinding.ItemNewsDetailEmptyBinding
 import com.hash.home.databinding.ItemNewsDetailHeaderBinding

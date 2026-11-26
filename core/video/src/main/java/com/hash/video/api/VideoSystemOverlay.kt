@@ -3,7 +3,6 @@ package com.hash.video.api
 import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
-import com.hash.video.player.VideoPlaybackControlToken
 import com.hash.video.presentation.SystemOverlayHost
 
 /** 系统级视频悬浮窗入口。 */

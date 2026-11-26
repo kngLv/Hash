@@ -2,15 +2,15 @@ package com.hash.video.api
 
 import android.app.Application
 import android.content.Context
-import com.hash.video.player.VideoPlaybackControlToken
 import com.hash.video.player.VideoPlayerEngine
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * 多播放器页面的播放队列协调入口。
+ * 页面级播放队列协调入口。
  *
- * 当一个页面有多个播放器 View、但共用同一个 ExoPlayer 时使用。它负责队列和当前播放项，
- * 页面再将当前视频画面交给对应的播放器 View 承载。单播放器页面直接调用播放器 View 的方法。
+ * 只要页面存在选集、连续播放或多个播放器 View 共用一个 ExoPlayer，就通过此入口管理队列和
+ * 当前播放项。页面再将当前视频画面交给对应的播放器 View 承载；没有队列的单视频页面直接调用
+ * 播放器 View 的方法。
  */
 object VideoPlaybackQueueManager {
     /** 当前队列的全局播放状态；用于选择应承载画面的播放器。 */
@@ -38,7 +38,7 @@ object VideoPlaybackQueueManager {
         showNotificationArtwork = options.showNotificationArtwork,
     )
 
-    /** 多播放器页面销毁时释放 [token] 的队列播放会话。 */
+    /** 队列页面销毁时释放 [token] 对应的播放会话。 */
     fun release(context: Context, token: VideoPlaybackControlToken) =
         VideoPlayerEngine.release(app(context), token)
 

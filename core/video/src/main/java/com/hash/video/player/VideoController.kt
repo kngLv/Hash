@@ -1,12 +1,12 @@
 package com.hash.video.player
 
 import android.app.Application
-import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
 import android.view.ViewGroup
 import androidx.annotation.MainThread
 import com.hash.video.api.VideoMedia
+import com.hash.video.api.VideoPlaybackControlToken
 import com.hash.video.api.VideoPlaybackState
 import kotlinx.coroutines.flow.StateFlow
 
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * 不持有 ExoPlayer、Player.Listener 或页面引用，可安全地为 RecyclerView 的每个 item 创建。
  */
-class VideoController(context: Context) {
+internal class VideoController(context: Context) {
 
     private val application = context.applicationContext as Application
 
@@ -41,36 +41,9 @@ class VideoController(context: Context) {
             showNotificationArtwork,
         )
 
-    /** 设置当前播放器的播放队列，不会立即开始播放。 */
-    @MainThread
-    fun setPlaybackQueue(items: List<VideoMedia>) = VideoPlayerEngine.setPlaybackQueue(playbackToken, items)
-
-    /** 播放当前播放器队列中 [index] 对应的视频。 */
-    @MainThread
-    fun playQueueAt(index: Int) =
-        VideoPlayerEngine.playQueueAt(application, playbackToken, index, showNotification, showNotificationArtwork)
-
-    /** 清除当前播放器的播放队列。 */
-    @MainThread
-    fun clearPlaybackQueue() = VideoPlayerEngine.clearPlaybackQueue(playbackToken)
-
-    /** 设置通知点击后返回应用的 Intent。 */
-    @MainThread
-    fun setNotificationActivity(pendingIntent: PendingIntent?) =
-        VideoPlayerEngine.setNotificationActivity(application, pendingIntent)
-
     /** 释放当前播放器拥有的播放会话。 */
     @MainThread
     fun releasePlayback() = VideoPlayerEngine.release(application, playbackToken)
-
-
-    /** 播放队列中的上一项；位于首项时安全忽略。 */
-    @MainThread
-    fun playPrevious() = VideoPlayerEngine.playPrevious(playbackToken)
-
-    /** 播放队列中的下一项；位于末项时安全忽略。 */
-    @MainThread
-    fun playNext() = VideoPlayerEngine.playNext(playbackToken)
 
     @MainThread
     fun pause() = VideoPlayerEngine.pause(playbackToken)

@@ -40,7 +40,7 @@ import com.hash.common.shared.storage.MMKVConst
 import com.hash.router.RouterActivityPath
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoOverlayResult
-import com.hash.video.player.VideoPlaybackControlToken
+import com.hash.video.api.VideoPlaybackControlToken
 import com.hash.video.api.VideoPlaybackNotification
 import com.hash.video.api.VideoPlaybackQueueManager
 import com.hash.video.api.VideoSystemOverlay

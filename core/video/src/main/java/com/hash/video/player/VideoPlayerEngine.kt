@@ -18,6 +18,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.hash.video.api.VideoMedia
+import com.hash.video.api.VideoPlaybackControlToken
 import com.hash.video.api.VideoPlaylist
 import com.hash.video.api.VideoPlaybackProgress
 import com.hash.video.api.VideoPlaybackState
@@ -27,8 +28,12 @@ import com.hash.video.cache.VideoCacheProvider
 import com.hash.video.cache.VideoCacheKeyFactory
 import com.hash.video.service.HashVideoPlaybackService
 import com.hash.video.ui.render.VideoRenderCoordinator
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** 进程唯一的播放引擎；集中持有播放器、状态监听和渲染器。 */
@@ -76,7 +81,23 @@ internal object VideoPlayerEngine {
 
     private val _notificationControls = MutableStateFlow(VideoNotificationControls())
     val notificationControls: StateFlow<VideoNotificationControls> = _notificationControls.asStateFlow()
-    private var notificationControlsRevision = 0L
+
+    /**
+     * 通知控制器的刷新事件。
+     *
+     * 播放器就绪后即使按钮状态没有变化，也需要重新下发 MediaSession 命令；此事件与状态快照
+     * 分离，避免在 [VideoNotificationControls] 中加入仅为触发刷新而存在的字段。
+     */
+    private val _notificationControlUpdates = MutableSharedFlow<VideoNotificationControls>(
+        // 新订阅者立即收到最近一次控制状态，服务重建后不用等待下一次状态变化。
+        replay = 1,
+        // 通知更新很轻量，允许暂存一次尚未被收集的最新更新。
+        extraBufferCapacity = 1,
+        // 高频状态变化时丢弃旧更新，只同步最终状态即可。
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val notificationControlUpdates: SharedFlow<VideoNotificationControls> =
+        _notificationControlUpdates.asSharedFlow()
 
     /** 用于丢弃过期的播放请求。 */
     private var latestRequestId = 0L
@@ -192,6 +213,7 @@ internal object VideoPlayerEngine {
             if (requestId == latestRequestId) {
                 when (command) {
                     VideoPlayCommand.REPLACE -> current.run {
+                        //记住上月媒体进度
                         rememberPlaybackOf(
                             previousMedia,
                             this,
@@ -265,23 +287,6 @@ internal object VideoPlayerEngine {
         if (playbackQueue?.token !== token) return
         clearPlaylist()
         updateNotificationControls()
-    }
-
-    fun playPrevious(token: VideoPlaybackControlToken) {
-        checkMainThread()
-        val current = currentPlayer() ?: return
-        if (token !== activeToken || playbackQueue?.isLoaded != true || playbackQueue?.token !== token) return
-        val target = (current.currentMediaItemIndex - 1).takeIf { it >= 0 } ?: return
-        playLoadedPlaylistIndex(current, target)
-    }
-
-    fun playNext(token: VideoPlaybackControlToken) {
-        checkMainThread()
-        val current = currentPlayer() ?: return
-        if (token !== activeToken || playbackQueue?.isLoaded != true || playbackQueue?.token !== token) return
-        val target = current.currentMediaItemIndex + 1
-        if (target !in 0 until current.mediaItemCount) return
-        playLoadedPlaylistIndex(current, target)
     }
 
     /** 只有当前操作凭证可以暂停播放。 */
@@ -619,21 +624,21 @@ internal object VideoPlayerEngine {
      */
     private fun updateNotificationControls(current: Player? = currentPlayer()) {
         val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist
-        if (activePlaylist == null) {
-            _notificationControls.value = VideoNotificationControls(
+        val controls = if (activePlaylist == null) {
+            VideoNotificationControls(
                 isAppInForeground = isAppInForeground,
-                revision = ++notificationControlsRevision,
             )
-            return
+        } else {
+            val index = current?.currentMediaItemIndex ?: _playbackState.value.playlistIndex
+            val count = activePlaylist.items.size
+            VideoNotificationControls(
+                isAppInForeground = isAppInForeground,
+                hasPrevious = index != null && index > 0 && count > 1,
+                hasNext = index != null && index >= 0 && index < count - 1,
+            )
         }
-        val index = current?.currentMediaItemIndex ?: _playbackState.value.playlistIndex
-        val count = activePlaylist.items.size
-        _notificationControls.value = VideoNotificationControls(
-            isAppInForeground = isAppInForeground,
-            hasPrevious = index != null && index > 0 && count > 1,
-            hasNext = index != null && index >= 0 && index < count - 1,
-            revision = ++notificationControlsRevision,
-        )
+        _notificationControls.value = controls
+        _notificationControlUpdates.tryEmit(controls)
     }
 
     /** 提供给列表卡片展示；快照只在对应视频非当前渲染目标时使用。 */

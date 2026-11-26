@@ -28,6 +28,7 @@ class VideoNotificationControlsTest {
 
         assertFalse(controls.shouldShowPrevious)
         assertTrue(controls.shouldShowNext)
+        assertTrue(controls.shouldShowPlaylistNavigationButtons)
     }
 
     @Test
@@ -36,6 +37,7 @@ class VideoNotificationControlsTest {
 
         assertTrue(controls.shouldShowPrevious)
         assertFalse(controls.shouldShowNext)
+        assertTrue(controls.shouldShowPlaylistNavigationButtons)
     }
 
     @Test
@@ -48,5 +50,6 @@ class VideoNotificationControlsTest {
 
         assertFalse(controls.shouldShowPrevious)
         assertFalse(controls.shouldShowNext)
+        assertFalse(controls.shouldShowPlaylistNavigationButtons)
     }
 }
