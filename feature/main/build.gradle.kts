@@ -25,5 +25,6 @@ dependencies {
 
     implementation(project(":core:common"))
     implementation(project(":core:router"))
+    implementation(project(":core:video"))
     kapt(libs.arouter.compiler)
 }

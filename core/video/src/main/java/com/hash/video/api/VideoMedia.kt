@@ -10,6 +10,8 @@ data class VideoMedia(
     /** 封面的原始像素尺寸；存在时直接决定内嵌播放器比例，无需等待图片加载。 */
     val coverWidth: Int? = null,
     val coverHeight: Int? = null,
+    /** 所属业务内容的透传标识；视频模块不参与解释或使用。 */
+    val contentKey: String? = null,
 ) {
     /** 宽高均为有效正数时，表示业务已明确指定封面比例。 */
     fun hasValidCoverSize(): Boolean = (coverWidth ?: 0) > 0 && (coverHeight ?: 0) > 0

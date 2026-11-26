@@ -72,9 +72,9 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     }
     private val detailAdapter by lazy {
         NewsDetailAdapter(
-            videoPlaybackToken,
-            ::showLandscapeVideo,
-            ::showPortraitVideo,
+            playbackToken = videoPlaybackToken,
+            showLandscape = ::showLandscapeVideo,
+            showPortrait = ::showPortraitVideo,
             showVideoNotification = true,
             showVideoNotificationArtwork = true,
         )
@@ -85,6 +85,8 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     private var presentationMode: VideoPresentationMode? = null
     private var originalRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     private var detailRenderRequestId = 0L
+    /** 当前详情与悬浮窗播放内容相同，待列表提交后将画面交回页面。 */
+    private var shouldRestoreOverlay = false
     private val videoPresentationBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = closeVideoPresentation()
     }
@@ -98,6 +100,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     override fun layoutId(): Int = R.layout.activity_news_detail
 
     override fun initView() = with(binding) {
+        resolveOverlayForDetail()
         toolbar.applyTopBarInsets()
         contentRecycler.applyScrollContentInsets()
         contentRecycler.layoutManager = LinearLayoutManager(this@NewsDetailActivity)
@@ -153,6 +156,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
         super.onNewIntent(intent)
         // Activity 被通知 PendingIntent 复用时，后续读取的新闻参数必须来自最新 Intent。
         setIntent(intent)
+        resolveOverlayForDetail()
         if (newsId != previousNewsId) {
             viewModel.load(newsId)
         }
@@ -205,7 +209,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
             )
             detailAdapter.submitList(playlistItems) {
                 videoPresentationCoordinator.onAdapterListCommitted()
-                if (VideoSystemOverlay.restoreIfRequested(videoPlaybackToken)) {
+                if (shouldRestoreOverlay && VideoSystemOverlay.restoreIfRequested(videoPlaybackToken)) {
                     videoPresentationCoordinator.presentCurrentPlaybackHost()
                 }
             }
@@ -308,7 +312,11 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     private fun List<NewsDetailPageItem>.withPlaylistIndices(): List<NewsDetailPageItem> {
         var nextIndex = 0
         return map { item ->
-            if (item is NewsDetailPageItem.Video) item.copy(playlistIndex = nextIndex++) else item
+            if (item is NewsDetailPageItem.Video) {
+                item.copy(playlistIndex = nextIndex++, contentKey = newsId)
+            } else {
+                item
+            }
         }
     }
 
@@ -318,7 +326,16 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
         coverUrl = coverUrl.ifBlank { null },
         coverWidth = coverWidth,
         coverHeight = coverHeight,
+        contentKey = this.contentKey,
     )
+
+    /** 打开详情时按业务内容标识决定接管当前悬浮窗，或结束旧的播放。 */
+    private fun resolveOverlayForDetail() {
+        shouldRestoreOverlay = false
+        val overlayMedia = VideoSystemOverlay.currentMediaOrNull() ?: return
+        shouldRestoreOverlay = overlayMedia.contentKey == newsId
+        if (!shouldRestoreOverlay) VideoSystemOverlay.close()
+    }
 
     /** 测试详情页可在不改变真实详情构建逻辑的前提下追加或替换页面视频。 */
     protected open fun transformPageItems(items: List<NewsDetailPageItem>): List<NewsDetailPageItem> = items

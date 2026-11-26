@@ -14,6 +14,8 @@ sealed interface NewsDetailPageItem {
         val coverHeight: Int? = null,
         /** 当前详情页播放队列中的稳定位置；非最终渲染阶段为空。 */
         val playlistIndex: Int? = null,
+        /** 所属详情的业务标识，透传给 [com.hash.video.api.VideoMedia]。 */
+        val contentKey: String? = null,
     ) : NewsDetailPageItem
     data object Empty : NewsDetailPageItem
 }

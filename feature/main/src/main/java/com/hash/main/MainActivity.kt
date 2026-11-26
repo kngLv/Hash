@@ -1,14 +1,17 @@
 package com.hash.main
 
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.activity.OnBackPressedCallback
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
 import com.hash.common.base.activity.BaseBindingActivity
+import com.hash.common.ext.showToast
 import com.hash.common.ui.insets.applyBottomBarInsets
 import com.hash.main.adapter.MainNavigationAdapter
 import com.hash.main.adapter.MainPageAdapter
 import com.hash.main.databinding.ActivityMainBinding
 import com.hash.router.RouterActivityPath
+import com.hash.video.api.VideoSystemOverlay
 
 
 @Route(path = RouterActivityPath.Main.MAIN)
@@ -18,6 +21,22 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>(),
     private val list = arrayListOf<MainNavigationAdapter.MenuItem>()
     private val navigationAdapter by lazy { MainNavigationAdapter(list) }
     private val pageAdapter by lazy { MainPageAdapter(supportFragmentManager, lifecycle, list) }
+    private var exitPending = false
+    private val resetExitPending = Runnable { exitPending = false }
+    private val exitBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (!exitPending) {
+                exitPending = true
+                getString(R.string.main_exit_again).showToast()
+                binding.root.removeCallbacks(resetExitPending)
+                binding.root.postDelayed(resetExitPending, EXIT_CONFIRM_TIMEOUT_MS)
+                return
+            }
+            binding.root.removeCallbacks(resetExitPending)
+            VideoSystemOverlay.close()
+            finish()
+        }
+    }
 
 
     override fun layoutId(): Int = R.layout.activity_main
@@ -26,6 +45,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>(),
         binding.mainNavigationContainer.applyBottomBarInsets()
         navigationAdapter.onTabClickPosition = this
         binding.mainNavigation.layoutManager = GridLayoutManager(this, 5)
+        onBackPressedDispatcher.addCallback(this, exitBackCallback)
     }
 
     override fun loadData() {
@@ -57,5 +77,14 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>(),
 
             else -> binding.mainViewpager.setCurrentItem(position - 1, false)
         }
+    }
+
+    override fun onDestroy() {
+        binding.root.removeCallbacks(resetExitPending)
+        super.onDestroy()
+    }
+
+    private companion object {
+        const val EXIT_CONFIRM_TIMEOUT_MS = 2_000L
     }
 }

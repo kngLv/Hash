@@ -184,6 +184,7 @@ class NewsDetailAdapter(
                 coverUrl = item.coverUrl.ifBlank { null },
                 coverWidth = item.coverWidth,
                 coverHeight = item.coverHeight,
+                contentKey = item.contentKey,
             )
             videoPlayer.setMedia(media)
             videoPlayer.playbackToken = playbackToken

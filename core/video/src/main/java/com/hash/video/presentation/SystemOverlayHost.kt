@@ -54,6 +54,10 @@ object SystemOverlayHost {
     /** 检查是否有权限在系统上绘制悬浮窗。 */
     fun canDraw(context: android.content.Context): Boolean = Settings.canDrawOverlays(context)
 
+    /** 返回当前悬浮窗正在播放的媒体；没有悬浮窗会话时返回空。 */
+    fun currentMediaOrNull(): VideoMedia? =
+        VideoPlayerEngine.playbackState.value.media?.takeIf { session != null }
+
     /**
      * 创建系统悬浮窗，并将页面操作凭证替换为悬浮窗专用凭证。
      *
@@ -113,11 +117,10 @@ object SystemOverlayHost {
         }
     }
 
-    /** 页面数据加载完成后调用；仅处理由悬浮窗“返回应用”触发的接管。 */
+    /** 页面数据加载完成后调用；有悬浮窗会话时将播放画面交回该页面。 */
     @MainThread
     fun restoreTo(targetToken: VideoPlaybackControlToken): Boolean {
         val currentSession = session ?: return false
-        if (!restoreRequested) return false
         root?.detachRender()
         if (!VideoPlayerEngine.restoreSystemOverlay(currentSession, targetToken)) return false
         removeViewOnly()
