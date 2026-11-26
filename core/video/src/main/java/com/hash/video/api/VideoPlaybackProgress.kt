@@ -7,6 +7,8 @@ data class VideoPlaybackProgress(
     val positionMs: Long = 0L,
     val bufferedPositionMs: Long = 0L,
     val durationMs: Long = 0L,
+    /** 当前媒体是否已自然播完；时长未知时也用它保证再次选择会从头播放。 */
+    val completed: Boolean = false,
 ) {
     /** 时长有效时才允许界面展示确定进度。 */
     val isAvailable: Boolean
@@ -26,8 +28,8 @@ data class VideoPlaybackProgress(
 
     /** 用于继续播放的进度；已播完时从头重新开始。 */
     fun forResume(): VideoPlaybackProgress =
-        if (durationMs in 1L..positionMs) {
-            copy(positionMs = 0L, bufferedPositionMs = 0L)
+        if (completed || durationMs in 1L..positionMs) {
+            copy(positionMs = 0L, bufferedPositionMs = 0L, completed = false)
         } else {
             this
         }

@@ -129,8 +129,9 @@ object SystemOverlayHost {
         val currentSession = session ?: return false
         val currentMedia = VideoPlayerEngine.playbackState.value.media ?: return false
         if (!matches(currentMedia)) return false
-        root?.detachRender()
+        // 先完成凭证移交；失败时保留悬浮窗原画面，避免窗口仍在却变成黑屏。
         if (!VideoPlayerEngine.restoreSystemOverlay(currentSession, targetToken)) return false
+        root?.detachRender()
         removeViewOnly()
         return true
     }

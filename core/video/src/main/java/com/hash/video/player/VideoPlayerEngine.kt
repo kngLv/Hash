@@ -259,7 +259,8 @@ internal object VideoPlayerEngine {
         checkMainThread()
         if (activeToken != null && activeToken !== token) return
         val newPlaylist = VideoPlaylist(items)
-        if (newPlaylist.items.size <= 1) {
+        // 单项列表仍是有效播放队列：它可统一页面的“当前队列位置”语义，只是不提供下一条。
+        if (newPlaylist.items.isEmpty()) {
             clearPlaybackQueue(token)
             return
         }
@@ -268,12 +269,11 @@ internal object VideoPlayerEngine {
         if (currentQueue?.token === token && currentQueue.playlist.items == newPlaylist.items) {
             return
         }
-        //是活跃的操作者且队列已加载，清空播放器和状态
+        // 活跃队列被替换时，先停止旧列表，避免它在新队列配置完成前继续自动续播。
         if (activeToken === token && currentQueue?.isLoaded == true) {
-            currentPlayer()?.stop()
-            _playbackState.value = _playbackState.value.resetPlaybackSession()
+            stopLoadedPlaylist()
         }
-        //创建新的队列会话，通知服务
+        // 创建新的队列会话，通知服务。
         playbackQueue = PlaybackQueueSession(token, newPlaylist)
         updateNotificationControls()
     }
@@ -296,7 +296,9 @@ internal object VideoPlayerEngine {
 
     fun clearPlaybackQueue(token: VideoPlaybackControlToken) {
         checkMainThread()
-        if (playbackQueue?.token !== token) return
+        val queue = playbackQueue?.takeIf { it.token === token } ?: return
+        // 已装入 ExoPlayer 的列表不能只丢弃业务引用，否则播放器仍会按旧列表自动续播。
+        if (activeToken === token && queue.isLoaded) stopLoadedPlaylist()
         clearPlaylist()
         updateNotificationControls()
     }
@@ -631,6 +633,17 @@ internal object VideoPlayerEngine {
         currentPlayer()?.pauseAtEndOfMediaItems = false
     }
 
+    /** 停止并移除已装入 ExoPlayer 的整个列表，同步清空页面可观察到的播放状态。 */
+    private fun stopLoadedPlaylist() {
+        latestRequestId++
+        stopProgressPolling()
+        currentPlayer()?.run {
+            stop()
+            clearMediaItems()
+        }
+        _playbackState.value = _playbackState.value.resetPlaybackSession()
+    }
+
     /**
      * 根据前后台状态及当前队列索引更新通知控制快照。
      *
@@ -696,17 +709,22 @@ internal object VideoPlayerEngine {
         }
     }
 
-    /** 自动续播切项时播放器已进入新媒体，旧媒体保留最后一次进度；播完时补满进度。 */
+    /** 自动续播切项时播放器已进入新媒体，旧媒体保留最后一次进度；播完时标记完成。 */
     private fun rememberPlaybackProgress(media: VideoMedia, completed: Boolean) {
         val state = _playbackState.value
         if (!media.isSameSourceAs(state.media)) return
         val progress = state.progress
         savedProgresses.put(
             media.cacheKey(),
-            if (completed && progress.durationMs > 0L) {
+            if (completed) {
                 progress.copy(
-                    positionMs = progress.durationMs,
-                    bufferedPositionMs = maxOf(progress.bufferedPositionMs, progress.durationMs),
+                    positionMs = progress.durationMs.takeIf { it > 0L } ?: progress.positionMs,
+                    bufferedPositionMs = if (progress.durationMs > 0L) {
+                        maxOf(progress.bufferedPositionMs, progress.durationMs)
+                    } else {
+                        progress.bufferedPositionMs
+                    },
+                    completed = true,
                 )
             } else {
                 progress

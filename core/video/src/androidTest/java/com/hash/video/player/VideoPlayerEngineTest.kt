@@ -70,4 +70,30 @@ class VideoPlayerEngineTest {
             VideoPlayerEngine.release(application, token)
         }
     }
+
+    @Test
+    fun `已加载队列替换为单项队列时应清空旧列表`() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val application = instrumentation.targetContext.applicationContext as Application
+        val token = VideoPlaybackControlToken()
+        val first = VideoMedia("first", "https://example.com/first.mp4")
+        val second = VideoMedia("second", "https://example.com/second.mp4")
+        val only = VideoMedia("only", "https://example.com/only.mp4")
+
+        instrumentation.runOnMainSync {
+            VideoPlayerEngine.release(application)
+            VideoPlayerEngine.setPlaybackQueue(token, listOf(first, second))
+            VideoPlayerEngine.playQueueAt(application, token, 0, false, false)
+
+            VideoPlayerEngine.setPlaybackQueue(token, listOf(only))
+            assertEquals(null, VideoPlayerEngine.playbackState.value.media)
+
+            VideoPlayerEngine.playQueueAt(application, token, 0, false, false)
+            val state = VideoPlayerEngine.playbackState.value
+            assertEquals(only, state.media)
+            assertEquals(0, state.playlistIndex)
+            assertEquals(1, state.playlistSize)
+            VideoPlayerEngine.release(application, token)
+        }
+    }
 }

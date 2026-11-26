@@ -44,4 +44,17 @@ class VideoPlaybackProgressTest {
         assertEquals(0L, progress.forResume().positionMs)
         assertEquals(0L, progress.forResume().bufferedPositionMs)
     }
+
+    @Test
+    fun `时长未知但已完成的视频再次选择时应从头播放`() {
+        val progress = VideoPlaybackProgress(
+            positionMs = 600L,
+            bufferedPositionMs = 600L,
+            completed = true,
+        )
+
+        assertEquals(0L, progress.forResume().positionMs)
+        assertEquals(0L, progress.forResume().bufferedPositionMs)
+        assertFalse(progress.forResume().completed)
+    }
 }
