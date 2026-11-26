@@ -64,8 +64,8 @@ internal object VideoPlayerEngine {
     private var hasInstalledProcessObserver = false
     private var isAppInForeground = true
 
-    /** 每个视频最近一次切走的位置；重新点回同一条视频时从这里续播。 */
-    private val savedPositionsMs = mutableMapOf<String, Long>()
+    /** 每个视频最近一次的进度；用于续播和非当前卡片展示暂停进度。 */
+    private val savedProgresses = LruCache<String, VideoPlaybackProgress>(MAX_SAVED_PROGRESS_COUNT)
 
     /** 旧卡片的最后一帧缩略图，容量按像素内存限制，避免列表切换导致黑屏。 */
     private val pausedFrames = object : LruCache<String, Bitmap>(MAX_PAUSED_FRAME_BYTES) {
@@ -136,6 +136,15 @@ internal object VideoPlayerEngine {
             val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist ?: return
             val index = current.currentMediaItemIndex
             val media = activePlaylist.items.getOrNull(index) ?: return
+            _playbackState.value.media
+                ?.takeIf { !it.isSameSourceAs(media) }
+                ?.let { previousMedia ->
+                    // 媒体发生变化时，保留旧媒体的进度。
+                    rememberPlaybackProgress(
+                        media = previousMedia,
+                        completed = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO,
+                    )
+                }
             // 自动切项时，ExoPlayer 可能仍处于 READY/播放中，不一定会再派发一次状态变化。
             // 不能无条件写成 PREPARING，否则 UI 会持续显示 loading，而进度实际上仍在推进。
             val status = VideoPlaybackStatusMapper.from(current.playbackState, current.isPlaying)
@@ -204,22 +213,25 @@ internal object VideoPlayerEngine {
         if (command != VideoPlayCommand.NO_OP) {
             val requestId = ++latestRequestId
             val previousMedia = _playbackState.value.media
+            if (command == VideoPlayCommand.REPLACE) {
+                // 替换播放源前，保存旧媒体进度并按需抓取最后一帧。
+                rememberPlaybackOf(
+                    media = previousMedia,
+                    player = current,
+                    captureFrame = previousMedia?.cacheKey() != transferredFrameMediaKey,
+                )
+            }
             if (command == VideoPlayCommand.REPLACE || command == VideoPlayCommand.REPLAY) {
+                val resumedProgress = progressFor(media)?.forResume()
                 _playbackState.value = _playbackState.value.replaceMedia(
                     media = media,
                     status = VideoPlaybackStatus.PREPARING,
-                )
+                ).copy(progress = resumedProgress ?: VideoPlaybackProgress())
             }
             if (requestId == latestRequestId) {
                 when (command) {
                     VideoPlayCommand.REPLACE -> current.run {
-                        //记住上月媒体进度
-                        rememberPlaybackOf(
-                            previousMedia,
-                            this,
-                            captureFrame = previousMedia?.cacheKey() != transferredFrameMediaKey,
-                        )
-                        val startPositionMs = savedPositionsMs[media.cacheKey()].orEmptyPosition()
+                        val startPositionMs = progressFor(media)?.forResume()?.resumePositionMs() ?: 0L
                         val mediaItem = VideoMediaItemFactory.create(media, includeArtwork = showNotificationArtwork)
                         val sourceFactory = DefaultMediaSourceFactory(
                             VideoCacheProvider.getDataSourceFactory(application, media.headers),
@@ -416,7 +428,7 @@ internal object VideoPlayerEngine {
         renderCoordinator?.clear()
         renderCoordinator = null
         _playbackState.value = _playbackState.value.resetPlaybackSession()
-        savedPositionsMs.clear()
+        savedProgresses.evictAll()
         pausedFrames.evictAll()
         activeToken = null
         clearPlaylist()
@@ -437,15 +449,14 @@ internal object VideoPlayerEngine {
         val positionMs = player.currentPosition.coerceAtLeast(0L)
         val bufferedPositionMs = player.bufferedPosition.coerceAtLeast(0L)
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0L } ?: 0L
-        _playbackState.value = _playbackState.value.copy(
-            progress = VideoPlaybackProgress(
-                positionMs = positionMs,
-                bufferedPositionMs = bufferedPositionMs,
-                durationMs = duration,
-            ),
+        val progress = VideoPlaybackProgress(
+            positionMs = positionMs,
+            bufferedPositionMs = bufferedPositionMs,
+            durationMs = duration,
         )
+        _playbackState.value = _playbackState.value.copy(progress = progress)
         _playbackState.value.media?.let { media ->
-            savedPositionsMs[media.cacheKey()] = positionMs
+            savedProgresses.put(media.cacheKey(), progress)
         }
     }
 
@@ -503,6 +514,7 @@ internal object VideoPlayerEngine {
         val current = get(application)
         if (!queue.isLoaded) {
             val previousMedia = _playbackState.value.media
+            val resumedProgress = progressFor(activePlaylist.items[index])?.forResume()
             //记住上一个视频的位置和播放帧
             rememberPlaybackOf(previousMedia, current, captureFrame = true)
             //更新状态为准备播放
@@ -511,14 +523,14 @@ internal object VideoPlayerEngine {
                 status = VideoPlaybackStatus.PREPARING,
                 playlistIndex = index,
                 playlistSize = activePlaylist.items.size,
-            )
+            ).copy(progress = resumedProgress ?: VideoPlaybackProgress())
             //设置播放列表
             current.setMediaSources(
                 activePlaylist.items.map { media ->
                     createMediaSource(application, media, showNotificationArtwork)
                 },
                 index,
-                savedPositionsMs[activePlaylist.items[index].cacheKey()].orEmptyPosition(),
+                resumedProgress?.resumePositionMs() ?: 0L,
             )
             queue.isLoaded = true
             // 队列由 ExoPlayer 自动续播；页面只根据新的 playlistIndex 迁移画面宿主。
@@ -537,8 +549,10 @@ internal object VideoPlayerEngine {
                 VideoPlayCommand.RESUME -> current.play()
                 VideoPlayCommand.REPLAY -> current.run { seekTo(index, 0L); play() }
                 VideoPlayCommand.REPLACE -> {
-                    current.seekTo(index, savedPositionsMs[activePlaylist.items[index].cacheKey()]
-                        .orEmptyPosition())
+                    current.seekTo(
+                        index,
+                        progressFor(activePlaylist.items[index])?.forResume()?.resumePositionMs() ?: 0L,
+                    )
                     current.prepare()
                     current.play()
                 }
@@ -552,14 +566,15 @@ internal object VideoPlayerEngine {
         val activePlaylist = playbackQueue?.takeIf { it.isLoaded }?.playlist ?: return
         val target = activePlaylist.items.getOrNull(index) ?: return
         rememberPlaybackOf(_playbackState.value.media, current, captureFrame = true)
+        val resumedProgress = progressFor(target)?.forResume()
         //更新播放前状态
         _playbackState.value = _playbackState.value.replaceMedia(
             media = target,
             status = VideoPlaybackStatus.PREPARING,
             playlistIndex = index,
             playlistSize = activePlaylist.items.size,
-        )
-        current.seekTo(index, savedPositionsMs[target.cacheKey()].orEmptyPosition())
+        ).copy(progress = resumedProgress ?: VideoPlaybackProgress())
+        current.seekTo(index, resumedProgress?.resumePositionMs() ?: 0L)
         // 播放失败后 ExoPlayer 会停在 ERROR/IDLE；仅 seekTo + play 无法重新加载目标媒体。
         if (current.playbackState == Player.STATE_IDLE || current.playerError != null) {
             current.prepare()
@@ -647,6 +662,12 @@ internal object VideoPlayerEngine {
         return pausedFrames.get(media.cacheKey())
     }
 
+    /** 提供给非当前列表卡片展示暂停进度。 */
+    fun progressFor(media: VideoMedia): VideoPlaybackProgress? {
+        checkMainThread()
+        return savedProgresses.get(media.cacheKey())
+    }
+
     private fun syncNotificationSession(application: Application, showNotification: Boolean) {
         if (showNotification) {
             HashVideoPlaybackService.ensureSession(application)
@@ -666,7 +687,8 @@ internal object VideoPlayerEngine {
      */
     private fun rememberPlaybackOf(media: VideoMedia?, player: ExoPlayer, captureFrame: Boolean) {
         media ?: return
-        savedPositionsMs[media.cacheKey()] = player.currentPosition.coerceAtLeast(0L)
+        val positionMs = player.currentPosition.coerceAtLeast(0L)
+        savedProgresses.put(media.cacheKey(), progressOf(player, positionMs))
         if (captureFrame) {
             renderCoordinator?.captureFrame()?.let { frame ->
                 pausedFrames.put(media.cacheKey(), frame)
@@ -674,9 +696,33 @@ internal object VideoPlayerEngine {
         }
     }
 
-    private fun VideoMedia.cacheKey(): String = VideoCacheKeyFactory.create(this)
+    /** 自动续播切项时播放器已进入新媒体，旧媒体保留最后一次进度；播完时补满进度。 */
+    private fun rememberPlaybackProgress(media: VideoMedia, completed: Boolean) {
+        val state = _playbackState.value
+        if (!media.isSameSourceAs(state.media)) return
+        val progress = state.progress
+        savedProgresses.put(
+            media.cacheKey(),
+            if (completed && progress.durationMs > 0L) {
+                progress.copy(
+                    positionMs = progress.durationMs,
+                    bufferedPositionMs = maxOf(progress.bufferedPositionMs, progress.durationMs),
+                )
+            } else {
+                progress
+            },
+        )
+    }
 
-    private fun Long?.orEmptyPosition(): Long = this?.coerceAtLeast(0L) ?: 0L
+    private fun progressOf(player: Player, positionMs: Long): VideoPlaybackProgress =
+        VideoPlaybackProgress(
+            positionMs = positionMs,
+            bufferedPositionMs = player.bufferedPosition.coerceAtLeast(positionMs),
+            durationMs = player.duration.takeIf { it != C.TIME_UNSET && it > 0L }
+                ?: _playbackState.value.progress.durationMs,
+        )
+
+    private fun VideoMedia.cacheKey(): String = VideoCacheKeyFactory.create(this)
 
     /** 一个页面预配置的可选后台队列，以及它是否已实际装载进唯一播放器。 */
     private data class PlaybackQueueSession(
@@ -688,4 +734,5 @@ internal object VideoPlayerEngine {
     private const val NOTIFICATION_SEEK_INCREMENT_MS = 15_000L
     private const val PROGRESS_UPDATE_INTERVAL_MS = 500L
     private const val MAX_PAUSED_FRAME_BYTES = 12 * 1024 * 1024
+    private const val MAX_SAVED_PROGRESS_COUNT = 32
 }

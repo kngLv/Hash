@@ -24,6 +24,17 @@ data class VideoPlaybackProgress(
     fun isNear(positionMs: Long, toleranceMs: Long): Boolean =
         toleranceMs >= 0L && abs(this.positionMs - positionMs) <= toleranceMs
 
+    /** 用于继续播放的进度；已播完时从头重新开始。 */
+    fun forResume(): VideoPlaybackProgress =
+        if (durationMs in 1L..positionMs) {
+            copy(positionMs = 0L, bufferedPositionMs = 0L)
+        } else {
+            this
+        }
+
+    /** 用于播放器 seek 的位置，确保不为负数。 */
+    fun resumePositionMs(): Long = positionMs.coerceAtLeast(0L)
+
     private fun Long.toFraction(): Float = if (isAvailable) {
         (toFloat() / durationMs).coerceIn(0f, 1f)
     } else {

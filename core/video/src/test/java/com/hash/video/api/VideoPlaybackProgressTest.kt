@@ -20,4 +20,28 @@ class VideoPlaybackProgressTest {
         assertTrue(progress.isAvailable)
         assertFalse(VideoPlaybackProgress().isAvailable)
     }
+
+    @Test
+    fun `未播完的视频应从缓存位置继续播放`() {
+        val progress = VideoPlaybackProgress(
+            positionMs = 600L,
+            bufferedPositionMs = 800L,
+            durationMs = 1_000L,
+        )
+
+        assertEquals(progress, progress.forResume())
+        assertEquals(600L, progress.forResume().resumePositionMs())
+    }
+
+    @Test
+    fun `已播完的视频再次选择时应从头播放`() {
+        val progress = VideoPlaybackProgress(
+            positionMs = 1_000L,
+            bufferedPositionMs = 1_000L,
+            durationMs = 1_000L,
+        )
+
+        assertEquals(0L, progress.forResume().positionMs)
+        assertEquals(0L, progress.forResume().bufferedPositionMs)
+    }
 }

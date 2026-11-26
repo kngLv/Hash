@@ -71,4 +71,7 @@ internal class VideoController(context: Context) {
     @MainThread
     internal fun pausedFrameFor(media: VideoMedia): Bitmap? = VideoPlayerEngine.pausedFrameFor(media)
 
+    @MainThread
+    internal fun progressFor(media: VideoMedia) = VideoPlayerEngine.progressFor(media)
+
 }

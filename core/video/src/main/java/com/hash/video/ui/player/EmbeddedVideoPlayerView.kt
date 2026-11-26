@@ -8,6 +8,7 @@ import androidx.media3.common.util.UnstableApi
 import com.hash.video.api.VideoMedia
 import com.hash.video.api.VideoPlaybackState
 import com.hash.video.api.VideoPlaybackStatus
+import com.hash.video.api.isLoading
 import com.hash.video.api.isSameSourceAs
 import com.hash.video.ui.panel.EmbeddedVideoControlPanel
 import com.hash.video.ui.gesture.VideoGestureConfig
@@ -57,6 +58,13 @@ open class EmbeddedVideoPlayerView @JvmOverloads constructor(
                 showPosterFrame(frame)
             } ?: showPosterCover()
             return
+        }
+        // 切回已播放过的视频时，准备阶段继续显示上次暂停帧和进度，避免短暂黑屏或退回封面。
+        if (state.status.isLoading) {
+            pausedFrameFor(boundMedia)?.let {
+                showPosterFrame(it)
+                return
+            }
         }
         when (state.status) {
             VideoPlaybackStatus.PLAYING,

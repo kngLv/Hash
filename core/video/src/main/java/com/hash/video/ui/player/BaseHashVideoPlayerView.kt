@@ -305,7 +305,14 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
         val displayedState = if (media?.isSameSourceAs(state.media) == true) {
             state
         } else {
-            VideoPlaybackState(status = VideoPlaybackStatus.IDLE)
+            // 当前卡片不是正在播放的媒体时，使用本卡片缓存的进度合成暂停展示状态。
+            // 没有播放过、没有缓存进度的卡片保持 IDLE。
+            media?.let(controller::progressFor)?.let { progress ->
+                VideoPlaybackState(
+                    status = VideoPlaybackStatus.PAUSED,
+                    progress = progress,
+                )
+            } ?: VideoPlaybackState(status = VideoPlaybackStatus.IDLE)
         }
         if (displayedState == lastRenderedPlaybackState) return
         lastRenderedPlaybackState = displayedState
@@ -324,10 +331,21 @@ abstract class BaseHashVideoPlayerView @JvmOverloads constructor(
     /** 暂停或播完后迁移画面时，优先显示保存的静态帧。 */
     private fun showTransferredFrameIfNeeded() {
         val boundMedia = media ?: return
-        val state = currentPlaybackState
-        if (
-            boundMedia.isSameSourceAs(state.media) &&
-            (state.status == VideoPlaybackStatus.PAUSED || state.status == VideoPlaybackStatus.ENDED)
+        val currentState = currentPlaybackState
+        val displayedState = if (boundMedia.isSameSourceAs(currentState.media)) {
+            currentState
+        } else {
+            // attachRender 可能先于 ExoPlayer 切换播放源：此时当前卡片已接管画面，但播放器
+            // 仍在输出上一条视频。优先使用本卡片缓存的进度和暂停帧，避免旧视频短暂串到新卡片。
+            controller.progressFor(boundMedia)?.let { progress ->
+                VideoPlaybackState(
+                    status = VideoPlaybackStatus.PAUSED,
+                    progress = progress,
+                )
+            }
+        }
+        if (displayedState?.status == VideoPlaybackStatus.PAUSED ||
+            displayedState?.status == VideoPlaybackStatus.ENDED
         ) {
             pausedFrameFor(boundMedia)?.let(::showTransferredFrame)
         }
