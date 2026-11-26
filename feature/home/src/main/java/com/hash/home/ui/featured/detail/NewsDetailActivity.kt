@@ -154,8 +154,6 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     override fun onNewIntent(intent: Intent) {
         val previousNewsId = newsId
         super.onNewIntent(intent)
-        // Activity 被通知 PendingIntent 复用时，后续读取的新闻参数必须来自最新 Intent。
-        setIntent(intent)
         resolveOverlayForDetail()
         if (newsId != previousNewsId) {
             viewModel.load(newsId)
@@ -313,7 +311,12 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
         var nextIndex = 0
         return map { item ->
             if (item is NewsDetailPageItem.Video) {
-                item.copy(playlistIndex = nextIndex++, contentKey = newsId)
+                item.copy(
+                    playlistIndex = nextIndex++,
+                    contentKey = newsId,
+                    title = newsTitle,
+                    subtitle = newsSource,
+                )
             } else {
                 item
             }
@@ -323,10 +326,12 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     private fun NewsDetailPageItem.Video.toVideoMedia(): VideoMedia = VideoMedia(
         id = videoUrl,
         url = videoUrl,
+        title = this.title,
         coverUrl = coverUrl.ifBlank { null },
         coverWidth = coverWidth,
         coverHeight = coverHeight,
         contentKey = this.contentKey,
+        subtitle = this.subtitle,
     )
 
     /** 打开详情时按业务内容标识决定接管当前悬浮窗，或结束旧的播放。 */

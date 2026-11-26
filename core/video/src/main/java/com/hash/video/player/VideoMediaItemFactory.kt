@@ -18,7 +18,9 @@ internal object VideoMediaItemFactory {
         .setCustomCacheKey(VideoCacheKeyFactory.create(media))
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(media.title)
+                .setTitle(media.title.takeIf(String::isNotBlank))
+                .setArtist(media.subtitle.takeIf(String::isNotBlank))
+                .setDescription(media.subtitle.takeIf(String::isNotBlank))
                 .setArtworkUri(media.coverUrl?.takeIf { includeArtwork }?.let(Uri::parse))
                 .build(),
         )

@@ -5,6 +5,8 @@ internal data class VideoNotificationControls(
     val isAppInForeground: Boolean = true,
     val hasPrevious: Boolean = false,
     val hasNext: Boolean = false,
+    /** 仅用于通知控制器刷新；相同按钮状态也需要在播放器就绪后重新下发可用命令。 */
+    val revision: Long = 0L,
 ) {
     val usesPlaylistNavigation: Boolean
         get() = !isAppInForeground

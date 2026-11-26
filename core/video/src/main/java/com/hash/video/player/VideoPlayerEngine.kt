@@ -76,6 +76,7 @@ internal object VideoPlayerEngine {
 
     private val _notificationControls = MutableStateFlow(VideoNotificationControls())
     val notificationControls: StateFlow<VideoNotificationControls> = _notificationControls.asStateFlow()
+    private var notificationControlsRevision = 0L
 
     /** 用于丢弃过期的播放请求。 */
     private var latestRequestId = 0L
@@ -157,7 +158,7 @@ internal object VideoPlayerEngine {
         showNotificationArtwork: Boolean,
     ) {
         checkMainThread()
-        installProcessObserverIfNeeded()
+        markForegroundPlaybackRequest()
         //匹配当前队列中是否存在该视频，若存在则直接播放队列中的视频
         val matchingPlaylistIndex = playbackQueue
             ?.takeIf { it.token === token }
@@ -252,6 +253,7 @@ internal object VideoPlayerEngine {
         showNotificationArtwork: Boolean,
     ) {
         checkMainThread()
+        markForegroundPlaybackRequest()
         val queue = playbackQueue?.takeIf { it.token === token } ?: return
         if (index !in queue.playlist.items.indices) return
         playPlaylistIndex(application, token, index, showNotificationArtwork)
@@ -446,6 +448,8 @@ internal object VideoPlayerEngine {
     private fun syncPlaybackSnapshot(player: Player) {
         updateState(VideoPlaybackStatusMapper.from(player.playbackState, player.isPlaying))
         syncProgressPolling(player)
+        // 首次创建通知时播放器可能还未提供 seek 命令；状态变化后必须重新下发控制能力。
+        updateNotificationControls(player)
     }
 
     /** 立即刷新进度，并按需管理 500ms 轮询。 */
@@ -596,6 +600,12 @@ internal object VideoPlayerEngine {
         })
     }
 
+    /** 页面主动点击播放时立即使用前台通知按钮，避免首次创建会话时沿用旧的后台快照。 */
+    private fun markForegroundPlaybackRequest() {
+        installProcessObserverIfNeeded()
+        isAppInForeground = true
+    }
+
     private fun clearPlaylist() {
         playbackQueue = null
         currentPlayer()?.pauseAtEndOfMediaItems = false
@@ -612,6 +622,7 @@ internal object VideoPlayerEngine {
         if (activePlaylist == null) {
             _notificationControls.value = VideoNotificationControls(
                 isAppInForeground = isAppInForeground,
+                revision = ++notificationControlsRevision,
             )
             return
         }
@@ -621,6 +632,7 @@ internal object VideoPlayerEngine {
             isAppInForeground = isAppInForeground,
             hasPrevious = index != null && index > 0 && count > 1,
             hasNext = index != null && index >= 0 && index < count - 1,
+            revision = ++notificationControlsRevision,
         )
     }
 

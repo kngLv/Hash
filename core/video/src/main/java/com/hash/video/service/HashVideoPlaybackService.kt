@@ -166,18 +166,18 @@ class HashVideoPlaybackService : MediaSessionService() {
         controls: VideoNotificationControls,
     ): List<CommandButton> = buildList {
         if (controls.usesPlaylistNavigation) {
-            if (controls.shouldShowPrevious) {
+            // 系统媒体卡片以 seekToPrevious/seekToNext 渲染上一条/下一条；队列可导航时
+            // 同时提供这两个按钮，首项的上一条按平台语义从当前视频开头重播。
+            if (controls.shouldShowPrevious || controls.shouldShowNext) {
                 add(
                     CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-                        .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                        .setPlayerCommand(Player.COMMAND_SEEK_TO_PREVIOUS)
                         .setDisplayName(getString(R.string.video_previous))
                         .build(),
                 )
-            }
-            if (controls.shouldShowNext) {
                 add(
                     CommandButton.Builder(CommandButton.ICON_NEXT)
-                        .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                        .setPlayerCommand(Player.COMMAND_SEEK_TO_NEXT)
                         .setDisplayName(getString(R.string.video_next))
                         .build(),
                 )
@@ -208,8 +208,20 @@ class HashVideoPlaybackService : MediaSessionService() {
     /** 只限制通知控制器，不影响页面内播放器和其他外部控制器。 */
     private fun notificationPlayerCommands(controls: VideoNotificationControls): Player.Commands =
         mediaSession.player.availableCommands.buildUpon().apply {
-            if (!controls.shouldShowPrevious) remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-            if (!controls.shouldShowNext) remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+            // 通知只使用泛化的上一条/下一条命令，避免不同 ROM 在两套导航命令间选择不一致。
+            remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+            if (controls.usesPlaylistNavigation) {
+                remove(Player.COMMAND_SEEK_BACK)
+                remove(Player.COMMAND_SEEK_FORWARD)
+                if (!controls.shouldShowPrevious && !controls.shouldShowNext) {
+                    remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    remove(Player.COMMAND_SEEK_TO_NEXT)
+                }
+            } else {
+                remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                remove(Player.COMMAND_SEEK_TO_NEXT)
+            }
         }.build()
 
     companion object {

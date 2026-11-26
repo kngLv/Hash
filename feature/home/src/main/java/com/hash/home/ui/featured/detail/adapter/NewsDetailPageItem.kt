@@ -16,6 +16,10 @@ sealed interface NewsDetailPageItem {
         val playlistIndex: Int? = null,
         /** 所属详情的业务标识，透传给 [com.hash.video.api.VideoMedia]。 */
         val contentKey: String? = null,
+        /** 最终展示的视频标题，透传给播放器与系统媒体通知。 */
+        val title: String = "",
+        /** 最终展示的视频补充信息，透传给系统媒体通知的第二行。 */
+        val subtitle: String = "",
     ) : NewsDetailPageItem
     data object Empty : NewsDetailPageItem
 }

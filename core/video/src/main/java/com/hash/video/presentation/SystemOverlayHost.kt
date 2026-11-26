@@ -39,9 +39,6 @@ object SystemOverlayHost {
     /** 返回应用时打开当前播放详情页的目标。 */
     private var restoreIntent: PendingIntent? = null
 
-    /** 用户已点击返回应用，等待详情页列表就绪后再迁回画面。 */
-    private var restoreRequested = false
-
     /** 仅用于关闭悬浮窗时释放悬浮窗操作凭证的播放会话。 */
     private var application: Application? = null
 
@@ -124,7 +121,6 @@ object SystemOverlayHost {
         root?.detachRender()
         if (!VideoPlayerEngine.restoreSystemOverlay(currentSession, targetToken)) return false
         removeViewOnly()
-        restoreRequested = false
         return true
     }
 
@@ -140,8 +136,7 @@ object SystemOverlayHost {
     /** 保留悬浮窗画面，等待目标详情页创建并主动接管。 */
     private fun requestRestore() {
         val intent = restoreIntent ?: return
-        restoreRequested = true
-        runCatching { intent.send() }.onFailure { restoreRequested = false }
+        runCatching { intent.send() }
     }
 
     /** 仅移除系统窗口，不停止播放器；恢复详情时仍需继续播放。 */

@@ -12,6 +12,8 @@ data class VideoMedia(
     val coverHeight: Int? = null,
     /** 所属业务内容的透传标识；视频模块不参与解释或使用。 */
     val contentKey: String? = null,
+    /** 媒体的补充描述，可用于系统媒体通知的第二行。 */
+    val subtitle: String = "",
 ) {
     /** 宽高均为有效正数时，表示业务已明确指定封面比例。 */
     fun hasValidCoverSize(): Boolean = (coverWidth ?: 0) > 0 && (coverHeight ?: 0) > 0

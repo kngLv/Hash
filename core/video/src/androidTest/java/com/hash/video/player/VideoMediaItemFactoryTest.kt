@@ -16,6 +16,7 @@ class VideoMediaItemFactoryTest {
             id = "news-1",
             url = "https://example.com/news-1.mp4",
             title = "新闻视频",
+            subtitle = "新闻来源",
             coverUrl = "https://example.com/cover.jpg",
             headers = mapOf("Authorization" to "token"),
         )
@@ -25,6 +26,8 @@ class VideoMediaItemFactoryTest {
         assertEquals(media.id, mediaItem.mediaId)
         assertEquals(media.url, mediaItem.localConfiguration?.uri.toString())
         assertEquals(media.title, mediaItem.mediaMetadata.title)
+        assertEquals(media.subtitle, mediaItem.mediaMetadata.artist)
+        assertEquals(media.subtitle, mediaItem.mediaMetadata.description)
         assertEquals(media.coverUrl, mediaItem.mediaMetadata.artworkUri.toString())
         assertEquals(VideoCacheKeyFactory.create(media), mediaItem.localConfiguration?.customCacheKey)
     }

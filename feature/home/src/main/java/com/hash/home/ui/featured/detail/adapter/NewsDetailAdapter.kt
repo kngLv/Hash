@@ -181,10 +181,12 @@ class NewsDetailAdapter(
             val media = VideoMedia(
                 id = item.videoUrl,
                 url = item.videoUrl,
+                title = item.title,
                 coverUrl = item.coverUrl.ifBlank { null },
                 coverWidth = item.coverWidth,
                 coverHeight = item.coverHeight,
                 contentKey = item.contentKey,
+                subtitle = item.subtitle,
             )
             videoPlayer.setMedia(media)
             videoPlayer.playbackToken = playbackToken
