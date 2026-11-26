@@ -154,6 +154,8 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     override fun onNewIntent(intent: Intent) {
         val previousNewsId = newsId
         super.onNewIntent(intent)
+        // singleTop 复用页面时，通知点击目标也必须切换到新的详情内容。
+        setVideoNotificationActivity()
         resolveOverlayForDetail()
         if (newsId != previousNewsId) {
             viewModel.load(newsId)
@@ -207,7 +209,11 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
             )
             detailAdapter.submitList(playlistItems) {
                 videoPresentationCoordinator.onAdapterListCommitted()
-                if (shouldRestoreOverlay && VideoSystemOverlay.restoreIfRequested(videoPlaybackToken)) {
+                if (
+                    shouldRestoreOverlay && VideoSystemOverlay.restoreIfMatches(videoPlaybackToken) {
+                        it.contentKey == newsId
+                    }
+                ) {
                     videoPresentationCoordinator.presentCurrentPlaybackHost()
                 }
             }
@@ -257,6 +263,7 @@ open class NewsDetailActivity : BaseBindingActivity<ActivityNewsDetailBinding>()
     private fun startOverlayPlayback(onShown: () -> Unit) {
         when (VideoSystemOverlay.enter(this, videoPlaybackToken, createNotificationPendingIntent())) {
             VideoOverlayResult.SHOWN -> onShown()
+            VideoOverlayResult.ALREADY_SHOWN -> Unit
             VideoOverlayResult.PERMISSION_REQUIRED -> startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
             else -> getString(R.string.news_detail_float_unavailable).showToast()
         }

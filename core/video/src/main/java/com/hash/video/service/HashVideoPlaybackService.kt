@@ -41,6 +41,8 @@ class HashVideoPlaybackService : MediaSessionService() {
     private lateinit var mediaSession: MediaSession
     private var sessionReleased = false
     private var notificationSessionCommands: SessionCommands? = null
+    /** 已完成连接的系统通知控制器；前后台切换时用它稳定更新命令。 */
+    private var notificationController: MediaSession.ControllerInfo? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val notificationControlScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -66,6 +68,35 @@ class HashVideoPlaybackService : MediaSessionService() {
                 sessionCommands,
             )
             return resultBuilder.build()
+        }
+
+        /**
+         * 通知控制器已真正连接后，再下发一次当前按钮及命令。
+         *
+         * onConnect 时控制器尚未完成连接，针对该控制器的动态更新可能被 Media3 忽略；这里
+         * 保证前后台切换前已有的控制快照也能实际同步到系统媒体通知。
+         */
+        override fun onPostConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ) {
+            if (session.isMediaNotificationController(controller)) {
+                notificationController = controller
+                notificationSessionCommands?.let { sessionCommands ->
+                    applyNotificationControls(
+                        controller = controller,
+                        sessionCommands = sessionCommands,
+                        controls = VideoPlayerEngine.notificationControls.value,
+                    )
+                }
+            }
+        }
+
+        override fun onDisconnected(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ) {
+            if (notificationController == controller) notificationController = null
         }
 
         override fun onCustomCommand(
@@ -101,22 +132,13 @@ class HashVideoPlaybackService : MediaSessionService() {
         notificationControlScope.launch {
             VideoPlayerEngine.notificationControls.collect { controls ->
                 if (!sessionReleased) {
-                    mediaSession.setMediaButtonPreferences(notificationMediaButtonPreferences(controls))
-                    mediaSession.getMediaNotificationControllerInfo()?.let { controller ->
+                    (notificationController ?: mediaSession.getMediaNotificationControllerInfo())?.let { controller ->
                         notificationSessionCommands?.let { sessionCommands ->
-                            // 通知控制器必须同时收紧可用播放器命令；仅更新按钮偏好在部分系统上
-                            // 仍会保留 ExoPlayer 默认的“上一条”，首项点击后便会重播当前媒体。
-                            mediaSession.setAvailableCommands(
-                                controller,
-                                sessionCommands,
-                                notificationPlayerCommands(controls),
-                            )
-                            mediaSession.setMediaButtonPreferences(
-                                controller,
-                                notificationMediaButtonPreferences(controls),
-                            )
+                            applyNotificationControls(controller, sessionCommands, controls)
                         }
-                    }
+                    } ?: mediaSession.setMediaButtonPreferences(
+                        notificationMediaButtonPreferences(controls),
+                    )
                 }
             }
         }
@@ -223,6 +245,25 @@ class HashVideoPlaybackService : MediaSessionService() {
                 remove(Player.COMMAND_SEEK_TO_NEXT)
             }
         }.build()
+
+    /** 同步同一份通知快照，避免按钮偏好和控制器可用命令出现不同步。 */
+    private fun applyNotificationControls(
+        controller: MediaSession.ControllerInfo,
+        sessionCommands: SessionCommands,
+        controls: VideoNotificationControls,
+    ) {
+        // 通知控制器必须同时收紧可用播放器命令；仅更新按钮偏好在部分系统上仍会保留
+        // ExoPlayer 默认的“上一条”，首项点击后便会重播当前媒体。
+        mediaSession.setAvailableCommands(
+            controller,
+            sessionCommands,
+            notificationPlayerCommands(controls),
+        )
+        mediaSession.setMediaButtonPreferences(
+            controller,
+            notificationMediaButtonPreferences(controls),
+        )
+    }
 
     companion object {
         private const val LOG_TAG = "HashVideoLifecycle"

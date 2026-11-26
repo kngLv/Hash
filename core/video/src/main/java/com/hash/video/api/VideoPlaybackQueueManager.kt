@@ -2,7 +2,6 @@ package com.hash.video.api
 
 import android.app.Application
 import android.content.Context
-import com.hash.video.player.VideoController
 import com.hash.video.player.VideoPlaybackControlToken
 import com.hash.video.player.VideoPlayerEngine
 import kotlinx.coroutines.flow.StateFlow
@@ -26,8 +25,18 @@ object VideoPlaybackQueueManager {
     fun clearPlaybackQueue(token: VideoPlaybackControlToken) = VideoPlayerEngine.clearPlaybackQueue(token)
 
     /** 播放队列中 [index] 对应的视频，并将它设为当前播放项。 */
-    fun playQueueAt(context: Context, token: VideoPlaybackControlToken, index: Int) =
-        VideoPlayerEngine.playQueueAt(app(context), token, index, true, true)
+    fun playQueueAt(
+        context: Context,
+        token: VideoPlaybackControlToken,
+        index: Int,
+        options: VideoQueuePlaybackOptions = VideoQueuePlaybackOptions(),
+    ) = VideoPlayerEngine.playQueueAt(
+        application = app(context),
+        token = token,
+        index = index,
+        showNotification = options.showNotification,
+        showNotificationArtwork = options.showNotificationArtwork,
+    )
 
     /** 多播放器页面销毁时释放 [token] 的队列播放会话。 */
     fun release(context: Context, token: VideoPlaybackControlToken) =

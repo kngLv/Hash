@@ -66,7 +66,7 @@ object SystemOverlayHost {
         sourceToken: VideoPlaybackControlToken,
         returnIntent: PendingIntent?,
     ): VideoOverlayResult {
-        if (root != null) return VideoOverlayResult.SHOWN
+        if (root != null) return VideoOverlayResult.ALREADY_SHOWN
         if (!canDraw(application)) return VideoOverlayResult.PERMISSION_REQUIRED
         val currentMedia =
             VideoPlayerEngine.playbackState.value.media ?: return VideoOverlayResult.NO_ACTIVE_MEDIA
@@ -114,10 +114,15 @@ object SystemOverlayHost {
         }
     }
 
-    /** 页面数据加载完成后调用；有悬浮窗会话时将播放画面交回该页面。 */
+    /** 页面数据加载完成后调用；仅媒体匹配时将悬浮窗播放画面交回该页面。 */
     @MainThread
-    fun restoreTo(targetToken: VideoPlaybackControlToken): Boolean {
+    fun restoreTo(
+        targetToken: VideoPlaybackControlToken,
+        matches: (VideoMedia) -> Boolean,
+    ): Boolean {
         val currentSession = session ?: return false
+        val currentMedia = VideoPlayerEngine.playbackState.value.media ?: return false
+        if (!matches(currentMedia)) return false
         root?.detachRender()
         if (!VideoPlayerEngine.restoreSystemOverlay(currentSession, targetToken)) return false
         removeViewOnly()

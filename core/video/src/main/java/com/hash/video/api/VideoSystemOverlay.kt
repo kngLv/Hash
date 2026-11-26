@@ -18,8 +18,15 @@ object VideoSystemOverlay {
     fun enter(context: Context, token: VideoPlaybackControlToken, returnIntent: PendingIntent?) =
         SystemOverlayHost.enter(context.applicationContext as Application, token, returnIntent)
 
-    /** 页面重新出现时，如有待恢复的悬浮窗播放则转交回 [token]。 */
-    fun restoreIfRequested(token: VideoPlaybackControlToken): Boolean = SystemOverlayHost.restoreTo(token)
+    /**
+     * 页面重新出现时，仅当当前悬浮窗媒体满足 [matches] 时才将播放会话转交回 [token]。
+     *
+     * 调用方应以自己的内容标识判断，避免错误接管其他页面的悬浮窗播放。
+     */
+    fun restoreIfMatches(
+        token: VideoPlaybackControlToken,
+        matches: (VideoMedia) -> Boolean,
+    ): Boolean = SystemOverlayHost.restoreTo(token, matches)
 
     /** 关闭当前系统悬浮窗，并结束其播放会话。 */
     fun close() = SystemOverlayHost.close()

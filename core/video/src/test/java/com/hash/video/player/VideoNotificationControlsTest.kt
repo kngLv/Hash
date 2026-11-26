@@ -23,7 +23,7 @@ class VideoNotificationControlsTest {
     }
 
     @Test
-    fun `后台首项仅显示下一条`() {
+    fun `后台首项没有上一媒体但存在下一媒体`() {
         val controls = VideoNotificationControls(isAppInForeground = false, hasNext = true)
 
         assertFalse(controls.shouldShowPrevious)

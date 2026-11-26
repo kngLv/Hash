@@ -4,6 +4,8 @@ package com.hash.video.api
 enum class VideoOverlayResult {
     /** 悬浮窗已成功显示并接管当前播放会话。 */
     SHOWN,
+    /** 已有其他播放会话正在使用悬浮窗，本次请求未接管也不应关闭当前页面。 */
+    ALREADY_SHOWN,
     /** 未获得“显示在其他应用上层”权限，调用方可引导用户授权。 */
     PERMISSION_REQUIRED,
     /** 当前没有可迁移到悬浮窗的播放媒体。 */
