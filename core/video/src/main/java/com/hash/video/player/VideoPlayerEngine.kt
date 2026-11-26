@@ -412,10 +412,19 @@ internal object VideoPlayerEngine {
         }
     }
 
-    /** 仅允许当前悬浮窗凭证将会话交回目标页面凭证。 */
-    fun restoreSystemOverlay(session: VideoOverlaySession, targetToken: VideoPlaybackControlToken): Boolean {
+    /**
+     * 将悬浮窗会话交回页面：先由悬浮窗凭证摘除唯一渲染 View，再转交页面凭证。
+     *
+     * 两步必须在同一处完成，避免页面凭证已生效后，悬浮窗因旧凭证无法解除渲染容器。
+     */
+    fun restoreSystemOverlay(
+        session: VideoOverlaySession,
+        targetToken: VideoPlaybackControlToken,
+        overlayContainer: ViewGroup,
+    ): Boolean {
         checkMainThread()
         if (activeToken !== session.token) return false
+        renderCoordinator?.detachFrom(overlayContainer)
         activeToken = targetToken
         playbackQueue?.takeIf { it.token === session.token }?.token = targetToken
         return true

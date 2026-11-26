@@ -12,6 +12,7 @@ internal class OverlayWindowPositionController(
     windowManager: WindowManager,
     view: View,
     private val params: WindowManager.LayoutParams,
+    private val onWindowError: (Throwable) -> Unit,
 ) {
     private var windowManager: WindowManager? = windowManager
     private var viewRef: WeakReference<View>? = WeakReference(view)
@@ -70,7 +71,11 @@ internal class OverlayWindowPositionController(
         val manager = windowManager ?: return
         params.x = x.roundToInt()
         params.y = y.roundToInt()
-        manager.updateViewLayout(view, params)
+        runCatching { manager.updateViewLayout(view, params) }
+            .onFailure { error ->
+                release()
+                onWindowError(error)
+            }
     }
 
     private companion object {

@@ -1,6 +1,7 @@
 package com.hash.video.player
 
 import android.app.Application
+import android.widget.FrameLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.hash.video.api.VideoMedia
@@ -9,6 +10,8 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,6 +97,32 @@ class VideoPlayerEngineTest {
             assertEquals(0, state.playlistIndex)
             assertEquals(1, state.playlistSize)
             VideoPlayerEngine.release(application, token)
+        }
+    }
+
+    @Test
+    fun `悬浮窗恢复时应先解除渲染容器再转交凭证`() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val application = instrumentation.targetContext.applicationContext as Application
+        val sourceToken = VideoPlaybackControlToken()
+        val targetToken = VideoPlaybackControlToken()
+
+        instrumentation.runOnMainSync {
+            VideoPlayerEngine.release(application)
+            val overlayContainer = FrameLayout(application)
+            VideoPlayerEngine.attachRenderTo(application, sourceToken, overlayContainer)
+            val session = VideoPlayerEngine.enterSystemOverlay(sourceToken)
+            assertNotNull(session)
+
+            assertTrue(
+                VideoPlayerEngine.restoreSystemOverlay(
+                    session = requireNotNull(session),
+                    targetToken = targetToken,
+                    overlayContainer = overlayContainer,
+                ),
+            )
+            assertFalse(VideoPlayerEngine.hasAttachedRender())
+            VideoPlayerEngine.release(application, targetToken)
         }
     }
 }

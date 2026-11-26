@@ -86,7 +86,15 @@ object SystemOverlayHost {
             layoutParams(currentMedia).also {
                 windowParams = it
                 manager.addView(overlayRoot, it)
-                positionController = OverlayWindowPositionController(manager, overlayRoot, it)
+                positionController = OverlayWindowPositionController(
+                    windowManager = manager,
+                    view = overlayRoot,
+                    params = it,
+                    onWindowError = { error ->
+                        Log.w(LOG_TAG, "悬浮窗位置更新失败，关闭当前悬浮播放", error)
+                        close()
+                    },
+                )
                 overlayRoot.setDragListener(object : FloatingDragListener {
                     override fun onDragBy(deltaX: Float, deltaY: Float) {
                         positionController?.moveBy(deltaX, deltaY)
@@ -114,8 +122,12 @@ object SystemOverlayHost {
                 error,
             )
             runCatching { manager.removeViewImmediate(overlayRoot) }
-            //异常时恢复页面原来的播放凭证和渲染 View；悬浮窗创建失败不影响页面。
-            VideoPlayerEngine.restoreSystemOverlay(overlaySession, sourceToken)
+            // 异常时恢复页面原来的播放凭证；悬浮窗创建失败不影响播放会话。
+            VideoPlayerEngine.restoreSystemOverlay(
+                session = overlaySession,
+                targetToken = sourceToken,
+                overlayContainer = overlayRoot,
+            )
             VideoOverlayResult.FAILED
         }
     }
@@ -129,9 +141,9 @@ object SystemOverlayHost {
         val currentSession = session ?: return false
         val currentMedia = VideoPlayerEngine.playbackState.value.media ?: return false
         if (!matches(currentMedia)) return false
-        // 先完成凭证移交；失败时保留悬浮窗原画面，避免窗口仍在却变成黑屏。
-        if (!VideoPlayerEngine.restoreSystemOverlay(currentSession, targetToken)) return false
-        root?.detachRender()
+        val overlayRoot = root ?: return false
+        // 由引擎原子地解除悬浮窗渲染容器并转交凭证；失败时保留悬浮窗原画面。
+        if (!VideoPlayerEngine.restoreSystemOverlay(currentSession, targetToken, overlayRoot)) return false
         removeViewOnly()
         return true
     }
